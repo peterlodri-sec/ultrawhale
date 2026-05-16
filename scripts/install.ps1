@@ -22,7 +22,7 @@ function Resolve-RepoSlug {
   if (-not [string]::IsNullOrWhiteSpace($env:OWNER) -and -not [string]::IsNullOrWhiteSpace($env:REPO)) {
     return "$($env:OWNER.Trim())/$($env:REPO.Trim())"
   }
-  return "usewhale/whale"
+  return "usewhale/DeepSeek-Code-Whale"
 }
 
 function Resolve-Version($ResolvedRepoSlug) {

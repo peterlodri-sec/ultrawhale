@@ -2,7 +2,7 @@
 
 set -eu
 
-REPO_SLUG="${REPO_SLUG:-usewhale/whale}"
+REPO_SLUG="${REPO_SLUG:-usewhale/DeepSeek-Code-Whale}"
 OWNER="${OWNER:-}"
 REPO="${REPO:-}"
 VERSION="${VERSION:-latest}"
