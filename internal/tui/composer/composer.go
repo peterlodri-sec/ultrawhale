@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	rw "github.com/mattn/go-runewidth"
-	"github.com/rivo/uniseg"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
 
@@ -200,7 +199,9 @@ func (c *Composer) reflow() {
 	if height > composerCollapseThreshold {
 		height = composerCollapseThreshold
 	}
-	c.textarea.SetHeight(height)
+	if height != c.textarea.Height() {
+		c.textarea.SetHeight(height)
+	}
 }
 
 func (c Composer) foldedView(lines []string) string {
@@ -394,54 +395,57 @@ func wrappedLineCount(runes []rune, width int) int {
 		return 1
 	}
 	var (
-		lines  = 1
-		row    []rune
-		word   []rune
-		spaces int
+		lines         = 1
+		rowWidth      int
+		wordWidth     int
+		lastCharWidth int
+		spaces        int
 	)
 
 	flushWord := func() {
-		if len(word) == 0 && spaces == 0 {
+		if wordWidth == 0 && spaces == 0 {
 			return
 		}
 		if spaces > 0 {
-			if uniseg.StringWidth(string(row))+uniseg.StringWidth(string(word))+spaces > width {
+			if rowWidth+wordWidth+spaces > width {
 				lines++
-				row = append([]rune{}, word...)
-				row = append(row, repeatSpaces(spaces)...)
+				rowWidth = wordWidth + spaces
 			} else {
-				row = append(row, word...)
-				row = append(row, repeatSpaces(spaces)...)
+				rowWidth += wordWidth + spaces
 			}
-			word = nil
+			wordWidth = 0
+			lastCharWidth = 0
 			spaces = 0
 			return
 		}
-		lastCharLen := rw.RuneWidth(word[len(word)-1])
-		if uniseg.StringWidth(string(word))+lastCharLen > width {
-			if len(row) > 0 {
+		// Handle very long words that exceed the wrap width.
+		if wordWidth+lastCharWidth > width {
+			if rowWidth > 0 {
 				lines++
-				row = nil
+				rowWidth = 0
 			}
-			row = append(row, word...)
-			word = nil
+			rowWidth = wordWidth
+			wordWidth = 0
+			lastCharWidth = 0
 		}
 	}
 
 	for _, r := range runes {
+		w := rw.RuneWidth(r)
+		if w < 0 {
+			w = 0
+		}
 		if unicode.IsSpace(r) {
 			spaces++
 		} else {
-			word = append(word, r)
+			wordWidth += w
+			lastCharWidth = w
 		}
 		flushWord()
 	}
 
-	if uniseg.StringWidth(string(row))+uniseg.StringWidth(string(word))+spaces >= width {
+	if rowWidth+wordWidth+spaces >= width {
 		lines++
-	} else if len(word) > 0 || spaces > 0 {
-		row = append(row, word...)
-		row = append(row, repeatSpaces(spaces+1)...)
 	}
 
 	return lines
