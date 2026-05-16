@@ -128,6 +128,13 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.status = ev.Text
 		m.addLog(logEntry{Kind: "mcp_complete", Source: "mcp", Summary: ev.Text, Raw: fmt.Sprintf("%+v", ev.Metadata)})
 	case service.EventApprovalRequired:
+		if m.stopping {
+			if ev.ToolCallID != "" {
+				m.dispatchIntent(service.Intent{Kind: service.IntentCancelToolApproval, ToolCallID: ev.ToolCallID})
+			}
+			m.addLog(logEntry{Kind: "approval_required_stale", Source: ev.ToolName, Summary: ev.Text, Raw: ev.Text})
+			break
+		}
 		m.mode = modeApproval
 		m.approval.toolCallID = ev.ToolCallID
 		m.approval.toolName = ev.ToolName
@@ -137,6 +144,13 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.addLog(logEntry{Kind: "approval_required", Source: ev.ToolName, Summary: ev.Text, Raw: ev.Text})
 		m.status = "approval required"
 	case service.EventUserInputRequired:
+		if m.stopping {
+			if ev.ToolCallID != "" {
+				m.dispatchIntent(service.Intent{Kind: service.IntentCancelUserInput, ToolCallID: ev.ToolCallID})
+			}
+			m.addLog(logEntry{Kind: "user_input_required_stale", Source: ev.ToolName, Summary: fmt.Sprintf("%d questions", len(ev.Questions)), Raw: fmt.Sprintf("%+v", ev.Questions)})
+			break
+		}
 		m.mode = modeUserInput
 		m.userInput.toolCallID = ev.ToolCallID
 		m.userInput.toolName = ev.ToolName
@@ -257,8 +271,12 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 	wasBusy := m.busy
 	wasStopping := m.stopping
 	wasFrozen := m.viewportFrozen
+	wasBlockingModal := m.mode == modeApproval || m.mode == modeUserInput
 	m.stopBusy()
 	m.stopping = false
+	if wasBlockingModal {
+		m.mode = modeChat
+	}
 	reconciledAssistant := false
 	if isAgentTurnDone(ev) {
 		reconciledAssistant = m.reconcileFinalAssistant(ev.LastResponse)
@@ -273,7 +291,7 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 	m.status = "ready"
 	queuedTurnStarted := false
 	queuedRestored := false
-	shouldOpenPlanPicker := wasBusy && m.chatMode == "plan" && m.sawPlanThisTurn && m.mode == modeChat
+	shouldOpenPlanPicker := wasBusy && !wasBlockingModal && m.chatMode == "plan" && m.sawPlanThisTurn && m.mode == modeChat
 	var eventCmd tea.Cmd
 	if wasStopping {
 		m.deferredPlanPicker = false

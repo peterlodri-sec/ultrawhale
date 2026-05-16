@@ -23,6 +23,8 @@ func (s *Service) Dispatch(in Intent) {
 		s.resolveApproval(in.ToolCallID, policy.ApprovalAllowForSession)
 	case IntentDenyTool:
 		s.resolveApproval(in.ToolCallID, policy.ApprovalDeny)
+	case IntentCancelToolApproval:
+		s.resolveApproval(in.ToolCallID, policy.ApprovalCancel)
 	case IntentSubmitUserInput:
 		if in.UserInput != nil {
 			s.resolveUserInput(in.ToolCallID, *in.UserInput, true)
@@ -47,6 +49,7 @@ func (s *Service) Dispatch(in Intent) {
 			s.cancel()
 		}
 		s.cancelMu.Unlock()
+		s.cancelPendingInteractions()
 	case IntentSetModelAndEffort:
 		if err := s.app.SetModelAndEffort(in.Model, in.Effort); err != nil {
 			s.emit(Event{Kind: EventError, Text: err.Error()})

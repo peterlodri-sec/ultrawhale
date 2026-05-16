@@ -65,6 +65,7 @@ const (
 	ApprovalDeny            = policy.ApprovalDeny
 	ApprovalAllow           = policy.ApprovalAllow
 	ApprovalAllowForSession = policy.ApprovalAllowForSession
+	ApprovalCancel          = policy.ApprovalCancel
 )
 
 var (

@@ -323,7 +323,11 @@ func (m model) renderBusyStatusLine(width int) string {
 	}
 	line := fmt.Sprintf("%s (%s)", label, formatElapsedCompact(m.busyElapsed()))
 	if !m.stopping {
-		line += " · Esc to interrupt"
+		if m.mode == modeChat {
+			line += " · Esc/Ctrl+C to interrupt"
+		} else {
+			line += " · Ctrl+C to interrupt"
+		}
 	}
 	return lipgloss.NewStyle().
 		Width(width).

@@ -90,7 +90,7 @@ func busySlashBlockedMessage(line string, stopping bool) string {
 	if stopping {
 		state = "the current turn is stopping"
 	}
-	return fmt.Sprintf("%s is disabled while %s. Press Esc to interrupt or wait.", cmd, state)
+	return fmt.Sprintf("%s is disabled while %s. Press Esc/Ctrl+C to interrupt or wait.", cmd, state)
 }
 
 func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) {

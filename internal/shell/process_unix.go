@@ -3,6 +3,7 @@
 package shell
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -13,10 +14,24 @@ import (
 // ConfigureCommand applies platform process settings for shell commands.
 func ConfigureCommand(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error {
+	cmd.WaitDelay = 2 * time.Second
+}
+
+func RunCommand(ctx context.Context, cmd *exec.Cmd) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	ConfigureCommand(cmd)
+	cancel := func() error {
 		return killCommandGroup(cmd)
 	}
-	cmd.WaitDelay = 2 * time.Second
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return waitCommandContext(ctx, cmd, cancel)
 }
 
 func killCommandGroup(cmd *exec.Cmd) error {

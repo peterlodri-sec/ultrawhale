@@ -25,6 +25,7 @@ const (
 	ApprovalDeny ApprovalDecision = iota
 	ApprovalAllow
 	ApprovalAllowForSession
+	ApprovalCancel
 )
 
 func (d ApprovalDecision) Approved() bool {
@@ -33,6 +34,10 @@ func (d ApprovalDecision) Approved() bool {
 
 func (d ApprovalDecision) ForSession() bool {
 	return d == ApprovalAllowForSession
+}
+
+func (d ApprovalDecision) Canceled() bool {
+	return d == ApprovalCancel
 }
 
 type ApprovalFunc func(req ApprovalRequest) ApprovalDecision

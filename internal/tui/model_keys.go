@@ -26,6 +26,9 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		m.updateSlashMatches()
 		return nil, false, true
 	}
+	if msg.String() == "ctrl+c" && m.busy {
+		return m.interruptBusyTurn(), false, true
+	}
 	if m.mode == modeChat {
 		if cmd, handled := m.handleChatModeKey(msg); handled {
 			return cmd, false, true
@@ -55,6 +58,37 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 	}
 	cmd, handled = m.handleComposerKey(msg)
 	return cmd, false, handled
+}
+
+func (m *model) interruptBusyTurn() tea.Cmd {
+	m.quitArmedUntil = time.Time{}
+	alreadyStopping := m.stopping
+	m.cancelBlockingModalForInterrupt(!alreadyStopping)
+	if !alreadyStopping {
+		if m.svc != nil {
+			m.dispatchIntent(service.Intent{Kind: service.IntentShutdown})
+		}
+		m.status = "stopping"
+		m.stopping = true
+		m.appendNotice(m.turnInterruptedNoticeText())
+	}
+	m.commitLiveTranscript(false)
+	return m.flushNativeScrollbackCmd()
+}
+
+func (m *model) cancelBlockingModalForInterrupt(dispatch bool) {
+	switch m.mode {
+	case modeApproval:
+		if dispatch && m.approval.toolCallID != "" {
+			m.dispatchIntent(service.Intent{Kind: service.IntentCancelToolApproval, ToolCallID: m.approval.toolCallID})
+		}
+		m.mode = modeChat
+	case modeUserInput:
+		if dispatch && m.userInput.toolCallID != "" {
+			m.dispatchIntent(service.Intent{Kind: service.IntentCancelUserInput, ToolCallID: m.userInput.toolCallID})
+		}
+		m.mode = modeChat
+	}
 }
 
 func (m *model) handleChatModeKey(msg tea.KeyMsg) (tea.Cmd, bool) {
@@ -113,18 +147,13 @@ func (m *model) handleChatModeKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		if m.insertSelectedSkill() {
 			return nil, true
 		}
+	case "ctrl+c":
+		if m.busy {
+			return m.interruptBusyTurn(), true
+		}
 	case "esc":
 		if m.busy {
-			if !m.stopping {
-				if m.svc != nil {
-					m.dispatchIntent(service.Intent{Kind: service.IntentShutdown})
-				}
-				m.status = "stopping"
-				m.stopping = true
-				m.appendNotice(m.turnInterruptedNoticeText())
-			}
-			m.commitLiveTranscript(false)
-			return m.flushNativeScrollbackCmd(), true
+			return m.interruptBusyTurn(), true
 		}
 		if m.hasSlashSuggestions() {
 			m.slash.matches = nil

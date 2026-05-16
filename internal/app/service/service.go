@@ -18,6 +18,7 @@ const (
 	IntentAllowTool           IntentKind = "allow_tool"
 	IntentAllowToolForSession IntentKind = "allow_tool_for_session"
 	IntentDenyTool            IntentKind = "deny_tool"
+	IntentCancelToolApproval  IntentKind = "cancel_tool_approval"
 	IntentSubmitUserInput     IntentKind = "submit_user_input"
 	IntentCancelUserInput     IntentKind = "cancel_user_input"
 	IntentSelectSession       IntentKind = "select_session"
@@ -120,6 +121,9 @@ type Service struct {
 	cancelMu         sync.Mutex
 	cancel           context.CancelFunc
 	active           bool
+
+	interactionMu     sync.Mutex
+	shutdownRequested bool
 
 	approveMu     sync.Mutex
 	approvals     map[string]chan policy.ApprovalDecision

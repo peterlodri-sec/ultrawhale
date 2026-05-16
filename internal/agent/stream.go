@@ -307,6 +307,9 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 					})
 				}
 				approved = approvalDecision.Approved()
+				if approvalDecision.Canceled() {
+					return core.Message{}, nil, llm.Usage{}, "", false, context.Canceled
+				}
 				if approvalDecision.ForSession() {
 					a.approvalCache.Grant(sessionID, key)
 					a.persistApproval(ctx, sessionID, key)

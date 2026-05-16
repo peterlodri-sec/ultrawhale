@@ -35,6 +35,7 @@ func (s *Service) runTurnWith(start func(context.Context) (<-chan agent.AgentEve
 	}
 	s.active = true
 	s.cancel = cancel
+	s.resetInteractionShutdown()
 	s.cancelMu.Unlock()
 	defer func() {
 		s.cancelMu.Lock()

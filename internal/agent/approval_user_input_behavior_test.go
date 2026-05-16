@@ -141,6 +141,64 @@ func TestApprovalRequiredAndDenied(t *testing.T) {
 	assertApprovalDeniedMarker(t, store, "s-approval-deny", "write")
 }
 
+func TestApprovalCancelDoesNotPersistDeniedMarker(t *testing.T) {
+	store := NewInMemoryStore()
+	prov := &approvalProvider{}
+	asked := 0
+	a := NewAgentWithRegistry(
+		prov,
+		store,
+		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
+			asked++
+			return ApprovalCancel
+		}),
+	)
+
+	events, err := a.RunStream(context.Background(), "s-approval-cancel", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	var sawApproval bool
+	var sawCancelled bool
+	for ev := range events {
+		if ev.Type == AgentEventTypeToolApprovalRequired {
+			sawApproval = true
+		}
+		if ev.Type == AgentEventTypeTurnCancelled {
+			sawCancelled = true
+		}
+		if ev.Type == AgentEventTypeDone {
+			t.Fatalf("unexpected done event after approval cancel")
+		}
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil && strings.Contains(ev.Result.Content, "approval_denied") {
+			t.Fatalf("approval cancel produced denial result: %+v", ev.Result)
+		}
+	}
+	if !sawApproval {
+		t.Fatal("expected approval required event")
+	}
+	if !sawCancelled {
+		t.Fatal("expected turn cancelled event")
+	}
+	if asked != 1 {
+		t.Fatalf("expected asked=1, got %d", asked)
+	}
+	if prov.calls != 1 {
+		t.Fatalf("expected provider to stop after canceled approval, got calls=%d", prov.calls)
+	}
+	msgs, err := store.List(context.Background(), "s-approval-cancel")
+	if err != nil {
+		t.Fatalf("list messages: %v", err)
+	}
+	if historyContainsApprovalDeniedMarker(msgs, "write") {
+		t.Fatalf("approval cancel should not persist approval-denied marker:\n%+v", msgs)
+	}
+	if !historyContainsInterruptedMarker(msgs) {
+		t.Fatalf("expected approval cancel to persist interrupted marker:\n%+v", msgs)
+	}
+}
+
 func TestApprovalDeniedMarkerIsVisibleToNextTurn(t *testing.T) {
 	store := NewInMemoryStore()
 	prov := &approvalProvider{}
@@ -241,6 +299,18 @@ func historyContainsApprovalDeniedMarker(msgs []Message, toolName string) bool {
 		if strings.Contains(msg.Text, "<approval_denied>") &&
 			strings.Contains(msg.Text, "tool: "+toolName) &&
 			strings.Contains(msg.Text, "Do not retry or continue") {
+			return true
+		}
+	}
+	return false
+}
+
+func historyContainsInterruptedMarker(msgs []Message) bool {
+	for _, msg := range msgs {
+		if msg.Role != RoleUser || !msg.Hidden || msg.FinishReason != FinishReasonCanceled {
+			continue
+		}
+		if strings.Contains(msg.Text, "<turn_aborted>") {
 			return true
 		}
 	}

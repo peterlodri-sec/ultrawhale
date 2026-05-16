@@ -182,14 +182,13 @@ func runShellBackground(ctx context.Context, dir, command string, task *shellTas
 		task.exitCode = nil
 		return
 	}
-	cmd := exec.CommandContext(ctx, spec.Bin, spec.Args...)
-	shell.ConfigureCommand(cmd)
+	cmd := exec.Command(spec.Bin, spec.Args...)
 	cmd.Dir = dir
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
-	err = cmd.Run()
+	err = shell.RunCommand(ctx, cmd)
 
 	task.mu.Lock()
 	defer task.mu.Unlock()

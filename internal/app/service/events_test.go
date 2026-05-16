@@ -12,6 +12,7 @@ import (
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/app"
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
 )
 
@@ -327,6 +328,117 @@ func TestLocalSubmitDispatchEnqueuesWithoutHandlingInline(t *testing.T) {
 		}
 	default:
 		t.Fatal("expected local submit to be queued without inline handling")
+	}
+}
+
+func TestShutdownCancelsPendingInteractions(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	turnCtx, turnCancel := context.WithCancel(ctx)
+	approvalCh := make(chan policy.ApprovalDecision, 1)
+	inputCh := make(chan userInputDecision, 1)
+	svc := &Service{
+		ctx:       ctx,
+		events:    make(chan Event, 10),
+		cancel:    turnCancel,
+		approvals: map[string]chan policy.ApprovalDecision{"approval-1": approvalCh},
+		inputs:    map[string]chan userInputDecision{"input-1": inputCh},
+	}
+
+	svc.Dispatch(Intent{Kind: IntentShutdown})
+
+	select {
+	case got := <-approvalCh:
+		if got != policy.ApprovalCancel {
+			t.Fatalf("approval decision = %v, want cancel", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("shutdown did not release pending approval")
+	}
+	select {
+	case got := <-inputCh:
+		if got.ok {
+			t.Fatalf("user input decision ok = true, want false")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("shutdown did not release pending user input")
+	}
+	select {
+	case <-turnCtx.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("shutdown did not cancel active turn")
+	}
+	if len(svc.approvals) != 0 {
+		t.Fatalf("pending approvals not cleared: %+v", svc.approvals)
+	}
+	if len(svc.inputs) != 0 {
+		t.Fatalf("pending inputs not cleared: %+v", svc.inputs)
+	}
+}
+
+func TestShutdownRejectsLateInteractions(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	svc := &Service{
+		ctx:           ctx,
+		events:        make(chan Event, 10),
+		approvals:     map[string]chan policy.ApprovalDecision{},
+		sessionGrants: map[string]map[string]bool{},
+		inputs:        map[string]chan userInputDecision{},
+	}
+
+	svc.Dispatch(Intent{Kind: IntentShutdown})
+
+	approvalDone := make(chan policy.ApprovalDecision, 1)
+	go func() {
+		approvalDone <- svc.awaitApproval(policy.ApprovalRequest{
+			SessionID: "session-1",
+			Key:       "approval-key",
+			ToolCall:  core.ToolCall{ID: "approval-late", Name: "shell_run", Input: `{"command":"date"}`},
+		})
+	}()
+	select {
+	case got := <-approvalDone:
+		if got != policy.ApprovalCancel {
+			t.Fatalf("late approval decision = %v, want cancel", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("late approval request blocked after shutdown")
+	}
+
+	inputDone := make(chan bool, 1)
+	go func() {
+		_, ok := svc.awaitUserInput(agent.UserInputRequest{
+			SessionID: "session-1",
+			ToolCall:  core.ToolCall{ID: "input-late", Name: "request_user_input"},
+			Questions: []core.UserInputQuestion{{
+				Header:   "Choice",
+				ID:       "choice",
+				Question: "Continue?",
+			}},
+		})
+		inputDone <- ok
+	}()
+	select {
+	case ok := <-inputDone:
+		if ok {
+			t.Fatal("late user input ok = true, want false")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("late user input request blocked after shutdown")
+	}
+	if len(svc.approvals) != 0 {
+		t.Fatalf("late approval should not be tracked: %+v", svc.approvals)
+	}
+	if len(svc.inputs) != 0 {
+		t.Fatalf("late user input should not be tracked: %+v", svc.inputs)
+	}
+	select {
+	case ev := <-svc.events:
+		if ev.Kind == EventApprovalRequired || ev.Kind == EventUserInputRequired {
+			t.Fatalf("late interaction emitted modal event: %+v", ev)
+		}
+	default:
 	}
 }
 

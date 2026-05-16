@@ -1581,6 +1581,257 @@ func TestEscWhileBusyKeepsTurnBusyUntilTurnDone(t *testing.T) {
 	}
 }
 
+func TestCtrlCWhileBusyInterruptsWithoutArmingQuit(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.svc = &service.Service{}
+	m.width = 80
+	m.height = 24
+	m.busy = true
+	m.quitArmedUntil = time.Now().Add(time.Second)
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m = next.(model)
+	if !m.busy {
+		t.Fatal("expected interrupted turn to remain busy until EventTurnDone")
+	}
+	if !m.stopping {
+		t.Fatal("expected stopping state after ctrl+c interrupt")
+	}
+	if m.status != "stopping" {
+		t.Fatalf("unexpected status: %q", m.status)
+	}
+	if !m.quitArmedUntil.IsZero() {
+		t.Fatal("expected ctrl+c while busy not to arm quit")
+	}
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentShutdown {
+		t.Fatalf("expected ctrl+c while busy to dispatch shutdown intent, got %+v", *intents)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m = next.(model)
+	if !m.quitArmedUntil.IsZero() {
+		t.Fatal("expected repeated ctrl+c while stopping not to arm quit")
+	}
+	if len(*intents) != 1 {
+		t.Fatalf("expected repeated ctrl+c while stopping not to dispatch another intent, got %+v", *intents)
+	}
+
+	next, _ = m.Update(svcMsg(service.Event{Kind: service.EventTurnDone}))
+	m = next.(model)
+	if m.busy || m.stopping {
+		t.Fatalf("expected turn done to clear busy/stopping, busy=%v stopping=%v", m.busy, m.stopping)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m = next.(model)
+	if m.quitArmedUntil.IsZero() {
+		t.Fatal("expected first idle ctrl+c after interrupt to arm quit")
+	}
+	if len(*intents) != 1 {
+		t.Fatalf("expected idle ctrl+c to avoid shutdown after stale arm was cleared, got %+v", *intents)
+	}
+}
+
+func TestCtrlCWhileBusyInterruptsBeforeApprovalMode(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.svc = &service.Service{}
+	m.width = 80
+	m.height = 24
+	m.busy = true
+	m.mode = modeApproval
+	m.approval.toolCallID = "tool-1"
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m = next.(model)
+
+	if !m.stopping {
+		t.Fatal("expected ctrl+c in busy approval mode to interrupt the turn")
+	}
+	if m.mode != modeChat {
+		t.Fatalf("expected interrupt to leave approval mode, got %v", m.mode)
+	}
+	if len(*intents) != 2 ||
+		(*intents)[0].Kind != service.IntentCancelToolApproval ||
+		(*intents)[0].ToolCallID != "tool-1" ||
+		(*intents)[1].Kind != service.IntentShutdown {
+		t.Fatalf("expected cancel approval then shutdown intents, got %+v", *intents)
+	}
+}
+
+func TestCtrlCWhileBusyInterruptsBeforeUserInputMode(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.svc = &service.Service{}
+	m.width = 80
+	m.height = 24
+	m.busy = true
+	m.mode = modeUserInput
+	m.userInput.toolCallID = "tool-1"
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m = next.(model)
+
+	if !m.stopping {
+		t.Fatal("expected ctrl+c in busy user-input mode to interrupt the turn")
+	}
+	if m.mode != modeChat {
+		t.Fatalf("expected interrupt to leave user-input mode, got %v", m.mode)
+	}
+	if len(*intents) != 2 ||
+		(*intents)[0].Kind != service.IntentCancelUserInput ||
+		(*intents)[0].ToolCallID != "tool-1" ||
+		(*intents)[1].Kind != service.IntentShutdown {
+		t.Fatalf("expected cancel input then shutdown intents, got %+v", *intents)
+	}
+}
+
+func TestCtrlCWhileStoppingClearsBlockingModalWithoutDuplicateShutdown(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*model)
+	}{
+		{
+			name: "approval",
+			setup: func(m *model) {
+				m.mode = modeApproval
+				m.approval.toolCallID = "approval-queued"
+			},
+		},
+		{
+			name: "user input",
+			setup: func(m *model) {
+				m.mode = modeUserInput
+				m.userInput.toolCallID = "input-queued"
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, intents := newModelWithDispatchSpy()
+			m.svc = &service.Service{}
+			m.width = 80
+			m.height = 24
+			m.busy = true
+			m.stopping = true
+			m.status = "stopping"
+			tt.setup(&m)
+
+			next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+			m = next.(model)
+
+			if m.mode != modeChat {
+				t.Fatalf("expected repeated ctrl+c while stopping to clear blocking mode, got %v", m.mode)
+			}
+			if !m.busy || !m.stopping {
+				t.Fatalf("expected turn to keep stopping, busy=%v stopping=%v", m.busy, m.stopping)
+			}
+			if len(*intents) != 0 {
+				t.Fatalf("expected no duplicate shutdown or modal intent while already stopping, got %+v", *intents)
+			}
+		})
+	}
+}
+
+func TestStaleBlockingEventsWhileStoppingDoNotOpenModals(t *testing.T) {
+	tests := []struct {
+		name       string
+		ev         service.Event
+		wantIntent service.IntentKind
+	}{
+		{
+			name: "approval",
+			ev: service.Event{
+				Kind:       service.EventApprovalRequired,
+				ToolCallID: "approval-stale",
+				ToolName:   "shell_run",
+				Text:       "shell_run: sleep 30",
+			},
+			wantIntent: service.IntentCancelToolApproval,
+		},
+		{
+			name: "user input",
+			ev: service.Event{
+				Kind:       service.EventUserInputRequired,
+				ToolCallID: "input-stale",
+				ToolName:   "request_user_input",
+				Questions: []core.UserInputQuestion{{
+					Header:   "Choice",
+					ID:       "choice",
+					Question: "Continue?",
+				}},
+			},
+			wantIntent: service.IntentCancelUserInput,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, intents := newModelWithDispatchSpy()
+			m.busy = true
+			m.stopping = true
+			m.mode = modeChat
+			m.status = "stopping"
+
+			next, _ := m.Update(svcMsg(tt.ev))
+			m = next.(model)
+
+			if m.mode != modeChat {
+				t.Fatalf("expected stale event while stopping to leave chat mode, got %v", m.mode)
+			}
+			if m.status != "stopping" {
+				t.Fatalf("expected stale event while stopping to preserve status, got %q", m.status)
+			}
+			if len(*intents) != 1 {
+				t.Fatalf("expected stale event while stopping to resolve interaction, got %+v", *intents)
+			}
+			if got := (*intents)[0]; got.Kind != tt.wantIntent || got.ToolCallID != tt.ev.ToolCallID {
+				t.Fatalf("unexpected stale interaction intent: %+v", got)
+			}
+		})
+	}
+}
+
+func TestTurnDoneClearsStaleBlockingModal(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*model)
+	}{
+		{
+			name: "approval",
+			setup: func(m *model) {
+				m.mode = modeApproval
+				m.approval.toolCallID = "approval-stale"
+			},
+		},
+		{
+			name: "user input",
+			setup: func(m *model) {
+				m.mode = modeUserInput
+				m.userInput.toolCallID = "input-stale"
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel(nil, "", "", "")
+			m.busy = true
+			m.stopping = true
+			m.status = "stopping"
+			tt.setup(&m)
+
+			next, _ := m.Update(svcMsg(service.Event{Kind: service.EventTurnDone}))
+			m = next.(model)
+
+			if m.mode != modeChat {
+				t.Fatalf("expected turn done to clear stale blocking mode, got %v", m.mode)
+			}
+			if m.busy || m.stopping {
+				t.Fatalf("expected turn done to clear busy/stopping, busy=%v stopping=%v", m.busy, m.stopping)
+			}
+			if m.status != "ready" {
+				t.Fatalf("expected ready status after turn done, got %q", m.status)
+			}
+		})
+	}
+}
+
 func TestPlanCompletedReplacesPartialPlanAndTurnDoneShowsPicker(t *testing.T) {
 	m := model{
 		assembler: tuirender.NewAssembler(),
@@ -3211,7 +3462,7 @@ func TestChatBusyViewShowsWorkingAboveComposer(t *testing.T) {
 	m.startBusy()
 	m.busySince = time.Now().Add(-12 * time.Second)
 	view := m.View()
-	if !strings.Contains(view, "Working (12s) · Esc to interrupt") {
+	if !strings.Contains(view, "Working (12s) · Esc/Ctrl+C to interrupt") {
 		t.Fatalf("expected working status line with elapsed time:\n%s", view)
 	}
 	if strings.Contains(view, "status: working") {
@@ -3219,6 +3470,25 @@ func TestChatBusyViewShowsWorkingAboveComposer(t *testing.T) {
 	}
 	if strings.Index(view, "Working (12s)") > strings.Index(view, "Type message or command") {
 		t.Fatalf("working status line should appear above composer:\n%s", view)
+	}
+}
+
+func TestApprovalBusyViewShowsCtrlCOnlyInterruptHint(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 80
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.mode = modeApproval
+	m.approval.toolName = "shell_run"
+	m.approval.reason = "shell_run: sleep 30"
+
+	view := m.View()
+	if !strings.Contains(view, "Working (12s) · Ctrl+C to interrupt") {
+		t.Fatalf("expected approval busy status line to advertise ctrl+c interrupt:\n%s", view)
+	}
+	if strings.Contains(view, "Esc/Ctrl+C to interrupt") {
+		t.Fatalf("approval busy status line should not advertise esc as interrupt:\n%s", view)
 	}
 }
 
@@ -3244,7 +3514,7 @@ func TestChatStoppingViewShowsStoppingAboveComposer(t *testing.T) {
 	if !strings.Contains(view, "Stopping (1m 05s)") {
 		t.Fatalf("expected stopping status line with continued elapsed time:\n%s", view)
 	}
-	if strings.Contains(view, "Esc to interrupt") {
+	if strings.Contains(view, "to interrupt") {
 		t.Fatalf("stopping view should not show interrupt hint:\n%s", view)
 	}
 }
