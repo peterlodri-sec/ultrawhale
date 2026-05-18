@@ -65,6 +65,11 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 			}
 		case llm.EventToolUseStop:
 			// no-op in this minimal version
+		case llm.EventRetryScheduled:
+			if ev.Retry != nil {
+				info := *ev.Retry
+				events <- AgentEvent{Type: AgentEventTypeProviderRetryScheduled, ProviderRetry: &info}
+			}
 		case llm.EventComplete:
 			if ev.Response != nil {
 				lastUsage = ev.Response.Usage

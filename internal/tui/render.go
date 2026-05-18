@@ -362,6 +362,8 @@ func (m model) renderBusyStatusLine(width int) string {
 	label := "Working"
 	if m.stopping {
 		label = "Stopping"
+	} else if status := strings.TrimSpace(m.providerRetryStatus); status != "" && time.Now().Before(m.providerRetryUntil) {
+		label = status
 	}
 	line := fmt.Sprintf("%s (%s)", label, formatElapsedCompact(m.busyElapsed()))
 	if !m.stopping {

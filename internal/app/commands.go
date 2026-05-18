@@ -493,7 +493,9 @@ func (a *App) reloadSkillDisabledConfig() error {
 		return err
 	}
 	cfg := Config{}
-	ApplyLoadedConfig(&cfg, loaded)
+	if err := ApplyLoadedConfig(&cfg, loaded); err != nil {
+		return err
+	}
 	a.cfg.SkillsDisabled = trimList(cfg.SkillsDisabled)
 	if a.toolset != nil {
 		a.toolset.SetSkillDisabled(a.cfg.SkillsDisabled)

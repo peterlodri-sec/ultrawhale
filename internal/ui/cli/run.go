@@ -11,6 +11,7 @@ import (
 
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/app"
+	llmretry "github.com/usewhale/whale/internal/llm/retry"
 )
 
 func Run(cfg app.Config, start app.StartOptions) error {
@@ -213,6 +214,10 @@ func renderEvent(ev agent.AgentEvent, printedText *bool, lastAssistantText *stri
 	case agent.AgentEventTypeToolArgsRepaired:
 		if ev.ToolArgsRepair != nil {
 			fmt.Printf("\n[tool-repair] %s#%d repaired\n", ev.ToolArgsRepair.ToolName, ev.ToolArgsRepair.ToolCallIndex)
+		}
+	case agent.AgentEventTypeProviderRetryScheduled:
+		if ev.ProviderRetry != nil {
+			fmt.Printf("\n[api-retry] %s\n", llmretry.FormatInfo(*ev.ProviderRetry))
 		}
 	case agent.AgentEventTypeToolCallBlocked, agent.AgentEventTypeToolModeBlocked:
 		if ev.ToolBlocked != nil {

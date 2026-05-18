@@ -69,6 +69,10 @@ deny_shell_prefixes = ["rm -rf"]
 [api]
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
+[retry]
+max_attempts = 4
+max_delay = "60s"
+
 [budget]
 session_limit_usd = 1.0
 
@@ -116,6 +120,10 @@ If you started with Whale v0.1.9 or newer, you do not need this command.
   long-term defaults when `--effort` or `--thinking` are not passed.
 - `DEEPSEEK_BASE_URL` overrides `[api].base_url`; if neither is set, Whale uses
   `https://api.deepseek.com`.
+- `[retry]` controls transient API retries before streaming starts. Whale
+  retries 429, 500, 502, 503, 504, and network errors with an internal 1s
+  exponential backoff, 10% jitter, and `Retry-After` support. `max_attempts`
+  counts the initial request.
 - Skill enable/disable choices are stored in project config under
   `[skills].disabled`.
 

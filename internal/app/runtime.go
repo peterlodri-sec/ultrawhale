@@ -38,6 +38,7 @@ func (a *App) ensureAgent() (*agent.Agent, error) {
 			Model:           a.model,
 			ReasoningEffort: a.reasoningEffort,
 			ThinkingEnabled: a.thinkingEnabled,
+			RetryPolicy:     retryPolicyFromConfig(a.cfg),
 		})
 		if err != nil {
 			return nil, err

@@ -13,6 +13,7 @@ import (
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/defaults"
 	"github.com/usewhale/whale/internal/llm"
+	llmretry "github.com/usewhale/whale/internal/llm/retry"
 	whalemcp "github.com/usewhale/whale/internal/mcp"
 	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
@@ -39,6 +40,8 @@ type Config struct {
 	ModelExplicit        bool
 	ReasoningEffort      string
 	ThinkingEnabled      bool
+	RetryMaxAttempts     int
+	RetryMaxDelay        time.Duration
 	MCPConfigPath        string
 	APIBaseURL           string
 	SkillsDisabled       []string
@@ -106,6 +109,8 @@ func DefaultConfig() Config {
 		Model:                defaults.DefaultModel,
 		ReasoningEffort:      defaults.DefaultReasoningEffort,
 		ThinkingEnabled:      defaults.DefaultThinkingEnabled,
+		RetryMaxAttempts:     llmretry.DefaultPolicy().MaxAttempts,
+		RetryMaxDelay:        llmretry.DefaultPolicy().MaxDelay,
 	}
 }
 
@@ -210,6 +215,7 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 			ReasoningEffort: effort,
 			ThinkingEnabled: thinking,
 			MaxTokens:       maxTokens,
+			RetryPolicy:     retryPolicyFromConfig(cfg),
 		})
 	}
 	var appRef *App

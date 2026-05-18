@@ -2838,6 +2838,35 @@ func TestSkillSuggestionsHiddenAfterInsertedMentionWithSpace(t *testing.T) {
 	}
 }
 
+func TestProviderRetryEventUpdatesStatusWithoutTranscript(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	beforeTranscript := len(m.transcript)
+	m.handleServiceEvent(service.Event{Kind: service.EventProviderRetry, Text: "API rate limited, retrying in 2s (1/3)", Metadata: map[string]any{"delay_ms": int64(2000)}})
+
+	if m.status != "ready" {
+		t.Fatalf("status should not be overwritten by retry, got %s", m.status)
+	}
+	if m.providerRetryStatus != "API rate limited, retrying in 2s (1/3)" {
+		t.Fatalf("providerRetryStatus: %s", m.providerRetryStatus)
+	}
+	if len(m.transcript) != beforeTranscript {
+		t.Fatalf("retry event should not append transcript, before=%d after=%d", beforeTranscript, len(m.transcript))
+	}
+	if len(m.logs) == 0 || m.logs[len(m.logs)-1].Kind != "api_retry" {
+		t.Fatalf("missing api_retry log: %+v", m.logs)
+	}
+}
+
+func TestProviderRetryStatusClearsOnAssistantDelta(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.handleServiceEvent(service.Event{Kind: service.EventProviderRetry, Text: "API rate limited, retrying in 2s (1/3)", Metadata: map[string]any{"delay_ms": int64(2000)}})
+	m.handleServiceEvent(service.Event{Kind: service.EventAssistantDelta, Text: "ok"})
+
+	if m.providerRetryStatus != "" || !m.providerRetryUntil.IsZero() {
+		t.Fatalf("provider retry status not cleared: %q until=%v", m.providerRetryStatus, m.providerRetryUntil)
+	}
+}
+
 func TestSkillsManagerRendersSearchesAndToggles(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.handleServiceEvent(service.Event{
@@ -5592,6 +5621,39 @@ func TestChatBusyViewShowsWorkingAboveComposer(t *testing.T) {
 	}
 	if strings.Index(view, "Working (12s)") > strings.Index(view, "Type message or command") {
 		t.Fatalf("working status line should appear above composer:\n%s", view)
+	}
+}
+
+func TestChatBusyViewShowsProviderRetryStatus(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.providerRetryStatus = "API rate limited, retrying in 1s (1/3)"
+	m.providerRetryUntil = time.Now().Add(time.Second)
+
+	view := m.View()
+	if !strings.Contains(view, "API rate limited, retrying in 1s (1/3) (12s) · Esc/Ctrl+C to interrupt") {
+		t.Fatalf("expected retry status in busy line:\n%s", view)
+	}
+}
+
+func TestChatBusyViewIgnoresExpiredProviderRetryStatus(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.providerRetryStatus = "API rate limited, retrying in 1s (1/3)"
+	m.providerRetryUntil = time.Now().Add(-time.Second)
+
+	view := m.View()
+	if strings.Contains(view, "API rate limited") {
+		t.Fatalf("expired retry status should not render:\n%s", view)
+	}
+	if !strings.Contains(view, "Working (12s) · Esc/Ctrl+C to interrupt") {
+		t.Fatalf("expected working status after retry expiry:\n%s", view)
 	}
 }
 
