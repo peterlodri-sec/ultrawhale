@@ -5,9 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/usewhale/whale/internal/policy"
 )
+
+func intPtr(v int) *int { return &v }
 
 func TestConfigFileRoundTrip(t *testing.T) {
 	dir := t.TempDir()
@@ -119,8 +122,12 @@ func TestApplyFileConfigUsesGroupedConfig(t *testing.T) {
 	projectDocMaxBytes := 12000
 	budgetLimit := 1.25
 	cfg := DefaultConfig()
-	ApplyFileConfig(&cfg, FileConfig{
+	if err := ApplyFileConfig(&cfg, FileConfig{
 		API: FileAPIConfig{BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1/"},
+		Retry: FileRetryConfig{
+			MaxAttempts: intPtr(5),
+			MaxDelay:    "45s",
+		},
 		Permissions: FilePermissionsConfig{
 			Mode:               "never",
 			AllowShellPrefixes: []string{"git status"},
@@ -137,7 +144,9 @@ func TestApplyFileConfigUsesGroupedConfig(t *testing.T) {
 			MaxBytes:          &projectDocMaxBytes,
 			FallbackFilenames: []string{"AGENTS.md", "TEAM.md"},
 		},
-	})
+	}); err != nil {
+		t.Fatalf("ApplyFileConfig: %v", err)
+	}
 
 	if cfg.ApprovalMode != "never" || cfg.AllowPrefixes != "git status" || cfg.DenyPrefixes != "rm -rf" {
 		t.Fatalf("permissions not applied: %+v", cfg)
@@ -151,11 +160,24 @@ func TestApplyFileConfigUsesGroupedConfig(t *testing.T) {
 	if cfg.APIBaseURL != "https://dashscope.aliyuncs.com/compatible-mode/v1" {
 		t.Fatalf("api base url not applied: %s", cfg.APIBaseURL)
 	}
+	if cfg.RetryMaxAttempts != 5 || cfg.RetryMaxDelay != 45*time.Second {
+		t.Fatalf("retry not applied: %+v", cfg)
+	}
 	if cfg.AutoCompact || cfg.AutoCompactThreshold != compactThreshold {
 		t.Fatalf("context not applied: %+v", cfg)
 	}
 	if cfg.MemoryEnabled || cfg.MemoryMaxChars != projectDocMaxBytes || cfg.MemoryFileOrder != "AGENTS.md,TEAM.md" {
 		t.Fatalf("project doc not applied: %+v", cfg)
+	}
+}
+
+func TestApplyFileConfigRejectsInvalidRetryConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	if err := ApplyFileConfig(&cfg, FileConfig{Retry: FileRetryConfig{MaxAttempts: intPtr(0)}}); err == nil {
+		t.Fatal("expected invalid max_attempts error")
+	}
+	if err := ApplyFileConfig(&cfg, FileConfig{Retry: FileRetryConfig{MaxDelay: "soon"}}); err == nil {
+		t.Fatal("expected invalid max_delay error")
 	}
 }
 

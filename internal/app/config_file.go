@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
@@ -22,6 +23,7 @@ type FileConfig struct {
 
 	Permissions FilePermissionsConfig         `toml:"permissions,omitempty"`
 	API         FileAPIConfig                 `toml:"api,omitempty"`
+	Retry       FileRetryConfig               `toml:"retry,omitempty"`
 	Budget      FileBudgetConfig              `toml:"budget,omitempty"`
 	MCP         FileMCPConfig                 `toml:"mcp,omitempty"`
 	Context     FileContextConfig             `toml:"context,omitempty"`
@@ -38,6 +40,11 @@ type FilePermissionsConfig struct {
 
 type FileAPIConfig struct {
 	BaseURL string `toml:"base_url,omitempty"`
+}
+
+type FileRetryConfig struct {
+	MaxAttempts *int   `toml:"max_attempts,omitempty"`
+	MaxDelay    string `toml:"max_delay,omitempty"`
 }
 
 type FileBudgetConfig struct {
@@ -133,12 +140,17 @@ func SaveConfigFile(path string, cfg FileConfig) error {
 	return nil
 }
 
-func ApplyLoadedConfig(cfg *Config, loaded LoadedConfig) {
-	ApplyFileConfig(cfg, loaded.Global)
-	ApplyFileConfig(cfg, loaded.Project)
+func ApplyLoadedConfig(cfg *Config, loaded LoadedConfig) error {
+	if err := ApplyFileConfig(cfg, loaded.Global); err != nil {
+		return err
+	}
+	if err := ApplyFileConfig(cfg, loaded.Project); err != nil {
+		return err
+	}
+	return nil
 }
 
-func ApplyFileConfig(cfg *Config, file FileConfig) {
+func ApplyFileConfig(cfg *Config, file FileConfig) error {
 	if strings.TrimSpace(file.Model) != "" {
 		cfg.Model = strings.TrimSpace(file.Model)
 	}
@@ -166,6 +178,22 @@ func ApplyFileConfig(cfg *Config, file FileConfig) {
 	if strings.TrimSpace(file.API.BaseURL) != "" {
 		cfg.APIBaseURL = strings.TrimRight(strings.TrimSpace(file.API.BaseURL), "/")
 	}
+	if file.Retry.MaxAttempts != nil {
+		if *file.Retry.MaxAttempts <= 0 {
+			return fmt.Errorf("invalid retry.max_attempts: must be greater than 0")
+		}
+		cfg.RetryMaxAttempts = *file.Retry.MaxAttempts
+	}
+	if strings.TrimSpace(file.Retry.MaxDelay) != "" {
+		d, err := time.ParseDuration(strings.TrimSpace(file.Retry.MaxDelay))
+		if err != nil {
+			return fmt.Errorf("invalid retry.max_delay: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("invalid retry.max_delay: must be greater than 0")
+		}
+		cfg.RetryMaxDelay = d
+	}
 	if file.Context.AutoCompact != nil {
 		cfg.AutoCompact = *file.Context.AutoCompact
 	}
@@ -184,6 +212,7 @@ func ApplyFileConfig(cfg *Config, file FileConfig) {
 	if len(file.Skills.Disabled) > 0 {
 		cfg.SkillsDisabled = trimList(file.Skills.Disabled)
 	}
+	return nil
 }
 
 func LoadAndApplyConfig(cfg Config, workspaceRoot string) (Config, error) {
@@ -194,7 +223,9 @@ func LoadAndApplyConfig(cfg Config, workspaceRoot string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	ApplyLoadedConfig(&base, loaded)
+	if err := ApplyLoadedConfig(&base, loaded); err != nil {
+		return Config{}, err
+	}
 	overlayExplicitConfig(&base, cfg)
 	base.ConfigLoaded = true
 	return base, nil
@@ -239,6 +270,12 @@ func overlayExplicitConfig(dst *Config, src Config) {
 	}
 	if src.ThinkingEnabled != def.ThinkingEnabled {
 		dst.ThinkingEnabled = src.ThinkingEnabled
+	}
+	if src.RetryMaxAttempts != 0 && src.RetryMaxAttempts != def.RetryMaxAttempts {
+		dst.RetryMaxAttempts = src.RetryMaxAttempts
+	}
+	if src.RetryMaxDelay != 0 && src.RetryMaxDelay != def.RetryMaxDelay {
+		dst.RetryMaxDelay = src.RetryMaxDelay
 	}
 	if strings.TrimSpace(src.MCPConfigPath) != "" {
 		dst.MCPConfigPath = src.MCPConfigPath
