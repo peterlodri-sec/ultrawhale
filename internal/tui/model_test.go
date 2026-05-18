@@ -5453,6 +5453,18 @@ func TestComposerHeightGrowthAtTailUpdatesLayoutWithoutRerender(t *testing.T) {
 	}
 }
 
+func TestShiftEnterKeyInsertsNewline(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.input.SetValue("seed")
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("shift+enter")})
+	m = next.(model)
+
+	if got := m.input.Value(); got != "seed\n" {
+		t.Fatalf("expected shift+enter to add newline, got %q", got)
+	}
+}
+
 func TestComposerHeightShrinkOffTailClampsLayoutWithoutRerender(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
