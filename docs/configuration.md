@@ -140,6 +140,15 @@ Whale exposes shell execution through the `shell_run` tool. Commands run from
 the current workspace root by default. Use relative paths, or pass the `cwd`
 parameter to run from a workspace subdirectory.
 
+In the default `on-request` mode, Whale auto-runs common inspection commands
+such as `git status` and `rg`, plus common project verification commands such
+as `go test`, `go vet`, `make test`, `make test-tui`, and `make build`.
+Verification/build auto-allow is separate from strict read-only mode: Ask mode,
+Plan mode, and read-only subagents still block commands that can write caches or
+artifacts. Other shell commands ask for approval unless they match
+`[permissions].allow_shell_prefixes`. Prefix matching is token-boundary aware:
+`git status --short` matches `git status`, but `git statusfoo` does not.
+
 On macOS and Linux, `shell_run` runs commands through `/bin/sh`. On Windows,
 Whale first tries `pwsh`; if it is not available, it falls back to `ComSpec`
 and then `cmd.exe`. Write hooks and allow/deny shell prefixes to match the
