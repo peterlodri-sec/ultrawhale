@@ -23,6 +23,23 @@ func TestHeaderBannerUsesLargeLogoWhenWide(t *testing.T) {
 	}
 }
 
+func TestHeaderBannerKeepsWindowsDirectoryVisible(t *testing.T) {
+	got := buildHeaderBanner("deepseek-chat", "medium", "on", `C:\Users\goranka`, "v0.1.0", 80, 24)
+	if !strings.Contains(got, `directory: C:\Users\goranka`) {
+		t.Fatalf("expected Windows directory in header:\n%s", got)
+	}
+	if strings.Contains(got, "directory: ~") {
+		t.Fatalf("Windows header should not collapse directory to home shorthand:\n%s", got)
+	}
+}
+
+func TestDisplayWorkingDirectoryDoesNotCollapseWindowsHome(t *testing.T) {
+	got := displayWorkingDirectory(`C:\Users\goranka`, `C:\Users\goranka`, "windows")
+	if got != `C:\Users\goranka` {
+		t.Fatalf("expected absolute Windows home directory, got %q", got)
+	}
+}
+
 func TestHeaderBannerFallsBackWhenNarrow(t *testing.T) {
 	got := buildHeaderBanner("deepseek-chat", "medium", "on", "~/work/whale", "v0.1.0", 40, 24)
 	if strings.Contains(got, "██╗") {

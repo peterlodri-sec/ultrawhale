@@ -12,7 +12,6 @@ import (
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/plugins/memoryplugin"
-	"github.com/usewhale/whale/internal/plugins/skillsimprover"
 	"github.com/usewhale/whale/internal/skills"
 )
 
@@ -171,7 +170,7 @@ type PluginStatus struct {
 type Manager struct {
 	ctx      Context
 	enabled  []Plugin
-	disabled []Manifest
+	disabled []Plugin
 	byID     map[string]Plugin
 	commands map[string]registeredCommand
 	diag     []Diagnostic
@@ -201,7 +200,7 @@ func NewManager(ctx Context, disabled []string) *Manager {
 			continue
 		}
 		if disabledSet[manifest.ID] {
-			m.disabled = append(m.disabled, manifest)
+			m.disabled = append(m.disabled, p)
 			continue
 		}
 		m.enabled = append(m.enabled, p)
@@ -210,7 +209,9 @@ func NewManager(ctx Context, disabled []string) *Manager {
 	sort.Slice(m.enabled, func(i, j int) bool {
 		return normalizeManifest(m.enabled[i].Manifest()).ID < normalizeManifest(m.enabled[j].Manifest()).ID
 	})
-	sort.Slice(m.disabled, func(i, j int) bool { return m.disabled[i].ID < m.disabled[j].ID })
+	sort.Slice(m.disabled, func(i, j int) bool {
+		return normalizeManifest(m.disabled[i].Manifest()).ID < normalizeManifest(m.disabled[j].Manifest()).ID
+	})
 	m.collectCommands()
 	return m
 }
@@ -444,9 +445,10 @@ func (m *Manager) Status(id string) (PluginStatus, bool) {
 	if p := m.byID[id]; p != nil {
 		return m.statusFor(p, true), true
 	}
-	for _, manifest := range m.disabled {
+	for _, p := range m.disabled {
+		manifest := normalizeManifest(p.Manifest())
 		if manifest.ID == id {
-			return PluginStatus{Manifest: manifest, Enabled: false, Paths: m.pathsFor(manifest.ID)}, true
+			return m.statusFor(p, false), true
 		}
 	}
 	return PluginStatus{}, false
@@ -460,8 +462,8 @@ func (m *Manager) Statuses() []PluginStatus {
 	for _, p := range m.enabled {
 		out = append(out, m.statusFor(p, true))
 	}
-	for _, manifest := range m.disabled {
-		out = append(out, PluginStatus{Manifest: manifest, Enabled: false, Paths: m.pathsFor(manifest.ID)})
+	for _, p := range m.disabled {
+		out = append(out, m.statusFor(p, false))
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Manifest.ID < out[j].Manifest.ID })
 	return out
@@ -537,8 +539,6 @@ func (m *Manager) pathsFor(pluginID string) map[string]string {
 func builtins() []Plugin {
 	return []Plugin{
 		memoryPlugin{},
-		skillsImproverPlugin{},
-		localIndexerPlugin{},
 	}
 }
 
@@ -585,7 +585,7 @@ func (memoryPlugin) Manifest() Manifest {
 		ID:          memoryplugin.PluginID,
 		Name:        "Memory",
 		Version:     "0.1.0",
-		Description: "Durable global and project memory across Whale sessions.",
+		Description: "Durable global and project memory across sessions.",
 		Official:    true,
 		Capabilities: []Capability{
 			CapabilityTools,
@@ -613,8 +613,8 @@ func (p memoryPlugin) SlashCommands(ctx Context) []SlashCommand {
 	return []SlashCommand{
 		{
 			Name:        "/memory",
-			Usage:       "/memory [list|path|show <scope>/<name>|forget <scope>/<name>]",
-			Description: "List, inspect, or remove Whale memories.",
+			Usage:       "/memory [list|path|show <global|project>/<name>|forget <global|project>/<name>]",
+			Description: "List, inspect, or remove memories.",
 			Class:       CommandReadOnly,
 			Classify:    classifyMemoryCommand,
 			Run: func(_ context.Context, c Context, line string) (CommandResult, error) {
@@ -656,97 +656,6 @@ func (p memoryPlugin) Doctor(_ context.Context, ctx Context) []Diagnostic {
 		return []Diagnostic{{PluginID: memoryplugin.PluginID, Level: DiagnosticFail, Label: "storage", Detail: "memory data root is empty"}}
 	}
 	return []Diagnostic{{PluginID: memoryplugin.PluginID, Level: DiagnosticOK, Label: "storage", Detail: store.Root()}}
-}
-
-type skillsImproverPlugin struct{}
-
-func (skillsImproverPlugin) Manifest() Manifest {
-	return Manifest{
-		ID:          "skills-improver",
-		Name:        "Skills Improver",
-		Version:     "0.1.0",
-		Description: "Scaffold for proposing reviewed improvements to Whale skills.",
-		Official:    true,
-		Capabilities: []Capability{
-			CapabilityTools,
-			CapabilitySlashCommands,
-			CapabilitySkills,
-			CapabilityHooks,
-			CapabilityStorage,
-		},
-		Permissions: []Permission{PermissionReadPluginData, PermissionWritePluginData, PermissionReadWorkspace, PermissionWriteWorkspace},
-		Status:      "active",
-	}
-}
-
-func (skillsImproverPlugin) SlashCommands(ctx Context) []SlashCommand {
-	return []SlashCommand{
-		{
-			Name:        "/skills-improver",
-			Usage:       "/skills-improver [status|evidence [skill]|proposals|propose <skill>|apply <proposal-id>]",
-			Description: "Inspect skill improvement evidence and manage reviewed proposals.",
-			Class:       CommandReadOnly,
-			Classify:    classifySkillsImproverCommand,
-			Run: func(_ context.Context, c Context, line string) (CommandResult, error) {
-				res, err := skillsimprover.SlashCommand(skillsimprover.Context{
-					DataDir:       c.PluginDataDir("skills-improver"),
-					WorkspaceRoot: c.WorkspaceRoot,
-				}, line)
-				var turn *CommandTurn
-				if res.Turn != nil {
-					turn = &CommandTurn{
-						Input:               res.Turn.Input,
-						Hidden:              res.Turn.Hidden,
-						SkipUserPromptHooks: res.Turn.SkipUserPromptHooks,
-						SkipSkillInjection:  res.Turn.SkipSkillInjection,
-					}
-				}
-				return CommandResult{Text: res.Text, Mutated: res.Mutated, Turn: turn}, err
-			},
-		},
-	}
-}
-
-func classifySkillsImproverCommand(line string) CommandClass {
-	fields := strings.Fields(strings.TrimSpace(line))
-	if len(fields) == 1 {
-		return CommandReadOnly
-	}
-	if len(fields) == 2 && (fields[1] == "status" || fields[1] == "evidence" || fields[1] == "proposals") {
-		return CommandReadOnly
-	}
-	if len(fields) == 3 && fields[1] == "evidence" {
-		return CommandReadOnly
-	}
-	if len(fields) == 3 && fields[1] == "propose" {
-		return CommandTurnStarting
-	}
-	if len(fields) == 3 && fields[1] == "apply" {
-		return CommandMutating
-	}
-	return ""
-}
-
-func (skillsImproverPlugin) Skills(ctx Context) []*skills.Skill {
-	return []*skills.Skill{skillsimprover.Skill()}
-}
-
-func (skillsImproverPlugin) Tools(ctx Context) []core.Tool {
-	return skillsimprover.Tools(skillsimprover.Context{
-		DataDir:       ctx.PluginDataDir("skills-improver"),
-		WorkspaceRoot: ctx.WorkspaceRoot,
-	})
-}
-
-func (skillsImproverPlugin) Hooks(ctx Context) []agent.HookHandler {
-	return skillsimprover.Hooks(skillsimprover.Context{
-		DataDir:       ctx.PluginDataDir("skills-improver"),
-		WorkspaceRoot: ctx.WorkspaceRoot,
-	})
-}
-
-func (skillsImproverPlugin) Doctor(_ context.Context, _ Context) []Diagnostic {
-	return []Diagnostic{{PluginID: "skills-improver", Level: DiagnosticOK, Label: "implementation", Detail: "evidence collection and reviewed proposals enabled"}}
 }
 
 type localIndexerPlugin struct{}

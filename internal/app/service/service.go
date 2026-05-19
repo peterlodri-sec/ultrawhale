@@ -6,6 +6,7 @@ import (
 
 	"github.com/usewhale/whale/internal/app"
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/plugins"
 	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/skills"
 )
@@ -33,23 +34,26 @@ const (
 	IntentImplementPlan        IntentKind = "implement_plan"
 	IntentRequestSkillsManage  IntentKind = "request_skills_manage"
 	IntentSetSkillEnabled      IntentKind = "set_skill_enabled"
+	IntentSetPluginEnabled     IntentKind = "set_plugin_enabled"
 )
 
 type Intent struct {
-	Kind         IntentKind
-	Input        string
-	HiddenInput  bool
-	ToolCallID   string
-	UserInput    *core.UserInputResponse
-	SessionInput string
-	Model        string
-	Effort       string
-	Thinking     string
-	ApprovalMode string
-	ViewMode     string
-	SkillName    string
-	SkillEnabled bool
-	SkillBinding *app.SkillBinding
+	Kind          IntentKind
+	Input         string
+	HiddenInput   bool
+	ToolCallID    string
+	UserInput     *core.UserInputResponse
+	SessionInput  string
+	Model         string
+	Effort        string
+	Thinking      string
+	ApprovalMode  string
+	ViewMode      string
+	SkillName     string
+	SkillEnabled  bool
+	PluginID      string
+	PluginEnabled bool
+	SkillBinding  *app.SkillBinding
 }
 
 type EventKind string
@@ -86,6 +90,7 @@ const (
 	EventPermissionsPicker EventKind = "permissions_picker"
 	EventSkillsMenu        EventKind = "skills_menu"
 	EventSkillsManager     EventKind = "skills_manager"
+	EventPluginsManager    EventKind = "plugins_manager"
 	EventViewModeChanged   EventKind = "view_mode_changed"
 	EventSkillLoaded       EventKind = "skill_loaded"
 	EventExitRequested     EventKind = "exit_requested"
@@ -116,6 +121,7 @@ type Event struct {
 	CurrentApproval string
 	ViewMode        string
 	Skills          []skills.SkillView
+	Plugins         []plugins.PluginStatus
 	SessionID       string
 	Messages        []core.Message
 }
@@ -201,6 +207,13 @@ func (s *Service) SkillsForManager() []skills.SkillView {
 		return nil
 	}
 	return s.app.SkillReport().All()
+}
+
+func (s *Service) PluginsForManager() []plugins.PluginStatus {
+	if s == nil || s.app == nil {
+		return nil
+	}
+	return s.app.PluginStatuses()
 }
 
 func (s *Service) Close() error {

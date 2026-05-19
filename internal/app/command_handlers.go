@@ -133,9 +133,8 @@ func (a *App) ExecuteLocalCommand(line string) (CommandExecution, error) {
 		}
 		return CommandExecution{Handled: true, Text: ViewModeToggleMessage(mode)}, nil
 	}
-	if trimmed == "/plugins" || strings.HasPrefix(trimmed, "/plugins ") {
-		out, err := a.handlePluginsCommand(trimmed)
-		return CommandExecution{Handled: true, Text: out}, err
+	if strings.HasPrefix(trimmed, "/plugins ") {
+		return CommandExecution{Handled: true}, errors.New("usage: /plugins")
 	}
 	if trimmed == "/stats" {
 		return CommandExecution{Handled: true, Text: a.buildStats()}, nil
@@ -194,10 +193,6 @@ func pluginCommandID(line string) string {
 	switch fields[0] {
 	case "/memory":
 		return "memory"
-	case "/skills-improver":
-		return "skills-improver"
-	case "/local-indexer":
-		return "local-indexer"
 	default:
 		return ""
 	}

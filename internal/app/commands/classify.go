@@ -62,23 +62,12 @@ func ClassifySubmit(line, help string, localCommands ...string) SubmitClassifica
 
 func classifySlashFields(head string, fields []string, line string) SubmitClass {
 	switch head {
-	case "/status", "/mcp", "/plugins":
+	case "/status", "/mcp":
 		if len(fields) == 1 {
 			return SubmitLocalReadOnly
 		}
-		if head == "/plugins" {
-			if len(fields) == 2 && (fields[1] == "status" || fields[1] == "doctor" || fields[1] == "reload") {
-				if fields[1] == "reload" {
-					return SubmitLocalMutating
-				}
-				return SubmitLocalReadOnly
-			}
-			if len(fields) == 3 && fields[1] == "status" {
-				return SubmitLocalReadOnly
-			}
-		}
 		return SubmitUsageError
-	case "/memory", "/skills-improver", "/local-indexer":
+	case "/memory":
 		if class, ok := plugins.BuiltinSlashCommandClass(line); ok {
 			return submitClassFromPluginCommandClass(class)
 		}
@@ -91,7 +80,7 @@ func classifySlashFields(head string, fields []string, line string) SubmitClass 
 			return SubmitLocalReadOnly
 		}
 		return SubmitUsageError
-	case "/model", "/permissions", "/skills", "/resume":
+	case "/model", "/permissions", "/skills", "/plugins", "/resume":
 		if len(fields) == 1 {
 			return SubmitLocalUI
 		}

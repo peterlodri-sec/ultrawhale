@@ -134,6 +134,7 @@ func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) {
 	m.slash.matches = nil
 	m.slash.selected = 0
 	m.localSubmitPending++
+	m.localSubmitCommands = append(m.localSubmitCommands, cmd)
 	if !m.busy || submit.SubmitBarrier() {
 		m.status = "command pending"
 	}

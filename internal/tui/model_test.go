@@ -13,6 +13,7 @@ import (
 	"github.com/usewhale/whale/internal/app"
 	"github.com/usewhale/whale/internal/app/service"
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/plugins"
 	"github.com/usewhale/whale/internal/skills"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
@@ -2809,27 +2810,6 @@ func TestLocalImmediateSlashCommandsDoNotStartWorkingState(t *testing.T) {
 	}
 }
 
-func TestSkillsImproverProposeStartsTurnInTUI(t *testing.T) {
-	m, intents := newModelWithDispatchSpy()
-	m.input.SetValue("/skills-improver propose demo-skill")
-
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m = next.(model)
-
-	if len(*intents) != 1 {
-		t.Fatalf("expected one dispatched intent, got %+v", *intents)
-	}
-	if (*intents)[0].Kind != service.IntentSubmit || (*intents)[0].Input != "/skills-improver propose demo-skill" {
-		t.Fatalf("expected turn-starting submit, got %+v", (*intents)[0])
-	}
-	if !m.busy || m.busySince.IsZero() {
-		t.Fatalf("expected propose to start working state, busy=%v busySince=%v", m.busy, m.busySince)
-	}
-	if got := m.input.Value(); got != "" {
-		t.Fatalf("expected input cleared, got %q", got)
-	}
-}
-
 func TestSlashSuggestionTabFillsInputWithoutDispatch(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.windowsPaste.enabled = true
@@ -3145,6 +3125,54 @@ func TestSkillsMenuListActionOpensDollarPicker(t *testing.T) {
 	}
 	if len(m.skills.matches) != 1 || m.skills.matches[0].Name != "code-review" {
 		t.Fatalf("expected skill picker matches, got %+v", m.skills.matches)
+	}
+}
+
+func TestPluginsManagerRendersAndToggles(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{
+		Kind: service.EventPluginsManager,
+		Plugins: []plugins.PluginStatus{
+			{
+				Manifest: plugins.Manifest{ID: "memory", Name: "Memory", Description: "Durable memory"},
+				Enabled:  true,
+				Tools:    []string{"forget", "recall_memory", "remember"},
+				Commands: []plugins.SlashCommand{{Name: "/memory"}},
+			},
+		},
+	})
+	if m.mode != modePluginsManager {
+		t.Fatalf("expected plugins manager mode, got %v", m.mode)
+	}
+	rendered := m.renderPluginsManager()
+	for _, want := range []string{"Plugins", "Installed plugins", "[x] memory", "Run /memory", "Agent tools: forget", "Space enable/disable"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected plugins manager render to contain %q, got:\n%s", want, rendered)
+		}
+	}
+	for _, unwanted := range []string{"Type to search plugins", "skills-improver"} {
+		if strings.Contains(rendered, unwanted) {
+			t.Fatalf("plugins manager should not render search UI %q:\n%s", unwanted, rendered)
+		}
+	}
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	m = next.(model)
+	if len(*intents) != 1 {
+		t.Fatalf("expected one toggle intent, got %+v", *intents)
+	}
+	if got := (*intents)[0]; got.Kind != service.IntentSetPluginEnabled || got.PluginID != "memory" || got.PluginEnabled {
+		t.Fatalf("unexpected toggle intent: %+v", got)
+	}
+	idx := m.pluginsManager.matches[m.pluginsManager.selected]
+	if m.pluginsManager.all[idx].Enabled {
+		t.Fatalf("expected selected plugin to be optimistically disabled: %+v", m.pluginsManager.all[idx])
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(model)
+	if m.mode != modeChat {
+		t.Fatalf("expected esc to close plugins manager, got mode %v", m.mode)
 	}
 }
 
@@ -4444,6 +4472,17 @@ func TestChatFooterStaysPinnedAfterSlashSuggestionsClose(t *testing.T) {
 	}
 }
 
+func TestChatFooterShowsWindowsDirectoryTail(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-pro", "high", "on")
+	m.width = 80
+	m.height = 24
+	m.cwd = `C:\Users\goranka`
+
+	view := m.View()
+	assertFooterLastLine(t, view, `goranka`)
+	assertFooterLastLineNotContains(t, view, ` ~`)
+}
+
 func TestChatTranscriptRetainsLocalCommandResultsAcrossSubmits(t *testing.T) {
 	m, _ := newModelWithDispatchSpy()
 	m.width = 80
@@ -4468,10 +4507,51 @@ func TestChatTranscriptRetainsLocalCommandResultsAcrossSubmits(t *testing.T) {
 	m = next.(model)
 
 	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
-	for _, want := range []string{"config: /tmp/mcp.json", "session: test-session"} {
+	for _, want := range []string{"config: /tmp/mcp.json", "/status", "session: test-session"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected transcript to retain %q:\n%s", want, got)
 		}
+	}
+}
+
+func TestLocalSlashCommandsEchoBeforeResults(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 80
+	m.height = 18
+	localInfo := func(text string) service.Event {
+		return service.Event{Kind: service.EventLocalSubmitResult, Status: "info", Text: text}
+	}
+	localDone := func() service.Event {
+		return service.Event{Kind: service.EventLocalSubmitDone, Metadata: map[string]any{service.EventMetadataLocalSubmit: true}}
+	}
+
+	m.input.SetValue("/mcp")
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	next, _ = m.Update(svcMsg(localInfo("MCP\n\nconfig: /tmp/mcp.json servers: none")))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(localDone()))
+	m = next.(model)
+
+	m.input.SetValue("/status")
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	next, _ = m.Update(svcMsg(localInfo("Status\n\nsession: test-session")))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(localDone()))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	for _, want := range []string{"/mcp", "config: /tmp/mcp.json", "/status", "session: test-session"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected transcript to contain %q:\n%s", want, got)
+		}
+	}
+	if strings.Index(got, "/mcp") > strings.Index(got, "config: /tmp/mcp.json") {
+		t.Fatalf("expected /mcp before its result:\n%s", got)
+	}
+	if strings.Index(got, "/status") > strings.Index(got, "session: test-session") {
+		t.Fatalf("expected /status before its result:\n%s", got)
 	}
 }
 

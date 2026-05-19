@@ -275,29 +275,6 @@ func TestStopHookSummarizesOnlyUnsummarizedEvidence(t *testing.T) {
 	}
 }
 
-func TestSlashProposeReturnsHiddenTurn(t *testing.T) {
-	workspace := t.TempDir()
-	writeTestSkill(t, workspace, "demo", "old body")
-	dataDir := filepath.Join(t.TempDir(), "skills-improver")
-	store := NewStore(dataDir, workspace)
-	if _, err := store.AppendEvidence(Evidence{Kind: "user-feedback", Skill: "demo", Prompt: "以后 $demo 要更具体"}); err != nil {
-		t.Fatal(err)
-	}
-	res, err := SlashCommand(Context{DataDir: dataDir, WorkspaceRoot: workspace}, "/skills-improver propose demo")
-	if err != nil {
-		t.Fatalf("propose: %v", err)
-	}
-	if res.Turn == nil || !strings.Contains(res.Text, "creating proposal") || !strings.Contains(res.Turn.Input, "save_skill_proposal") {
-		t.Fatalf("unexpected propose result: %+v", res)
-	}
-	if !res.Turn.Hidden || !res.Turn.SkipUserPromptHooks || !res.Turn.SkipSkillInjection {
-		t.Fatalf("proposal turn should be hidden and isolated from user prompt processing: %+v", res.Turn)
-	}
-	if strings.Contains(res.Turn.Input, "$skills-improver") {
-		t.Fatalf("proposal prompt should not trigger visible skill injection: %q", res.Turn.Input)
-	}
-}
-
 func writeTestSkill(t *testing.T, workspace, name, body string) string {
 	t.Helper()
 	dir := filepath.Join(workspace, ".whale", "skills", name)

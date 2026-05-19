@@ -125,6 +125,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 			role = "info"
 		}
 		if !isEnvironmentInventoryBlock(ev.Text) {
+			m.appendLocalCommandEcho(m.popLocalSubmitCommand())
 			m.appendLocalSubmitResult(role, ev.Text)
 		} else {
 			m.addLog(logEntry{
@@ -241,6 +242,9 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		if m.localSubmitPending > 0 {
 			m.localSubmitPending--
 		}
+		if len(m.localSubmitCommands) > m.localSubmitPending {
+			m.localSubmitCommands = m.localSubmitCommands[len(m.localSubmitCommands)-m.localSubmitPending:]
+		}
 		if !m.busy && m.localSubmitPending > 0 {
 			m.status = "wait for command to finish"
 		}
@@ -312,6 +316,17 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.skills.selected = 0
 		m.setSkillsManagerItems(ev.Skills)
 		m.status = "skills"
+	case service.EventPluginsManager:
+		m.clearProviderRetryStatus()
+		m.stopBusy()
+		m.stopping = false
+		m.mode = modePluginsManager
+		m.slash.matches = nil
+		m.slash.selected = 0
+		m.skills.matches = nil
+		m.skills.selected = 0
+		m.setPluginsManagerItems(ev.Plugins)
+		m.status = "plugins"
 	case service.EventViewModeChanged:
 		m.clearProviderRetryStatus()
 		mode := strings.TrimSpace(ev.ViewMode)
@@ -451,6 +466,31 @@ func (m *model) appendLocalSubmitResult(role, text string) {
 		return
 	}
 	m.appendTranscript(role, tuirender.KindText, text)
+}
+
+func (m *model) popLocalSubmitCommand() string {
+	if len(m.localSubmitCommands) == 0 {
+		return ""
+	}
+	cmd := m.localSubmitCommands[0]
+	copy(m.localSubmitCommands, m.localSubmitCommands[1:])
+	m.localSubmitCommands = m.localSubmitCommands[:len(m.localSubmitCommands)-1]
+	return cmd
+}
+
+func (m *model) appendLocalCommandEcho(cmd string) {
+	cmd = strings.TrimSpace(cmd)
+	if cmd == "" {
+		return
+	}
+	if m.busy {
+		m.append("you", cmd)
+		return
+	}
+	if m.assembler != nil && m.assembler.Len() > 0 {
+		m.commitLiveTranscript(false)
+	}
+	m.appendTranscript("you", tuirender.KindText, cmd)
 }
 
 func isSessionNotice(text string) bool {
