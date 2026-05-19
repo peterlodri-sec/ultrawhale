@@ -2745,6 +2745,27 @@ func TestLocalImmediateSlashCommandsDoNotStartWorkingState(t *testing.T) {
 	}
 }
 
+func TestSkillsImproverProposeStartsTurnInTUI(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.input.SetValue("/skills-improver propose demo-skill")
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+
+	if len(*intents) != 1 {
+		t.Fatalf("expected one dispatched intent, got %+v", *intents)
+	}
+	if (*intents)[0].Kind != service.IntentSubmit || (*intents)[0].Input != "/skills-improver propose demo-skill" {
+		t.Fatalf("expected turn-starting submit, got %+v", (*intents)[0])
+	}
+	if !m.busy || m.busySince.IsZero() {
+		t.Fatalf("expected propose to start working state, busy=%v busySince=%v", m.busy, m.busySince)
+	}
+	if got := m.input.Value(); got != "" {
+		t.Fatalf("expected input cleared, got %q", got)
+	}
+}
+
 func TestSlashSuggestionTabFillsInputWithoutDispatch(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.windowsPaste.enabled = true

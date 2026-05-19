@@ -12,6 +12,7 @@ import (
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/plugins/memoryplugin"
+	"github.com/usewhale/whale/internal/plugins/skillsimprover"
 	"github.com/usewhale/whale/internal/skills"
 )
 
@@ -106,9 +107,10 @@ type DoctorProvider interface {
 type CommandClass string
 
 const (
-	CommandReadOnly CommandClass = "read_only"
-	CommandMutating CommandClass = "mutating"
-	CommandUI       CommandClass = "ui"
+	CommandReadOnly     CommandClass = "read_only"
+	CommandMutating     CommandClass = "mutating"
+	CommandUI           CommandClass = "ui"
+	CommandTurnStarting CommandClass = "turn"
 )
 
 type SlashCommand struct {
@@ -116,12 +118,21 @@ type SlashCommand struct {
 	Usage       string
 	Description string
 	Class       CommandClass
+	Classify    func(line string) CommandClass
 	Run         func(context.Context, Context, string) (CommandResult, error)
 }
 
 type CommandResult struct {
 	Text    string
 	Mutated bool
+	Turn    *CommandTurn
+}
+
+type CommandTurn struct {
+	Input               string
+	Hidden              bool
+	SkipUserPromptHooks bool
+	SkipSkillInjection  bool
 }
 
 type ServiceStatus struct {
@@ -351,6 +362,24 @@ func (m *Manager) CommandClass(name string) (CommandClass, bool) {
 	return cmd.command.Class, true
 }
 
+func (m *Manager) CommandClassForLine(line string) (CommandClass, bool) {
+	if m == nil {
+		return "", false
+	}
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) == 0 {
+		return "", false
+	}
+	reg, ok := m.commands[fields[0]]
+	if !ok {
+		return "", false
+	}
+	if reg.command.Classify != nil {
+		return reg.command.Classify(line), true
+	}
+	return reg.command.Class, true
+}
+
 func (m *Manager) HandleCommand(ctx context.Context, line string) (CommandResult, bool, error) {
 	if m == nil {
 		return CommandResult{}, false, nil
@@ -368,6 +397,29 @@ func (m *Manager) HandleCommand(ctx context.Context, line string) (CommandResult
 	}
 	res, err := reg.command.Run(ctx, m.ctx, line)
 	return res, true, err
+}
+
+func BuiltinSlashCommandClass(line string) (CommandClass, bool) {
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) == 0 {
+		return "", false
+	}
+	for _, p := range builtins() {
+		provider, ok := p.(SlashCommandProvider)
+		if !ok {
+			continue
+		}
+		for _, cmd := range provider.SlashCommands(Context{}) {
+			if cmd.Name != fields[0] {
+				continue
+			}
+			if cmd.Classify != nil {
+				return cmd.Classify(line), true
+			}
+			return cmd.Class, true
+		}
+	}
+	return "", false
 }
 
 func (m *Manager) EnabledIDs() []string {
@@ -564,12 +616,30 @@ func (p memoryPlugin) SlashCommands(ctx Context) []SlashCommand {
 			Usage:       "/memory [list|path|show <scope>/<name>|forget <scope>/<name>]",
 			Description: "List, inspect, or remove Whale memories.",
 			Class:       CommandReadOnly,
+			Classify:    classifyMemoryCommand,
 			Run: func(_ context.Context, c Context, line string) (CommandResult, error) {
 				out, _, err := memoryplugin.HandleCommand(p.store(c), line)
 				return CommandResult{Text: out, Mutated: memoryForgetDeleted(line, out, err)}, err
 			},
 		},
 	}
+}
+
+func classifyMemoryCommand(line string) CommandClass {
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) == 1 {
+		return CommandReadOnly
+	}
+	if len(fields) == 2 && (fields[1] == "list" || fields[1] == "path") {
+		return CommandReadOnly
+	}
+	if len(fields) == 3 && fields[1] == "show" {
+		return CommandReadOnly
+	}
+	if len(fields) == 3 && fields[1] == "forget" {
+		return CommandMutating
+	}
+	return ""
 }
 
 func memoryForgetDeleted(line, out string, err error) bool {
@@ -598,13 +668,14 @@ func (skillsImproverPlugin) Manifest() Manifest {
 		Description: "Scaffold for proposing reviewed improvements to Whale skills.",
 		Official:    true,
 		Capabilities: []Capability{
+			CapabilityTools,
 			CapabilitySlashCommands,
 			CapabilitySkills,
 			CapabilityHooks,
 			CapabilityStorage,
 		},
-		Permissions: []Permission{PermissionReadPluginData, PermissionWritePluginData, PermissionReadWorkspace},
-		Status:      "scaffold",
+		Permissions: []Permission{PermissionReadPluginData, PermissionWritePluginData, PermissionReadWorkspace, PermissionWriteWorkspace},
+		Status:      "active",
 	}
 }
 
@@ -612,48 +683,70 @@ func (skillsImproverPlugin) SlashCommands(ctx Context) []SlashCommand {
 	return []SlashCommand{
 		{
 			Name:        "/skills-improver",
-			Usage:       "/skills-improver [status|proposals]",
-			Description: "Inspect the skills-improver official plugin scaffold.",
+			Usage:       "/skills-improver [status|evidence [skill]|proposals|propose <skill>|apply <proposal-id>]",
+			Description: "Inspect skill improvement evidence and manage reviewed proposals.",
 			Class:       CommandReadOnly,
-			Run: func(_ context.Context, _ Context, line string) (CommandResult, error) {
-				fields := strings.Fields(strings.TrimSpace(line))
-				if len(fields) == 1 || (len(fields) == 2 && fields[1] == "status") {
-					return CommandResult{Text: "skills-improver\n\nstatus: scaffold\nproposals: none\nbehavior: proposes reviewed SKILL.md changes; automatic skill rewrites are not implemented"}, nil
+			Classify:    classifySkillsImproverCommand,
+			Run: func(_ context.Context, c Context, line string) (CommandResult, error) {
+				res, err := skillsimprover.SlashCommand(skillsimprover.Context{
+					DataDir:       c.PluginDataDir("skills-improver"),
+					WorkspaceRoot: c.WorkspaceRoot,
+				}, line)
+				var turn *CommandTurn
+				if res.Turn != nil {
+					turn = &CommandTurn{
+						Input:               res.Turn.Input,
+						Hidden:              res.Turn.Hidden,
+						SkipUserPromptHooks: res.Turn.SkipUserPromptHooks,
+						SkipSkillInjection:  res.Turn.SkipSkillInjection,
+					}
 				}
-				if len(fields) == 2 && fields[1] == "proposals" {
-					return CommandResult{Text: "skills-improver proposals\n\nnone"}, nil
-				}
-				return CommandResult{}, fmt.Errorf("usage: /skills-improver [status|proposals]")
+				return CommandResult{Text: res.Text, Mutated: res.Mutated, Turn: turn}, err
 			},
 		},
 	}
 }
 
-func (skillsImproverPlugin) Skills(ctx Context) []*skills.Skill {
-	return []*skills.Skill{{
-		Name:          "skills-improver",
-		Description:   "Review skill usage and draft human-reviewed SKILL.md improvement proposals.",
-		When:          "Use when asked to improve, evolve, review, or propose changes to Whale skills.",
-		Instructions:  "Inspect current skill files and usage evidence, identify one concrete improvement, and draft a proposal. Do not modify SKILL.md automatically unless the user explicitly asks for implementation after reviewing the proposal.",
-		Path:          "plugin://skills-improver",
-		SkillFilePath: "plugin://skills-improver/SKILL.md",
-	}}
+func classifySkillsImproverCommand(line string) CommandClass {
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) == 1 {
+		return CommandReadOnly
+	}
+	if len(fields) == 2 && (fields[1] == "status" || fields[1] == "evidence" || fields[1] == "proposals") {
+		return CommandReadOnly
+	}
+	if len(fields) == 3 && fields[1] == "evidence" {
+		return CommandReadOnly
+	}
+	if len(fields) == 3 && fields[1] == "propose" {
+		return CommandTurnStarting
+	}
+	if len(fields) == 3 && fields[1] == "apply" {
+		return CommandMutating
+	}
+	return ""
 }
 
-func (skillsImproverPlugin) Hooks(Context) []agent.HookHandler {
-	return []agent.HookHandler{{
-		Event:       agent.HookEventStop,
-		Name:        "skills-improver.collect-evidence",
-		Source:      "plugin:skills-improver",
-		Description: "Observe completed turns for future skill improvement proposals.",
-		Run: func(context.Context, agent.HookPayload) agent.HookResult {
-			return agent.HookResult{Decision: agent.HookDecisionPass}
-		},
-	}}
+func (skillsImproverPlugin) Skills(ctx Context) []*skills.Skill {
+	return []*skills.Skill{skillsimprover.Skill()}
+}
+
+func (skillsImproverPlugin) Tools(ctx Context) []core.Tool {
+	return skillsimprover.Tools(skillsimprover.Context{
+		DataDir:       ctx.PluginDataDir("skills-improver"),
+		WorkspaceRoot: ctx.WorkspaceRoot,
+	})
+}
+
+func (skillsImproverPlugin) Hooks(ctx Context) []agent.HookHandler {
+	return skillsimprover.Hooks(skillsimprover.Context{
+		DataDir:       ctx.PluginDataDir("skills-improver"),
+		WorkspaceRoot: ctx.WorkspaceRoot,
+	})
 }
 
 func (skillsImproverPlugin) Doctor(_ context.Context, _ Context) []Diagnostic {
-	return []Diagnostic{{PluginID: "skills-improver", Level: DiagnosticWarn, Label: "implementation", Detail: "scaffold only; proposal generation is not implemented"}}
+	return []Diagnostic{{PluginID: "skills-improver", Level: DiagnosticOK, Label: "implementation", Detail: "evidence collection and reviewed proposals enabled"}}
 }
 
 type localIndexerPlugin struct{}
@@ -684,6 +777,7 @@ func (localIndexerPlugin) SlashCommands(ctx Context) []SlashCommand {
 			Usage:       "/local-indexer [status|rebuild]",
 			Description: "Inspect the local-indexer official plugin scaffold.",
 			Class:       CommandReadOnly,
+			Classify:    classifyLocalIndexerCommand,
 			Run: func(_ context.Context, _ Context, line string) (CommandResult, error) {
 				fields := strings.Fields(strings.TrimSpace(line))
 				if len(fields) == 1 || (len(fields) == 2 && fields[1] == "status") {
@@ -696,6 +790,17 @@ func (localIndexerPlugin) SlashCommands(ctx Context) []SlashCommand {
 			},
 		},
 	}
+}
+
+func classifyLocalIndexerCommand(line string) CommandClass {
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) == 1 {
+		return CommandReadOnly
+	}
+	if len(fields) == 2 && (fields[1] == "status" || fields[1] == "rebuild") {
+		return CommandReadOnly
+	}
+	return ""
 }
 
 func (localIndexerPlugin) Services(Context) []ServiceStatus {

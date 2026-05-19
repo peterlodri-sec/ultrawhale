@@ -209,38 +209,41 @@ func (s *Service) handleLocalSubmit(line string) {
 		s.emit(localSubmitResultEvent("error", "usage: /model"))
 		return
 	}
-	handled, out, synthetic, shouldExit, clearScreen, err := s.app.HandleSlash(line)
+	cmd, err := s.app.ExecuteSlash(line)
 	if err != nil {
 		s.emit(localSubmitResultEvent("error", err.Error()))
 		return
 	}
-	if handled {
-		if synthetic != "" {
+	if cmd.Handled {
+		if cmd.Turn != nil {
 			s.emit(localSubmitResultEvent("error", "command starts an agent turn and cannot run as a local submit"))
 			return
 		}
-		if clearScreen {
+		if cmd.ClearScreen {
 			s.emit(Event{Kind: EventClearScreen})
 		}
-		if shouldExit {
+		if cmd.ShouldExit {
 			s.emit(Event{Kind: EventExitRequested})
 		}
 		if s.app.SessionID() != prevSessionID {
 			s.emitSessionHydrated()
 		}
-		if out != "" {
-			s.emit(localSubmitResultEvent("info", out))
+		if cmd.Text != "" {
+			s.emit(localSubmitResultEvent("info", cmd.Text))
 		}
 		return
 	}
-	handled, out, err = s.app.HandleLocalCommand(line)
+	cmd, err = s.app.ExecuteLocalCommand(line)
 	if err != nil {
 		s.emit(localSubmitResultEvent("error", err.Error()))
 		return
 	}
-	if handled {
-		if out != "" {
-			s.emit(localSubmitResultEvent("info", out))
+	if cmd.Handled {
+		if cmd.Text != "" {
+			s.emit(localSubmitResultEvent("info", cmd.Text))
+		}
+		if cmd.Turn != nil {
+			s.emit(localSubmitResultEvent("error", "command starts an agent turn and cannot run as a local submit"))
 		}
 		return
 	}
@@ -255,6 +258,8 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 	if line == "" {
 		return
 	}
+	skipHooks := false
+	skipSkillInjection := false
 	line = appcommands.ExpandUniqueSlashPrefix(line, app.CommandsHelp, "/mcp")
 	prevSessionID := s.app.SessionID()
 	if line == "/model" {
@@ -313,17 +318,17 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		s.emit(Event{Kind: EventTurnDone})
 		return
 	}
-	handled, out, synthetic, shouldExit, clearScreen, err := s.app.HandleSlash(line)
+	cmd, err := s.app.ExecuteSlash(line)
 	if err != nil {
 		s.emit(Event{Kind: EventError, Text: err.Error()})
 		s.emit(Event{Kind: EventTurnDone})
 		return
 	}
-	if handled {
-		if clearScreen {
+	if cmd.Handled {
+		if cmd.ClearScreen {
 			s.emit(Event{Kind: EventClearScreen})
 		}
-		if shouldExit {
+		if cmd.ShouldExit {
 			s.emit(Event{Kind: EventExitRequested})
 		}
 		if s.app.SessionID() != prevSessionID {
@@ -331,44 +336,58 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		}
 		// Emit Info after session hydration so the text isn't
 		// wiped by the hydration's assembler reset.
-		if out != "" {
-			s.emit(Event{Kind: EventInfo, Text: out})
+		if cmd.Text != "" {
+			s.emit(Event{Kind: EventInfo, Text: cmd.Text})
 		}
-		if synthetic == "" {
-			s.emit(Event{Kind: EventTurnDone, LastResponse: out})
+		if cmd.Turn == nil {
+			s.emit(Event{Kind: EventTurnDone, LastResponse: cmd.Text})
 			return
 		}
-		line = synthetic
-		hiddenInput = true
+		line = cmd.Turn.Input
+		hiddenInput = cmd.Turn.Hidden
+		skipHooks = cmd.Turn.SkipUserPromptHooks
+		skipSkillInjection = cmd.Turn.SkipSkillInjection
 	}
-	handled, out, err = s.app.HandleLocalCommand(line)
+	cmd, err = s.app.ExecuteLocalCommand(line)
 	if err != nil {
 		s.emit(Event{Kind: EventError, Text: err.Error()})
 		s.emit(Event{Kind: EventTurnDone})
 		return
 	}
-	if handled {
-		if out != "" {
-			s.emit(Event{Kind: EventInfo, Text: out})
+	if cmd.Handled {
+		if cmd.Text != "" {
+			s.emit(Event{Kind: EventInfo, Text: cmd.Text})
 		}
-		s.emit(Event{Kind: EventTurnDone, LastResponse: out})
-		return
+		if cmd.Turn == nil {
+			s.emit(Event{Kind: EventTurnDone, LastResponse: cmd.Text})
+			return
+		}
+		line = cmd.Turn.Input
+		hiddenInput = cmd.Turn.Hidden
+		skipHooks = cmd.Turn.SkipUserPromptHooks
+		skipSkillInjection = cmd.Turn.SkipSkillInjection
 	}
-	if appcommands.LooksLikeSlashCommand(line) {
+	if !cmd.Handled && appcommands.LooksLikeSlashCommand(line) {
 		s.emit(Event{Kind: EventError, Text: fmt.Sprintf("• Unrecognized command %q. Type \"/\" for a list of supported commands.", line)})
 		s.emit(Event{Kind: EventTurnDone})
 		return
 	}
-	blocked, out, updated := s.app.RunUserPromptSubmitHook(line)
-	line = updated
-	if out != "" {
-		s.emit(Event{Kind: EventInfo, Text: out})
-	}
-	if blocked {
-		if out == "" {
-			out = "blocked by UserPromptSubmit hook"
+	if !skipHooks {
+		blocked, out, updated := s.app.RunUserPromptSubmitHook(line)
+		line = updated
+		if out != "" {
+			s.emit(Event{Kind: EventInfo, Text: out})
 		}
-		s.emit(Event{Kind: EventTurnDone, LastResponse: out})
+		if blocked {
+			if out == "" {
+				out = "blocked by UserPromptSubmit hook"
+			}
+			s.emit(Event{Kind: EventTurnDone, LastResponse: out})
+			return
+		}
+	}
+	if hiddenInput || skipSkillInjection {
+		go s.runTurn(line, hiddenInput)
 		return
 	}
 	skillMention, skillOut, skillSynthetic, err := s.app.BuildSkillMentionSyntheticPromptWithBinding(line, skillBinding)

@@ -1,6 +1,10 @@
 package commands
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/usewhale/whale/internal/plugins"
+)
 
 type SubmitClass int
 
@@ -58,20 +62,9 @@ func ClassifySubmit(line, help string, localCommands ...string) SubmitClassifica
 
 func classifySlashFields(head string, fields []string, line string) SubmitClass {
 	switch head {
-	case "/status", "/mcp", "/memory", "/plugins", "/skills-improver", "/local-indexer":
+	case "/status", "/mcp", "/plugins":
 		if len(fields) == 1 {
 			return SubmitLocalReadOnly
-		}
-		if head == "/memory" {
-			if len(fields) == 2 && (fields[1] == "list" || fields[1] == "path") {
-				return SubmitLocalReadOnly
-			}
-			if len(fields) == 3 && fields[1] == "show" {
-				return SubmitLocalReadOnly
-			}
-			if len(fields) == 3 && fields[1] == "forget" {
-				return SubmitLocalMutating
-			}
 		}
 		if head == "/plugins" {
 			if len(fields) == 2 && (fields[1] == "status" || fields[1] == "doctor" || fields[1] == "reload") {
@@ -84,11 +77,10 @@ func classifySlashFields(head string, fields []string, line string) SubmitClass 
 				return SubmitLocalReadOnly
 			}
 		}
-		if head == "/skills-improver" && len(fields) == 2 && (fields[1] == "status" || fields[1] == "proposals") {
-			return SubmitLocalReadOnly
-		}
-		if head == "/local-indexer" && len(fields) == 2 && (fields[1] == "status" || fields[1] == "rebuild") {
-			return SubmitLocalReadOnly
+		return SubmitUsageError
+	case "/memory", "/skills-improver", "/local-indexer":
+		if class, ok := plugins.BuiltinSlashCommandClass(line); ok {
+			return submitClassFromPluginCommandClass(class)
 		}
 		return SubmitUsageError
 	case "/stats":
@@ -148,6 +140,21 @@ func classifySlashFields(head string, fields []string, line string) SubmitClass 
 			return SubmitTurnStarting
 		}
 		return SubmitUsageError
+	default:
+		return SubmitUsageError
+	}
+}
+
+func submitClassFromPluginCommandClass(class plugins.CommandClass) SubmitClass {
+	switch class {
+	case plugins.CommandReadOnly:
+		return SubmitLocalReadOnly
+	case plugins.CommandMutating:
+		return SubmitLocalMutating
+	case plugins.CommandUI:
+		return SubmitLocalUI
+	case plugins.CommandTurnStarting:
+		return SubmitTurnStarting
 	default:
 		return SubmitUsageError
 	}

@@ -16,9 +16,10 @@ The current plugin platform supports:
 - three official built-in plugins:
   - `memory`: functional explicit memory with tools, `/memory`, startup context,
     and plugin storage;
-  - `skills-improver`: scaffold plugin that contributes a Skill and command
-    surface, plus a no-op `Stop` hook for future evidence collection, but does
-    not rewrite skills yet;
+  - `skills-improver`: phase-one skill improvement plugin with evidence
+    collection, reviewed proposal storage, `/skills-improver`, and the
+    `save_skill_proposal` tool. It only writes `SKILL.md` when the user applies
+    a saved proposal;
   - `local-indexer`: scaffold plugin that declares local indexing/model
     capabilities and a no-op `Stop` hook, but does not run inference yet.
 
@@ -43,6 +44,10 @@ Official plugin commands are regular slash commands:
 ```text
 /memory
 /skills-improver status
+/skills-improver evidence [skill]
+/skills-improver proposals
+/skills-improver propose <skill>
+/skills-improver apply <proposal-id>
 /local-indexer status
 ```
 
@@ -466,27 +471,32 @@ memory plugin setting after users trust the basic flow.
 
 ## Skills Improver Plugin
 
-This is the second official plugin. It currently ships as a scaffold so the host
-can expose skill contribution and plugin command/status behavior before Whale
-implements proposal generation.
+This is the second official plugin. Phase one implements evidence collection and
+human-reviewed proposals. It does not run an autonomous evolution loop.
 
 Purpose:
 
-- inspect existing skills;
-- look at durable user feedback and selected session evidence;
-- propose skill improvements;
-- require user approval before writing.
+- inspect filesystem skills;
+- collect explicit user feedback and failed tool results through plugin hooks;
+- generate proposal drafts through a hidden agent turn;
+- save proposal artifacts in plugin storage;
+- require explicit `/skills-improver apply <id>` before writing `SKILL.md`.
 
-It should not automatically rewrite `SKILL.md`.
+It should not automatically rewrite `SKILL.md`, and phase one does not apply
+proposals to `plugin://` skills.
 
-Target command shape:
+Command shape:
 
-- `/skills improve`: show proposals.
-- `/skills improve <name>`: focus on one skill.
-- `/skills apply-proposal <id>`: apply a confirmed patch.
+- `/skills-improver status`: show evidence, proposal counts, and data path.
+- `/skills-improver evidence [skill]`: show recent evidence.
+- `/skills-improver proposals`: show saved proposals.
+- `/skills-improver propose <skill>`: ask the agent to draft and save one proposal
+  using `save_skill_proposal`.
+- `/skills-improver apply <proposal-id>`: validate and apply a saved proposal.
 
-The plugin depends on memory because stable feedback should first become memory
-before it changes reusable instructions.
+Proposals store the original `SKILL.md` SHA-256. Applying a proposal fails if
+the target skill changed, the path is not a discovered filesystem skill, or the
+proposed `SKILL.md` does not parse.
 
 ## Local Indexer Plugin
 

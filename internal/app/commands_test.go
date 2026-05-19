@@ -103,6 +103,12 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/memory path", want: appcommands.SubmitLocalReadOnly},
 		{line: "/memory show global/style", want: appcommands.SubmitLocalReadOnly},
 		{line: "/memory forget global/style", want: appcommands.SubmitLocalMutating},
+		{line: "/skills-improver status", want: appcommands.SubmitLocalReadOnly},
+		{line: "/skills-improver evidence", want: appcommands.SubmitLocalReadOnly},
+		{line: "/skills-improver evidence demo-skill", want: appcommands.SubmitLocalReadOnly},
+		{line: "/skills-improver proposals", want: appcommands.SubmitLocalReadOnly},
+		{line: "/skills-improver propose demo-skill", want: appcommands.SubmitTurnStarting},
+		{line: "/skills-improver apply sp-123", want: appcommands.SubmitLocalMutating},
 		{line: "/resume", want: appcommands.SubmitLocalUI},
 		{line: "/agent", want: appcommands.SubmitLocalMode},
 		{line: "/ask", want: appcommands.SubmitLocalMode},
@@ -120,6 +126,8 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/skills xxx", want: appcommands.SubmitUsageError},
 		{line: "/memory bad", want: appcommands.SubmitUsageError},
 		{line: "/memory show", want: appcommands.SubmitUsageError},
+		{line: "/skills-improver propose", want: appcommands.SubmitUsageError},
+		{line: "/skills-improver apply", want: appcommands.SubmitUsageError},
 		{line: "/resume xxx", want: appcommands.SubmitUsageError},
 		{line: "/new a b", want: appcommands.SubmitUsageError},
 		{line: "/stats bad", want: appcommands.SubmitUsageError},
@@ -319,7 +327,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		sessionsDir: sessionsDir,
 	}
 
-	handled, out, err := a.HandleLocalCommand("/stats")
+	handled, out, _, err := a.HandleLocalCommand("/stats")
 	if err != nil {
 		t.Fatalf("stats command: %v", err)
 	}
@@ -358,7 +366,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		t.Fatalf("stats should not expose raw input fields:\n%s", out)
 	}
 
-	handled, out, err = a.HandleLocalCommand("/stats usage")
+	handled, out, _, err = a.HandleLocalCommand("/stats usage")
 	if err != nil || !handled {
 		t.Fatalf("stats usage command handled=%v err=%v", handled, err)
 	}
@@ -374,7 +382,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		t.Fatalf("expected usage stats to omit tool input section:\n%s", out)
 	}
 
-	handled, out, err = a.HandleLocalCommand("/stats tools")
+	handled, out, _, err = a.HandleLocalCommand("/stats tools")
 	if err != nil || !handled {
 		t.Fatalf("stats tools command handled=%v err=%v", handled, err)
 	}
@@ -393,7 +401,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		t.Fatalf("expected tool stats to omit recent events:\n%s", out)
 	}
 
-	handled, out, err = a.HandleLocalCommand("/stats recent")
+	handled, out, _, err = a.HandleLocalCommand("/stats recent")
 	if err != nil || !handled {
 		t.Fatalf("stats recent command handled=%v err=%v", handled, err)
 	}
@@ -408,7 +416,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		}
 	}
 
-	handled, out, err = a.HandleLocalCommand("/stats all")
+	handled, out, _, err = a.HandleLocalCommand("/stats all")
 	if err != nil || !handled {
 		t.Fatalf("stats all command handled=%v err=%v", handled, err)
 	}
@@ -423,7 +431,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		}
 	}
 
-	handled, _, err = a.HandleLocalCommand("/stats extra")
+	handled, _, _, err = a.HandleLocalCommand("/stats extra")
 	if !handled || err == nil || !strings.Contains(err.Error(), "usage: /stats [usage|tools|repair|recent|all]") {
 		t.Fatalf("expected /stats usage error, handled=%v err=%v", handled, err)
 	}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/usewhale/whale/internal/plugins/memoryplugin"
+	"github.com/usewhale/whale/internal/plugins/skillsimprover"
 )
 
 func TestMemoryPluginToolsRegisteredByDefault(t *testing.T) {
@@ -44,7 +45,7 @@ func TestMemoryPluginCanBeDisabledByConfig(t *testing.T) {
 	if app.toolRegistry.Get("remember") != nil {
 		t.Fatal("remember should not be registered when memory plugin is disabled")
 	}
-	handled, out, err := app.HandleLocalCommand("/memory")
+	handled, out, _, err := app.HandleLocalCommand("/memory")
 	if err != nil || !handled {
 		t.Fatalf("/memory disabled handled=%v err=%v", handled, err)
 	}
@@ -78,7 +79,7 @@ func TestMemoryLocalCommandMatchesOnlyMemoryToken(t *testing.T) {
 	}
 	defer app.Close()
 
-	handled, out, err := app.HandleLocalCommand("/memorybank")
+	handled, out, _, err := app.HandleLocalCommand("/memorybank")
 	if err != nil {
 		t.Fatalf("/memorybank err: %v", err)
 	}
@@ -115,7 +116,7 @@ func TestPluginsCommandListsOfficialPlugins(t *testing.T) {
 	}
 	defer app.Close()
 
-	handled, out, err := app.HandleLocalCommand("/plugins")
+	handled, out, _, err := app.HandleLocalCommand("/plugins")
 	if err != nil || !handled {
 		t.Fatalf("/plugins handled=%v err=%v", handled, err)
 	}
@@ -154,14 +155,14 @@ func TestPluginsReloadRefreshesDisabledConfigFromDisk(t *testing.T) {
 		t.Fatalf("SaveConfigFile: %v", err)
 	}
 
-	handled, out, err := app.HandleLocalCommand("/plugins reload")
+	handled, out, _, err := app.HandleLocalCommand("/plugins reload")
 	if err != nil || !handled {
 		t.Fatalf("/plugins reload handled=%v err=%v out=%q", handled, err, out)
 	}
 	if app.toolRegistry.Get("remember") != nil {
 		t.Fatal("memory tool should be removed after reloading disabled plugin config")
 	}
-	handled, out, err = app.HandleLocalCommand("/memory")
+	handled, out, _, err = app.HandleLocalCommand("/memory")
 	if err != nil || !handled {
 		t.Fatalf("/memory handled=%v err=%v", handled, err)
 	}
@@ -180,14 +181,14 @@ func TestOfficialPluginScaffoldCommands(t *testing.T) {
 	}
 	defer app.Close()
 
-	handled, out, err := app.HandleLocalCommand("/skills-improver proposals")
+	handled, out, _, err := app.HandleLocalCommand("/skills-improver proposals")
 	if err != nil || !handled {
 		t.Fatalf("/skills-improver proposals handled=%v err=%v", handled, err)
 	}
 	if !strings.Contains(out, "none") {
 		t.Fatalf("expected empty proposals output, got:\n%s", out)
 	}
-	handled, out, err = app.HandleLocalCommand("/local-indexer rebuild")
+	handled, out, _, err = app.HandleLocalCommand("/local-indexer rebuild")
 	if err != nil || !handled {
 		t.Fatalf("/local-indexer rebuild handled=%v err=%v", handled, err)
 	}
@@ -206,15 +207,55 @@ func TestPluginStatusShowsHookContributions(t *testing.T) {
 	}
 	defer app.Close()
 
-	handled, out, err := app.HandleLocalCommand("/plugins status skills-improver")
+	handled, out, _, err := app.HandleLocalCommand("/plugins status skills-improver")
 	if err != nil || !handled {
 		t.Fatalf("/plugins status skills-improver handled=%v err=%v", handled, err)
 	}
-	if !strings.Contains(out, "hooks: skills-improver.collect-evidence") {
+	if !strings.Contains(out, "hooks: skills-improver.capture-feedback") {
 		t.Fatalf("expected hook contribution in plugin status, got:\n%s", out)
 	}
 	if strings.Contains(out, filepath.Join(cfg.DataDir, "plugins", "skills-improver")) && !strings.Contains(out, "`"+filepath.Join(cfg.DataDir, "plugins", "skills-improver")+"`") {
 		t.Fatalf("expected plugin paths to be markdown inline code, got:\n%s", out)
+	}
+}
+
+func TestSkillsImproverProposeReturnsHiddenTurn(t *testing.T) {
+	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
+	workspace := t.TempDir()
+	writeAppSkill(t, filepath.Join(workspace, ".whale", "skills", "test-skill"), "test-skill", "Workspace skill.", "# Test Skill\n\nFollow workspace instructions.")
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(workspace); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldwd) }()
+
+	cfg := DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer app.Close()
+	store := skillsimprover.NewStore(filepath.Join(cfg.DataDir, "plugins", "skills-improver", "data"), app.workspaceRoot)
+	if _, err := store.AppendEvidence(skillsimprover.Evidence{Kind: "user-feedback", Skill: "test-skill", Prompt: "以后 $test-skill 要更具体"}); err != nil {
+		t.Fatalf("append evidence: %v", err)
+	}
+
+	res, err := app.ExecuteLocalCommand("/skills-improver propose test-skill")
+	if err != nil || !res.Handled {
+		t.Fatalf("propose handled=%v err=%v", res.Handled, err)
+	}
+	if res.Turn == nil || !strings.Contains(res.Text, "creating proposal") || !strings.Contains(res.Turn.Input, "save_skill_proposal") {
+		t.Fatalf("unexpected propose result=%+v", res)
+	}
+	if !res.Turn.Hidden || !res.Turn.SkipUserPromptHooks || !res.Turn.SkipSkillInjection {
+		t.Fatalf("proposal turn should be hidden and isolated from user prompt processing: %+v", res.Turn)
+	}
+	if strings.Contains(res.Turn.Input, "$skills-improver") {
+		t.Fatalf("proposal prompt should remain hidden and not trigger skill injection: %q", res.Turn.Input)
 	}
 }
 
@@ -293,7 +334,7 @@ func TestMemoryLocalCommandListsAndShowsMemory(t *testing.T) {
 		t.Fatalf("Write: %v", err)
 	}
 
-	handled, out, err := app.HandleLocalCommand("/memory")
+	handled, out, _, err := app.HandleLocalCommand("/memory")
 	if err != nil || !handled {
 		t.Fatalf("/memory handled=%v err=%v", handled, err)
 	}
@@ -301,7 +342,7 @@ func TestMemoryLocalCommandListsAndShowsMemory(t *testing.T) {
 		t.Fatalf("/memory output missing index:\n%s", out)
 	}
 
-	handled, out, err = app.HandleLocalCommand("/memory show global/style")
+	handled, out, _, err = app.HandleLocalCommand("/memory show global/style")
 	if err != nil || !handled {
 		t.Fatalf("/memory show handled=%v err=%v", handled, err)
 	}
@@ -340,7 +381,7 @@ func TestMemoryForgetInvalidatesActiveAgent(t *testing.T) {
 		t.Fatal("expected active agent")
 	}
 
-	handled, out, err := app.HandleLocalCommand("/memory forget project/roadmap")
+	handled, out, _, err := app.HandleLocalCommand("/memory forget project/roadmap")
 	if err != nil || !handled {
 		t.Fatalf("/memory forget handled=%v err=%v", handled, err)
 	}
