@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -12,19 +11,6 @@ import (
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/skills"
 )
-
-type CommandResult struct {
-	Text    string
-	Mutated bool
-	Turn    *CommandTurn
-}
-
-type CommandTurn struct {
-	Input               string
-	Hidden              bool
-	SkipUserPromptHooks bool
-	SkipSkillInjection  bool
-}
 
 type Context struct {
 	DataDir       string
@@ -35,64 +21,12 @@ func StoreFor(ctx Context) *Store {
 	return NewStore(ctx.DataDir, ctx.WorkspaceRoot)
 }
 
-func SlashCommand(ctx Context, line string) (CommandResult, error) {
-	store := StoreFor(ctx)
-	fields := strings.Fields(strings.TrimSpace(line))
-	if len(fields) == 1 || (len(fields) == 2 && fields[1] == "status") {
-		out, err := renderStatus(store)
-		return CommandResult{Text: out}, err
-	}
-	if len(fields) >= 2 {
-		switch fields[1] {
-		case "evidence":
-			skill := ""
-			if len(fields) == 3 {
-				skill = fields[2]
-			} else if len(fields) > 3 {
-				return CommandResult{}, usageError()
-			}
-			out, err := renderEvidence(store, skill)
-			return CommandResult{Text: out}, err
-		case "proposals":
-			if len(fields) != 2 {
-				return CommandResult{}, usageError()
-			}
-			out, err := renderProposals(store)
-			return CommandResult{Text: out}, err
-		case "propose":
-			if len(fields) != 3 {
-				return CommandResult{}, usageError()
-			}
-			out, prompt, err := buildProposalPrompt(store, ctx.WorkspaceRoot, fields[2])
-			return CommandResult{Text: out, Turn: &CommandTurn{
-				Input:               prompt,
-				Hidden:              true,
-				SkipUserPromptHooks: true,
-				SkipSkillInjection:  true,
-			}}, err
-		case "apply":
-			if len(fields) != 3 {
-				return CommandResult{}, usageError()
-			}
-			p, err := store.ApplyProposal(fields[2])
-			if err != nil {
-				return CommandResult{}, err
-			}
-			return CommandResult{
-				Text:    fmt.Sprintf("skills-improver\n\napplied proposal: %s\nskill: %s\nfile: `%s`", p.ID, p.Skill, p.SkillFilePath),
-				Mutated: true,
-			}, nil
-		}
-	}
-	return CommandResult{}, usageError()
-}
-
 func Skill() *skills.Skill {
 	return &skills.Skill{
 		Name:          PluginID,
 		Description:   "Review skill usage evidence and draft human-reviewed SKILL.md improvement proposals.",
 		When:          "Use when asked to improve, evolve, review, or propose changes to Whale skills.",
-		Instructions:  "Inspect current skill files and skills-improver evidence. Draft one concrete proposal at a time. Save proposals with save_skill_proposal. Do not modify SKILL.md directly unless the user explicitly applies a reviewed proposal.",
+		Instructions:  "Inspect current skill files and skills-improver evidence. Draft one concrete proposal at a time. Save proposals with save_skill_proposal. Do not modify SKILL.md directly unless the user explicitly asks you to apply a reviewed change.",
 		Path:          "plugin://skills-improver",
 		SkillFilePath: "plugin://skills-improver/SKILL.md",
 	}
@@ -262,121 +196,6 @@ func toolFailureEvidence(payload agent.HookPayload) (Evidence, bool) {
 	}, true
 }
 
-func buildProposalPrompt(store *Store, workspaceRoot, name string) (string, string, error) {
-	name = strings.TrimSpace(name)
-	if !skills.ValidName(name) {
-		return "", "", fmt.Errorf("skill name must be alphanumeric with hyphens")
-	}
-	skill, _, ok := skills.Find(skills.DefaultRoots(workspaceRoot), name)
-	if !ok {
-		return "", "", fmt.Errorf("filesystem skill not found: %s", name)
-	}
-	if strings.HasPrefix(skill.SkillFilePath, "plugin://") {
-		return "", "", fmt.Errorf("plugin skills cannot be proposed for apply in phase 1")
-	}
-	b, err := os.ReadFile(skill.SkillFilePath)
-	if err != nil {
-		return "", "", err
-	}
-	evidence, err := store.ListEvidence(name, 12)
-	if err != nil {
-		return "", "", err
-	}
-	evidenceJSON, _ := json.MarshalIndent(evidence, "", "  ")
-	sha := sha256Hex(b)
-	prompt := fmt.Sprintf(`Use the skills-improver workflow to draft one reviewed improvement proposal.
-
-Target skill:
-- name: %s
-- SKILL.md path: %s
-- current sha256: %s
-
-Relevant evidence:
-%s
-
-Instructions:
-1. Read the target SKILL.md if needed.
-2. Propose the smallest useful improvement grounded in the evidence.
-3. Keep the skill concise and preserve its frontmatter name.
-4. Call save_skill_proposal with the complete proposed SKILL.md content, skill="%s", skill_file_path="%s", original_sha256="%s", and the evidence ids used.
-5. Do not edit files directly.`, skill.Name, skill.SkillFilePath, sha, string(evidenceJSON), skill.Name, skill.SkillFilePath, sha)
-	out := fmt.Sprintf("skills-improver\n\ncreating proposal for `%s` from %d evidence item(s)", skill.Name, len(evidence))
-	return out, prompt, nil
-}
-
-func renderStatus(store *Store) (string, error) {
-	st, err := store.Status()
-	if err != nil {
-		return "", err
-	}
-	lines := []string{
-		"skills-improver",
-		"",
-		"status: active",
-		fmt.Sprintf("evidence: %d", st.EvidenceCount),
-		fmt.Sprintf("proposals: %d", st.ProposalCount),
-		"data: `" + st.DataDir + "`",
-	}
-	if len(st.Recent) > 0 {
-		lines = append(lines, "", "recent evidence:")
-		appendEvidenceLines(&lines, st.Recent)
-	}
-	return strings.Join(lines, "\n"), nil
-}
-
-func renderEvidence(store *Store, skill string) (string, error) {
-	evs, err := store.ListEvidence(skill, 20)
-	if err != nil {
-		return "", err
-	}
-	title := "skills-improver evidence"
-	if strings.TrimSpace(skill) != "" {
-		title += " for `" + strings.TrimSpace(skill) + "`"
-	}
-	lines := []string{title, ""}
-	if len(evs) == 0 {
-		lines = append(lines, "none")
-		return strings.Join(lines, "\n"), nil
-	}
-	appendEvidenceLines(&lines, evs)
-	return strings.Join(lines, "\n"), nil
-}
-
-func renderProposals(store *Store) (string, error) {
-	proposals, err := store.ListProposals()
-	if err != nil {
-		return "", err
-	}
-	lines := []string{"skills-improver proposals", ""}
-	if len(proposals) == 0 {
-		lines = append(lines, "none")
-		return strings.Join(lines, "\n"), nil
-	}
-	for _, p := range proposals {
-		status := "pending"
-		if !p.AppliedAt.IsZero() {
-			status = "applied"
-		}
-		lines = append(lines, fmt.Sprintf("- `%s` [%s] `%s`: %s", p.ID, status, p.Skill, p.Summary))
-	}
-	return strings.Join(lines, "\n"), nil
-}
-
-func appendEvidenceLines(lines *[]string, evs []Evidence) {
-	for _, ev := range evs {
-		subject := firstNonEmpty(ev.Skill, ev.ToolName, ev.Kind)
-		detail := firstNonEmpty(ev.Prompt, ev.ToolResultSummary, ev.AssistantSummary)
-		if detail != "" {
-			detail = ": " + oneLine(detail)
-		}
-		*lines = append(*lines, fmt.Sprintf("- `%s` %s `%s`%s", ev.ID, ev.Kind, subject, detail))
-	}
-}
-
-func usageError() error {
-	return fmt.Errorf("usage: /skills-improver [status|evidence [skill]|proposals|propose <skill>|apply <proposal-id>]")
-}
-
 func firstSkillMention(text string) string {
 	fields := strings.Fields(text)
 	for _, f := range fields {
@@ -413,10 +232,6 @@ func summarizeJSON(v any) string {
 		return fmt.Sprint(v)
 	}
 	return string(b)
-}
-
-func oneLine(v string) string {
-	return strings.Join(strings.Fields(v), " ")
 }
 
 func firstNonEmpty(values ...string) string {

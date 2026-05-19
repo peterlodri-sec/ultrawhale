@@ -33,6 +33,7 @@ const (
 	modePlanImplementation
 	modeSkillsMenu
 	modeSkillsManager
+	modePluginsManager
 )
 
 type page int
@@ -72,6 +73,7 @@ type model struct {
 	providerRetryStatus  string
 	providerRetryUntil   time.Time
 	localSubmitPending   int
+	localSubmitCommands  []string
 	deferredPlanPicker   bool
 	mouseCapture         bool
 	stopping             bool
@@ -127,6 +129,11 @@ type model struct {
 		matches  []int
 		selected int
 		query    string
+	}
+	pluginsManager struct {
+		all      []pluginManagerItem
+		matches  []int
+		selected int
 	}
 	modelPicker struct {
 		stage     int // 0 model, 1 effort, 2 thinking

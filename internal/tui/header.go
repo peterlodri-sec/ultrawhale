@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -223,8 +224,15 @@ func resolveWorkingDirectory() string {
 	if err != nil {
 		return "."
 	}
-	home, hErr := os.UserHomeDir()
-	if hErr == nil {
+	home, _ := os.UserHomeDir()
+	return displayWorkingDirectory(wd, home, runtime.GOOS)
+}
+
+func displayWorkingDirectory(wd, home, goos string) string {
+	if goos == "windows" {
+		return wd
+	}
+	if home != "" {
 		if rel, rErr := filepath.Rel(home, wd); rErr == nil && rel != "" && rel != "." && !strings.HasPrefix(rel, "..") {
 			return "~/" + rel
 		}

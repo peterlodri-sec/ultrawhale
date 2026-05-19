@@ -119,6 +119,8 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		return m.handleSkillsMenuKey(msg), false, true
 	case modeSkillsManager:
 		return m.handleSkillsManagerKey(msg), false, true
+	case modePluginsManager:
+		return m.handlePluginsManagerKey(msg), false, true
 	}
 	cmd, quit, handled := m.handleGlobalKey(msg)
 	if handled {

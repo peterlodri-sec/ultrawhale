@@ -136,9 +136,8 @@ If you started with Whale v0.1.9 or newer, you do not need this command.
 - Skill enable/disable choices are stored in project config under
   `[skills].disabled`.
 - Official plugin enable/disable choices are stored under `[plugins].disabled`.
-  Built-in plugin IDs are `"memory"`, `"skills-improver"`, and
-  `"local-indexer"`. Use `/plugins status <id>` or `/plugins doctor` to inspect
-  their capabilities and diagnostics.
+  The current built-in plugin ID is `"memory"`. Use `/plugins` in the TUI to
+  inspect installed plugins and press Space to enable or disable them.
 
 ## Shell behavior
 

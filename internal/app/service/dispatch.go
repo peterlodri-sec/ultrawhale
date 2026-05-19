@@ -125,6 +125,12 @@ func (s *Service) Dispatch(in Intent) {
 			return
 		}
 		s.emit(Event{Kind: EventSkillsManager, Skills: s.SkillsForManager()})
+	case IntentSetPluginEnabled:
+		if _, err := s.app.SetPluginEnabled(in.PluginID, in.PluginEnabled); err != nil {
+			s.emit(Event{Kind: EventError, Text: err.Error()})
+			return
+		}
+		s.emit(Event{Kind: EventPluginsManager, Plugins: s.PluginsForManager()})
 	}
 }
 
@@ -215,6 +221,10 @@ func (s *Service) handleLocalSubmit(line string) {
 	}
 	if line == "/skills" {
 		s.emit(Event{Kind: EventSkillsMenu})
+		return
+	}
+	if line == "/plugins" {
+		s.emit(Event{Kind: EventPluginsManager, Plugins: s.PluginsForManager()})
 		return
 	}
 	if s.app.IsResumeMenu(line) {
@@ -312,6 +322,10 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 	}
 	if line == "/skills" {
 		s.emit(Event{Kind: EventSkillsMenu})
+		return
+	}
+	if line == "/plugins" {
+		s.emit(Event{Kind: EventPluginsManager, Plugins: s.PluginsForManager()})
 		return
 	}
 	if prompt, ok := appcommands.PlanPromptFromSlash(line); ok {

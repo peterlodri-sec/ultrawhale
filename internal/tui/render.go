@@ -129,6 +129,9 @@ func (m model) bottomPartsBeforeInput(mainWidth int) []string {
 	if m.mode == modeSkillsManager {
 		bottomParts = append(bottomParts, m.renderSkillsManager())
 	}
+	if m.mode == modePluginsManager {
+		bottomParts = append(bottomParts, m.renderPluginsManager())
+	}
 	if m.mode == modeSessionPicker {
 		rows := []string{"sessions (↑/↓ select, enter confirm, esc cancel):"}
 		for i, row := range m.sessionChoices {
@@ -434,12 +437,12 @@ func appendFooterHint(base string, width, reserve int) string {
 }
 
 func footerDirReserve(cwd string) int {
-	trimmed := strings.TrimRight(cwd, "/")
+	trimmed := strings.TrimRight(cwd, `/\`)
 	if trimmed == "" {
 		trimmed = cwd
 	}
 	tail := trimmed
-	if idx := strings.LastIndex(trimmed, "/"); idx >= 0 && idx < len(trimmed)-1 {
+	if idx := strings.LastIndexAny(trimmed, `/\`); idx >= 0 && idx < len(trimmed)-1 {
 		tail = trimmed[idx+1:]
 	}
 	if tail == "" {

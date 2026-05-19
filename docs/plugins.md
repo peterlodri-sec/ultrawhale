@@ -12,43 +12,30 @@ The current plugin platform supports:
 - global/project enablement through `[plugins].disabled`;
 - plugin-owned tools, slash commands, startup context, skills, hooks, storage
   paths, service status, and diagnostics;
-- `/plugins` discovery, `/plugins status`, `/plugins doctor`, and `/plugins reload`;
-- three official built-in plugins:
+- `/plugins` installed-plugin management in the TUI;
+- one official built-in plugin:
   - `memory`: functional explicit memory with tools, `/memory`, startup context,
-    and plugin storage;
-  - `skills-improver`: phase-one skill improvement plugin with evidence
-    collection, reviewed proposal storage, `/skills-improver`, and the
-    `save_skill_proposal` tool. It only writes `SKILL.md` when the user applies
-    a saved proposal;
-  - `local-indexer`: scaffold plugin that declares local indexing/model
-    capabilities and a no-op `Stop` hook, but does not run inference yet.
+    and plugin storage.
 
 The first milestone is not a marketplace. It is a stable internal plugin
 contract proven by official plugins.
 
 ## Commands
 
-Use `/plugins` to inspect the host:
+Use `/plugins` to manage installed built-in plugins:
 
 ```text
 /plugins
-/plugins status memory
-/plugins status skills-improver
-/plugins status local-indexer
-/plugins doctor
-/plugins reload
 ```
 
-Official plugin commands are regular slash commands:
+The TUI lists installed plugins, their short descriptions, and contributed
+commands/tools/skills/hooks. Press Space to enable or disable the selected
+plugin. Press Esc to close the list.
+
+Official plugin commands are regular slash commands when the plugin exposes one:
 
 ```text
 /memory
-/skills-improver status
-/skills-improver evidence [skill]
-/skills-improver proposals
-/skills-improver propose <skill>
-/skills-improver apply <proposal-id>
-/local-indexer status
 ```
 
 If a plugin is disabled, its slash command is unavailable and `/plugins` marks
@@ -433,8 +420,8 @@ The plugin should not inject full topic files automatically.
 Current command surface:
 
 - `/memory` shows current global and project indexes.
-- `/memory show <scope>/<name>` shows a body.
-- `/memory forget <scope>/<name>` deletes a named memory.
+- `/memory show <global|project>/<name>` shows a body.
+- `/memory forget <global|project>/<name>` deletes a named memory.
 - `/memory path` shows storage paths for manual inspection.
 
 Later shortcut:
@@ -471,37 +458,33 @@ memory plugin setting after users trust the basic flow.
 
 ## Skills Improver Plugin
 
-This is the second official plugin. Phase one implements evidence collection and
-human-reviewed proposals. It does not run an autonomous evolution loop.
+This is a planned official plugin. It is not registered as a built-in plugin in
+the current release because the user workflow and review/apply boundary are not
+stable enough yet.
 
 Purpose:
 
 - inspect filesystem skills;
 - collect explicit user feedback and failed tool results through plugin hooks;
-- generate proposal drafts through a hidden agent turn;
+- expose a reviewed proposal workflow;
 - save proposal artifacts in plugin storage;
-- require explicit `/skills-improver apply <id>` before writing `SKILL.md`.
+- avoid rewriting `SKILL.md` directly from background capture.
 
-It should not automatically rewrite `SKILL.md`, and phase one does not apply
-proposals to `plugin://` skills.
+It should not automatically rewrite `SKILL.md`. Until the workflow is clearer,
+it should also not appear in `/plugins`, `/skills`, slash commands, tools, or
+hooks.
 
-Command shape:
+Current user-facing entrypoint:
 
-- `/skills-improver status`: show evidence, proposal counts, and data path.
-- `/skills-improver evidence [skill]`: show recent evidence.
-- `/skills-improver proposals`: show saved proposals.
-- `/skills-improver propose <skill>`: ask the agent to draft and save one proposal
-  using `save_skill_proposal`.
-- `/skills-improver apply <proposal-id>`: validate and apply a saved proposal.
+- none.
 
-Proposals store the original `SKILL.md` SHA-256. Applying a proposal fails if
-the target skill changed, the path is not a discovered filesystem skill, or the
-proposed `SKILL.md` does not parse.
+Saved proposals store the original `SKILL.md` SHA-256 so a future apply flow can
+reject stale, undiscovered, or invalid skill changes.
 
 ## Local Indexer Plugin
 
-This is the third official plugin. It currently ships as a scaffold so the host
-can expose local-model/indexing capabilities before Whale bundles a local model.
+This is a planned official plugin. It should not ship until the local
+model/indexing path is ready.
 
 Purpose:
 
@@ -582,4 +565,4 @@ official and built in.
 Build only the host features required by the memory plugin. Do not build a
 marketplace, arbitrary plugin runtime, local model layer, or automatic skill
 rewriter yet. Use memory to prove the extension boundary, then let
-skills-improver and local-indexer pressure-test the API later.
+skills-improver pressure-test the API later.

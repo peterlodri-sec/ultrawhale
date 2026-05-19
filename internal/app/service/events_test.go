@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +12,7 @@ import (
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/app"
 	"github.com/usewhale/whale/internal/core"
-	"github.com/usewhale/whale/internal/plugins/skillsimprover"
+	"github.com/usewhale/whale/internal/plugins"
 	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/skills"
@@ -341,6 +339,57 @@ func hasServiceSkill(all []skills.SkillView, name, status string) bool {
 	return false
 }
 
+func TestPluginsCommandOpensManagerAndToggleUpdatesRuntime(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
+	work := t.TempDir()
+	t.Chdir(work)
+
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	svc.Dispatch(Intent{Kind: IntentSubmit, Input: "/plugins"})
+	ev := waitForServiceEvent(t, svc, EventPluginsManager)
+	if !hasServicePlugin(ev.Plugins, "memory", true) {
+		t.Fatalf("expected memory plugin enabled, got %+v", ev.Plugins)
+	}
+
+	svc.Dispatch(Intent{Kind: IntentSetPluginEnabled, PluginID: "memory", PluginEnabled: false})
+	ev = waitForServiceEvent(t, svc, EventPluginsManager)
+	if !hasServicePlugin(ev.Plugins, "memory", false) {
+		t.Fatalf("expected memory plugin disabled, got %+v", ev.Plugins)
+	}
+	cfgFile, loaded, err := app.LoadConfigFile(app.ProjectConfigPath(work))
+	if err != nil || !loaded {
+		t.Fatalf("load project config loaded=%v err=%v", loaded, err)
+	}
+	if len(cfgFile.Plugins.Disabled) != 1 || cfgFile.Plugins.Disabled[0] != "memory" {
+		t.Fatalf("expected memory disabled in config, got %+v", cfgFile.Plugins.Disabled)
+	}
+
+	svc.Dispatch(Intent{Kind: IntentSetPluginEnabled, PluginID: "memory", PluginEnabled: true})
+	ev = waitForServiceEvent(t, svc, EventPluginsManager)
+	if !hasServicePlugin(ev.Plugins, "memory", true) {
+		t.Fatalf("expected memory plugin enabled again, got %+v", ev.Plugins)
+	}
+}
+
+func hasServicePlugin(all []plugins.PluginStatus, id string, enabled bool) bool {
+	for _, plugin := range all {
+		if plugin.Manifest.ID == id {
+			return plugin.Enabled == enabled
+		}
+	}
+	return false
+}
+
 func TestLocalSubmitDoesNotEmitTurnDone(t *testing.T) {
 	cfg := app.DefaultConfig()
 	cfg.DataDir = t.TempDir()
@@ -591,93 +640,6 @@ func TestLocalSubmitEmitsDone(t *testing.T) {
 		t.Fatalf("unexpected local submit error: status=%q text=%q", errEvent.Status, errEvent.Text)
 	}
 	waitForServiceEvent(t, svc, EventLocalSubmitDone)
-}
-
-func TestLocalSubmitRejectsTurnStartingPluginCommand(t *testing.T) {
-	cfg := app.DefaultConfig()
-	cfg.DataDir = t.TempDir()
-	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	defer svc.Close()
-	waitForServiceEvent(t, svc, EventSessionHydrated)
-
-	svc.Dispatch(Intent{Kind: IntentSubmitLocal, Input: "/skills-improver propose demo-skill"})
-
-	errEvent := waitForServiceEvent(t, svc, EventLocalSubmitResult)
-	if errEvent.Status != "error" || !strings.Contains(errEvent.Text, "not available as a local submit") {
-		t.Fatalf("expected local submit rejection, got status=%q text=%q", errEvent.Status, errEvent.Text)
-	}
-	waitForServiceEvent(t, svc, EventLocalSubmitDone)
-	select {
-	case ev := <-svc.Events():
-		if ev.Kind == EventAssistantDelta || ev.Kind == EventToolCall || ev.Kind == EventTurnDone {
-			t.Fatalf("local submit should not start agent turn, got %+v", ev)
-		}
-	default:
-	}
-}
-
-func TestSubmitSkillsImproverProposeRunsTurn(t *testing.T) {
-	t.Setenv("DEEPSEEK_API_KEY", "test-key")
-	work := t.TempDir()
-	t.Chdir(work)
-	writeServiceSkill(t, filepath.Join(work, ".whale", "skills", "demo-skill"), "demo-skill", "Service test skill.")
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		_, _ = fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"proposal started\"},\"finish_reason\":\"stop\"}]}\n\n")
-		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
-	}))
-	defer srv.Close()
-
-	cfg := app.DefaultConfig()
-	cfg.DataDir = t.TempDir()
-	cfg.APIBaseURL = srv.URL
-	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	defer svc.Close()
-	waitForServiceEvent(t, svc, EventSessionHydrated)
-	improverStore := skillsimprover.NewStore(filepath.Join(cfg.DataDir, "plugins", "skills-improver", "data"), work)
-	if _, err := improverStore.AppendEvidence(skillsimprover.Evidence{
-		Kind:      "user-feedback",
-		SessionID: "s1",
-		Skill:     "demo-skill",
-		Prompt:    "用户说 $demo-skill 应该更具体",
-	}); err != nil {
-		t.Fatalf("append skills-improver evidence: %v", err)
-	}
-
-	svc.Dispatch(Intent{Kind: IntentSubmit, Input: "/skills-improver propose demo-skill"})
-
-	sawInfo := false
-	deadline := time.After(2 * time.Second)
-	for {
-		select {
-		case ev := <-svc.Events():
-			switch ev.Kind {
-			case EventInfo:
-				if strings.Contains(ev.Text, "creating proposal") {
-					sawInfo = true
-				}
-			case EventSkillLoaded:
-				t.Fatalf("hidden proposal prompt should not trigger skill injection: %+v", ev)
-			case EventAssistantDelta:
-				if !sawInfo {
-					t.Fatal("expected proposal preamble before assistant delta")
-				}
-				if ev.Text != "proposal started" {
-					t.Fatalf("expected assistant delta from model turn, got %q", ev.Text)
-				}
-				waitForServiceEvent(t, svc, EventTurnDone)
-				return
-			}
-		case <-deadline:
-			t.Fatal("timed out waiting for skills-improver proposal turn")
-		}
-	}
 }
 
 func TestProjectApprovalIntentWritesProjectConfig(t *testing.T) {
