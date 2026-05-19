@@ -316,16 +316,17 @@ func busyTickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(time.Time) tea.Msg { return busyTickMsg{} })
 }
 
-// clearScreenCmd clears the terminal and forces a full TUI redraw.
-// Unix terminals keep the existing scrollback-clearing sequence; Windows uses
-// Bubble Tea's renderer path so Whale does not bypass its console setup.
+// clearScreenCmd clears the visible terminal, scrollback, and renderer cache.
 func clearScreenCmd() tea.Cmd {
 	return clearScreenCmdForOS(runtime.GOOS, os.Stdout)
 }
 
 func clearScreenCmdForOS(goos string, out io.Writer) tea.Cmd {
 	if goos == "windows" {
-		return tea.ClearScreen
+		return func() tea.Msg {
+			fmt.Fprint(out, "\033[H\033[2J\033[3J")
+			return tea.ClearScreen()
+		}
 	}
 	return func() tea.Msg {
 		fmt.Fprint(out, "\033[H\033[2J\033[3J")

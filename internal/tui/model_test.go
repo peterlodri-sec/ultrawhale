@@ -1875,12 +1875,12 @@ func TestDefaultEnterSubmitRemainsImmediate(t *testing.T) {
 	}
 }
 
-func TestClearScreenCmdUsesBubbleTeaOnWindows(t *testing.T) {
+func TestClearScreenCmdClearsWindowsScrollbackAndRenderer(t *testing.T) {
 	var out bytes.Buffer
 	cmd := clearScreenCmdForOS("windows", &out)
 	msg := cmd()
-	if out.Len() != 0 {
-		t.Fatalf("windows clear should not write raw ANSI directly, got %q", out.String())
+	if got, want := out.String(), "\033[H\033[2J\033[3J"; got != want {
+		t.Fatalf("windows clear sequence = %q, want %q", got, want)
 	}
 	if msg == nil {
 		t.Fatal("windows clear should return a Bubble Tea clear-screen message")
