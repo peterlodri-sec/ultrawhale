@@ -75,10 +75,6 @@ Whale currently uses the DeepSeek API. Before running Whale, create an API key i
 
 > **Platform support:** Whale currently supports **macOS**, **Linux**, and **Windows**.
 
-<p align="center">
-  <img src="docs/screenshot-01.png" alt="Whale TUI screenshot" width="860">
-</p>
-
 You can also run a one-shot prompt:
 
 ```bash
