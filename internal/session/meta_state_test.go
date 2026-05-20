@@ -9,11 +9,17 @@ import (
 func TestSessionMetaPatchAndLoad(t *testing.T) {
 	dir := t.TempDir()
 	_, err := PatchSessionMeta(dir, "s1", SessionMeta{
-		Workspace: "/tmp/work",
-		Branch:    "main",
-		Title:     "first request",
-		TurnCount: 2,
-		Summary:   "hello",
+		Workspace:          "/tmp/work",
+		Branch:             "main",
+		Title:              "first request",
+		TurnCount:          2,
+		Summary:            "hello",
+		WorktreeName:       "feature",
+		WorktreePath:       "/tmp/worktrees/feature",
+		WorktreeBranch:     "worktree-feature",
+		OriginalWorkspace:  "/tmp/original",
+		OriginalBranch:     "main",
+		OriginalHeadCommit: "abc123",
 	})
 	if err != nil {
 		t.Fatalf("patch meta: %v", err)
@@ -23,6 +29,9 @@ func TestSessionMetaPatchAndLoad(t *testing.T) {
 		t.Fatalf("load meta: %v", err)
 	}
 	if got.Workspace != "/tmp/work" || got.Branch != "main" || got.Title != "first request" || got.TurnCount != 2 || got.Summary != "hello" {
+		t.Fatalf("unexpected meta: %+v", got)
+	}
+	if got.WorktreeName != "feature" || got.WorktreePath != "/tmp/worktrees/feature" || got.WorktreeBranch != "worktree-feature" || got.OriginalWorkspace != "/tmp/original" || got.OriginalBranch != "main" || got.OriginalHeadCommit != "abc123" {
 		t.Fatalf("unexpected meta: %+v", got)
 	}
 }

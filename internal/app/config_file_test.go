@@ -184,6 +184,92 @@ func TestConfigProjectOverridesGlobal(t *testing.T) {
 	}
 }
 
+func TestConfigProjectLocalOverridesProject(t *testing.T) {
+	dataDir := t.TempDir()
+	workspace := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(workspace, ".whale"), 0o755); err != nil {
+		t.Fatalf("mkdir .whale: %v", err)
+	}
+	if err := SaveConfigFile(GlobalConfigPath(dataDir), FileConfig{
+		Model:           "deepseek-v4-flash",
+		ReasoningEffort: "high",
+	}); err != nil {
+		t.Fatalf("save global: %v", err)
+	}
+	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{
+		Model:           "deepseek-v4-pro",
+		ReasoningEffort: "max",
+	}); err != nil {
+		t.Fatalf("save project: %v", err)
+	}
+	if err := SaveConfigFile(ProjectLocalConfigPath(workspace), FileConfig{
+		Model: "deepseek-v4-flash",
+	}); err != nil {
+		t.Fatalf("save project local: %v", err)
+	}
+
+	cfg := DefaultConfig()
+	cfg.DataDir = dataDir
+	loaded, err := LoadAndApplyConfig(cfg, workspace)
+	if err != nil {
+		t.Fatalf("LoadAndApplyConfig: %v", err)
+	}
+	if loaded.Model != "deepseek-v4-flash" {
+		t.Fatalf("model: want project-local override, got %s", loaded.Model)
+	}
+	if loaded.ReasoningEffort != "max" {
+		t.Fatalf("effort: want project value preserved, got %s", loaded.ReasoningEffort)
+	}
+}
+
+func TestConfigExplicitModelOverridesProjectLocalConfig(t *testing.T) {
+	dataDir := t.TempDir()
+	workspace := t.TempDir()
+	if err := SaveConfigFile(ProjectLocalConfigPath(workspace), FileConfig{Model: "deepseek-v4-pro"}); err != nil {
+		t.Fatalf("save project local: %v", err)
+	}
+
+	cfg := DefaultConfig()
+	cfg.DataDir = dataDir
+	cfg.Model = "deepseek-v4-flash"
+	cfg.ModelExplicit = true
+	loaded, err := LoadAndApplyConfig(cfg, workspace)
+	if err != nil {
+		t.Fatalf("LoadAndApplyConfig: %v", err)
+	}
+	if loaded.Model != "deepseek-v4-flash" {
+		t.Fatalf("model: want explicit override, got %s", loaded.Model)
+	}
+}
+
+func TestConfigSourcesIncludeProjectLocalFirst(t *testing.T) {
+	dataDir := t.TempDir()
+	workspace := t.TempDir()
+	if err := SaveConfigFile(GlobalConfigPath(dataDir), FileConfig{Model: "deepseek-v4-flash"}); err != nil {
+		t.Fatalf("save global: %v", err)
+	}
+	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{ReasoningEffort: "high"}); err != nil {
+		t.Fatalf("save project: %v", err)
+	}
+	if err := SaveConfigFile(ProjectLocalConfigPath(workspace), FileConfig{ReasoningEffort: "max"}); err != nil {
+		t.Fatalf("save project local: %v", err)
+	}
+
+	loaded, err := LoadConfigFiles(dataDir, workspace)
+	if err != nil {
+		t.Fatalf("LoadConfigFiles: %v", err)
+	}
+	got := ConfigSources(loaded)
+	want := []string{
+		ProjectLocalConfigPath(workspace),
+		ProjectConfigPath(workspace),
+		GlobalConfigPath(dataDir),
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("sources:\nwant %v\ngot  %v", want, got)
+	}
+}
+
 func TestApplyFileConfigUsesGroupedConfig(t *testing.T) {
 	autoCompact := false
 	compactThreshold := 0.7
@@ -237,6 +323,29 @@ func TestApplyFileConfigUsesGroupedConfig(t *testing.T) {
 	}
 	if cfg.MemoryEnabled || cfg.MemoryMaxChars != projectDocMaxBytes || cfg.MemoryFileOrder != "AGENTS.md,TEAM.md" {
 		t.Fatalf("project doc not applied: %+v", cfg)
+	}
+}
+
+func TestApplyLoadedConfigLocalEnabledOverridesSharedDisabled(t *testing.T) {
+	cfg := Config{}
+	err := ApplyLoadedConfig(&cfg, LoadedConfig{
+		Project: FileConfig{
+			Skills:  FileSkillsConfig{Disabled: []string{"review-skill", "keep-skill"}},
+			Plugins: FilePluginsConfig{Disabled: []string{"memory", "other-plugin"}},
+		},
+		ProjectLocal: FileConfig{
+			Skills:  FileSkillsConfig{Enabled: []string{"review-skill"}},
+			Plugins: FilePluginsConfig{Enabled: []string{"memory"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyLoadedConfig: %v", err)
+	}
+	if containsString(cfg.SkillsDisabled, "review-skill") || !containsString(cfg.SkillsDisabled, "keep-skill") {
+		t.Fatalf("skills disabled override mismatch: %+v", cfg.SkillsDisabled)
+	}
+	if containsString(cfg.PluginsDisabled, "memory") || !containsString(cfg.PluginsDisabled, "other-plugin") {
+		t.Fatalf("plugins disabled override mismatch: %+v", cfg.PluginsDisabled)
 	}
 }
 
@@ -324,7 +433,7 @@ func TestSetModelAndThinkingPersistToConfig(t *testing.T) {
 	}
 }
 
-func TestSetProjectApprovalModeUpdatesProjectConfig(t *testing.T) {
+func TestSetProjectApprovalModeUpdatesProjectLocalConfig(t *testing.T) {
 	dataDir := t.TempDir()
 	workspace := t.TempDir()
 	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{
@@ -345,35 +454,50 @@ func TestSetProjectApprovalModeUpdatesProjectConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetProjectApprovalMode: %v", err)
 	}
-	if path != ProjectConfigPath(workspace) {
-		t.Fatalf("project config path: want %s, got %s", ProjectConfigPath(workspace), path)
+	if path != ProjectLocalConfigPath(workspace) {
+		t.Fatalf("project local config path: want %s, got %s", ProjectLocalConfigPath(workspace), path)
 	}
 	if app.ApprovalMode() != policy.ApprovalModeNever || app.cfg.ApprovalMode != string(policy.ApprovalModeNever) {
 		t.Fatalf("approval mode not updated in memory: app=%s cfg=%s", app.ApprovalMode(), app.cfg.ApprovalMode)
 	}
-	loaded, ok, err := LoadConfigFile(ProjectConfigPath(workspace))
+	local, ok, err := LoadConfigFile(ProjectLocalConfigPath(workspace))
 	if err != nil || !ok {
-		t.Fatalf("load project config loaded=%v err=%v", ok, err)
+		t.Fatalf("load project local config loaded=%v err=%v", ok, err)
 	}
-	if loaded.Permissions.Mode != string(policy.ApprovalModeNever) {
-		t.Fatalf("project permissions.mode: want never, got %q", loaded.Permissions.Mode)
+	if local.Permissions.Mode != string(policy.ApprovalModeNever) {
+		t.Fatalf("project local permissions.mode: want never, got %q", local.Permissions.Mode)
 	}
-	if loaded.Model != "deepseek-v4-pro" || !containsString(loaded.Skills.Disabled, "project-skill") {
-		t.Fatalf("expected unrelated project config to be preserved, got %+v", loaded)
+	shared, ok, err := LoadConfigFile(ProjectConfigPath(workspace))
+	if err != nil || !ok {
+		t.Fatalf("load shared project config loaded=%v err=%v", ok, err)
+	}
+	if shared.Permissions.Mode != "" {
+		t.Fatalf("shared project permissions.mode should be untouched, got %q", shared.Permissions.Mode)
+	}
+	if shared.Model != "deepseek-v4-pro" || !containsString(shared.Skills.Disabled, "project-skill") {
+		t.Fatalf("expected unrelated shared project config to be preserved, got %+v", shared)
 	}
 }
 
-func TestClearProjectApprovalModePreservesOtherProjectConfig(t *testing.T) {
+func TestClearProjectApprovalModeClearsLocalAndFallsBackToProject(t *testing.T) {
 	dataDir := t.TempDir()
 	workspace := t.TempDir()
 	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{
 		Model: "deepseek-v4-pro",
 		Permissions: FilePermissionsConfig{
-			Mode:               string(policy.ApprovalModeNever),
+			Mode:               string(policy.ApprovalModeOnRequest),
 			AllowShellPrefixes: []string{"git status"},
 		},
 	}); err != nil {
 		t.Fatalf("save project config: %v", err)
+	}
+	if err := SaveConfigFile(ProjectLocalConfigPath(workspace), FileConfig{
+		Permissions: FilePermissionsConfig{
+			Mode:               string(policy.ApprovalModeNever),
+			AllowShellPrefixes: []string{"go test"},
+		},
+	}); err != nil {
+		t.Fatalf("save project local config: %v", err)
 	}
 	app := &App{
 		workspaceRoot: workspace,
@@ -385,27 +509,34 @@ func TestClearProjectApprovalModePreservesOtherProjectConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ClearProjectApprovalMode: %v", err)
 	}
-	if path != ProjectConfigPath(workspace) {
-		t.Fatalf("project config path: want %s, got %s", ProjectConfigPath(workspace), path)
+	if path != ProjectLocalConfigPath(workspace) {
+		t.Fatalf("project local config path: want %s, got %s", ProjectLocalConfigPath(workspace), path)
 	}
 	if mode != policy.ApprovalModeOnRequest || app.ApprovalMode() != policy.ApprovalModeOnRequest {
 		t.Fatalf("approval mode after clear: returned=%s app=%s", mode, app.ApprovalMode())
 	}
-	loaded, ok, err := LoadConfigFile(ProjectConfigPath(workspace))
+	local, ok, err := LoadConfigFile(ProjectLocalConfigPath(workspace))
 	if err != nil || !ok {
-		t.Fatalf("load project config loaded=%v err=%v", ok, err)
+		t.Fatalf("load project local config loaded=%v err=%v", ok, err)
 	}
-	if loaded.Permissions.Mode != "" {
-		t.Fatalf("project permissions.mode should be cleared, got %q", loaded.Permissions.Mode)
+	if local.Permissions.Mode != "" {
+		t.Fatalf("project local permissions.mode should be cleared, got %q", local.Permissions.Mode)
 	}
-	if loaded.Model != "deepseek-v4-pro" || !containsString(loaded.Permissions.AllowShellPrefixes, "git status") {
-		t.Fatalf("expected unrelated project config to be preserved, got %+v", loaded)
+	if !containsString(local.Permissions.AllowShellPrefixes, "go test") {
+		t.Fatalf("expected unrelated project local config to be preserved, got %+v", local)
 	}
-	raw, err := os.ReadFile(ProjectConfigPath(workspace))
+	shared, ok, err := LoadConfigFile(ProjectConfigPath(workspace))
+	if err != nil || !ok {
+		t.Fatalf("load shared project config loaded=%v err=%v", ok, err)
+	}
+	if shared.Permissions.Mode != string(policy.ApprovalModeOnRequest) || !containsString(shared.Permissions.AllowShellPrefixes, "git status") {
+		t.Fatalf("expected shared project config to be preserved, got %+v", shared)
+	}
+	raw, err := os.ReadFile(ProjectLocalConfigPath(workspace))
 	if err != nil {
-		t.Fatalf("read project config: %v", err)
+		t.Fatalf("read project local config: %v", err)
 	}
 	if strings.Contains(string(raw), "mode =") {
-		t.Fatalf("project config should not contain permissions.mode after clear:\n%s", raw)
+		t.Fatalf("project local config should not contain permissions.mode after clear:\n%s", raw)
 	}
 }

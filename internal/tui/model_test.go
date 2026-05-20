@@ -2291,9 +2291,9 @@ func TestPermissionsPickerCopyClarifiesAutoApproveScope(t *testing.T) {
 		"No approval prompts until Whale exits.",
 		"Project default",
 		"Trust this project...",
-		"Auto-approve by default in this workspace.",
+		"Auto-approve by default in this workspace for you.",
 		"Clear project default",
-		"Remove permissions.mode from ./.whale/config.toml.",
+		"Remove permissions.mode from ./.whale/config.local.toml.",
 	} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("expected permissions picker to contain %q:\n%s", want, view)
@@ -2311,8 +2311,8 @@ func TestPermissionsProjectTrustConfirmCopy(t *testing.T) {
 	for _, want := range []string{
 		"Trust this project?",
 		"Auto-approve write, patch, shell, and MCP tools by default in this workspace.",
-		"This affects future sessions in this workspace.",
-		"Config: ./.whale/config.toml",
+		"This affects your future sessions in this workspace.",
+		"Config: ./.whale/config.local.toml",
 		"Trust this project",
 		"Cancel",
 	} {
@@ -2322,6 +2322,26 @@ func TestPermissionsProjectTrustConfirmCopy(t *testing.T) {
 	}
 	if strings.Contains(view, "Whale will") {
 		t.Fatalf("trust confirmation should state facts without product-name narration:\n%s", view)
+	}
+}
+
+func TestPermissionsProjectClearConfirmCopy(t *testing.T) {
+	m := newModel(nil, "", "", "")
+
+	view := m.renderPermissionsProjectClearConfirm()
+	for _, want := range []string{
+		"Clear project default?",
+		"Remove permissions.mode from ./.whale/config.local.toml.",
+		"Future sessions will fall back to shared project, global, or default approval settings.",
+		"Clear project default",
+		"Cancel",
+	} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("expected clear confirmation to contain %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "will use the global/default approval setting") {
+		t.Fatalf("clear confirmation should not skip shared project fallback:\n%s", view)
 	}
 }
 

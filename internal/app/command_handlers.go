@@ -118,7 +118,7 @@ func (a *App) ExecuteSlash(line string) (CommandExecution, error) {
 		}
 		out.Text += fmt.Sprintf("\nresume:   whale resume %s", oldID)
 		out.Text += fmt.Sprintf("\nmode:     %s", a.currentMode)
-		if _, err := session.PatchSessionMeta(a.sessionsDir, a.sessionID, session.SessionMeta{Workspace: a.workspaceRoot, Branch: a.branch}); err != nil {
+		if _, err := session.PatchSessionMeta(a.sessionsDir, a.sessionID, a.baseSessionMeta()); err != nil {
 			return out, err
 		}
 	}
@@ -154,6 +154,16 @@ func (a *App) ExecuteLocalCommand(line string) (CommandExecution, error) {
 	}
 	if trimmed == "/feedback" {
 		return CommandExecution{Handled: true, Text: openFeedbackIssues()}, nil
+	}
+	if trimmed == "/worktree" || strings.HasPrefix(trimmed, "/worktree ") {
+		fields := strings.Fields(trimmed)
+		args := fields[1:]
+		if len(args) > 0 && args[0] == "remove" {
+			text, err := a.removeWorktree(args)
+			return CommandExecution{Handled: true, Text: text, Mutated: err == nil}, err
+		}
+		text, err := a.buildWorktreeStatus(args)
+		return CommandExecution{Handled: true, Text: text}, err
 	}
 	if trimmed == "/focus" {
 		mode, err := a.ToggleViewMode()

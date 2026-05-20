@@ -14,7 +14,10 @@ import (
 	"github.com/usewhale/whale/internal/store"
 )
 
-const ConfigFileName = "config.toml"
+const (
+	ConfigFileName      = "config.toml"
+	LocalConfigFileName = "config.local.toml"
+)
 
 type FileConfig struct {
 	Model           string `toml:"model,omitempty"`
@@ -74,20 +77,25 @@ type FileProjectDocConfig struct {
 }
 
 type FileSkillsConfig struct {
+	Enabled  []string `toml:"enabled,omitempty"`
 	Disabled []string `toml:"disabled,omitempty"`
 }
 
 type FilePluginsConfig struct {
+	Enabled  []string `toml:"enabled,omitempty"`
 	Disabled []string `toml:"disabled,omitempty"`
 }
 
 type LoadedConfig struct {
-	Global        FileConfig
-	GlobalLoaded  bool
-	GlobalPath    string
-	Project       FileConfig
-	ProjectLoaded bool
-	ProjectPath   string
+	Global             FileConfig
+	GlobalLoaded       bool
+	GlobalPath         string
+	Project            FileConfig
+	ProjectLoaded      bool
+	ProjectPath        string
+	ProjectLocal       FileConfig
+	ProjectLocalLoaded bool
+	ProjectLocalPath   string
 }
 
 func GlobalConfigPath(dataDir string) string {
@@ -101,6 +109,10 @@ func ProjectConfigPath(workspaceRoot string) string {
 	return filepath.Join(workspaceRoot, ".whale", ConfigFileName)
 }
 
+func ProjectLocalConfigPath(workspaceRoot string) string {
+	return filepath.Join(workspaceRoot, ".whale", LocalConfigFileName)
+}
+
 func LoadConfigFiles(dataDir, workspaceRoot string) (LoadedConfig, error) {
 	globalPath := GlobalConfigPath(dataDir)
 	global, globalLoaded, err := LoadConfigFile(globalPath)
@@ -112,13 +124,21 @@ func LoadConfigFiles(dataDir, workspaceRoot string) (LoadedConfig, error) {
 	if err != nil {
 		return LoadedConfig{}, err
 	}
+	projectLocalPath := ProjectLocalConfigPath(workspaceRoot)
+	projectLocal, projectLocalLoaded, err := LoadConfigFile(projectLocalPath)
+	if err != nil {
+		return LoadedConfig{}, err
+	}
 	return LoadedConfig{
-		Global:        global,
-		GlobalLoaded:  globalLoaded,
-		GlobalPath:    globalPath,
-		Project:       project,
-		ProjectLoaded: projectLoaded,
-		ProjectPath:   projectPath,
+		Global:             global,
+		GlobalLoaded:       globalLoaded,
+		GlobalPath:         globalPath,
+		Project:            project,
+		ProjectLoaded:      projectLoaded,
+		ProjectPath:        projectPath,
+		ProjectLocal:       projectLocal,
+		ProjectLocalLoaded: projectLocalLoaded,
+		ProjectLocalPath:   projectLocalPath,
 	}, nil
 }
 
@@ -156,6 +176,9 @@ func ApplyLoadedConfig(cfg *Config, loaded LoadedConfig) error {
 		return err
 	}
 	if err := ApplyFileConfig(cfg, loaded.Project); err != nil {
+		return err
+	}
+	if err := ApplyFileConfig(cfg, loaded.ProjectLocal); err != nil {
 		return err
 	}
 	return nil
@@ -231,10 +254,16 @@ func ApplyFileConfig(cfg *Config, file FileConfig) error {
 		cfg.MemoryFileOrder = strings.Join(trimList(file.ProjectDoc.FallbackFilenames), ",")
 	}
 	if len(file.Skills.Disabled) > 0 {
-		cfg.SkillsDisabled = trimList(file.Skills.Disabled)
+		cfg.SkillsDisabled = mergeNames(cfg.SkillsDisabled, file.Skills.Disabled)
+	}
+	if len(file.Skills.Enabled) > 0 {
+		cfg.SkillsDisabled = removeNames(cfg.SkillsDisabled, file.Skills.Enabled)
 	}
 	if len(file.Plugins.Disabled) > 0 {
-		cfg.PluginsDisabled = trimList(file.Plugins.Disabled)
+		cfg.PluginsDisabled = mergeNames(cfg.PluginsDisabled, file.Plugins.Disabled)
+	}
+	if len(file.Plugins.Enabled) > 0 {
+		cfg.PluginsDisabled = removeNames(cfg.PluginsDisabled, file.Plugins.Enabled)
 	}
 	return nil
 }
@@ -359,7 +388,10 @@ func NormalizeViewMode(mode string) (string, error) {
 }
 
 func ConfigSources(loaded LoadedConfig) []string {
-	out := make([]string, 0, 2)
+	out := make([]string, 0, 3)
+	if loaded.ProjectLocalLoaded {
+		out = append(out, loaded.ProjectLocalPath)
+	}
 	if loaded.ProjectLoaded {
 		out = append(out, loaded.ProjectPath)
 	}

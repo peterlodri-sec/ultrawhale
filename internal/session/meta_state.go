@@ -11,22 +11,28 @@ import (
 )
 
 type SessionMeta struct {
-	Branch          string    `json:"branch,omitempty"`
-	Title           string    `json:"title,omitempty"`
-	Summary         string    `json:"summary,omitempty"`
-	TotalCostUSD    float64   `json:"total_cost_usd,omitempty"`
-	TurnCount       int       `json:"turn_count,omitempty"`
-	Workspace       string    `json:"workspace,omitempty"`
-	Kind            string    `json:"kind,omitempty"`
-	ParentSessionID string    `json:"parent_session_id,omitempty"`
-	Role            string    `json:"role,omitempty"`
-	Model           string    `json:"model,omitempty"`
-	Task            string    `json:"task,omitempty"`
-	Status          string    `json:"status,omitempty"`
-	Error           string    `json:"error,omitempty"`
-	StartedAt       time.Time `json:"started_at,omitempty"`
-	CompletedAt     time.Time `json:"completed_at,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	Branch             string    `json:"branch,omitempty"`
+	Title              string    `json:"title,omitempty"`
+	Summary            string    `json:"summary,omitempty"`
+	TotalCostUSD       float64   `json:"total_cost_usd,omitempty"`
+	TurnCount          int       `json:"turn_count,omitempty"`
+	Workspace          string    `json:"workspace,omitempty"`
+	WorktreeName       string    `json:"worktree_name,omitempty"`
+	WorktreePath       string    `json:"worktree_path,omitempty"`
+	WorktreeBranch     string    `json:"worktree_branch,omitempty"`
+	OriginalWorkspace  string    `json:"original_workspace,omitempty"`
+	OriginalBranch     string    `json:"original_branch,omitempty"`
+	OriginalHeadCommit string    `json:"original_head_commit,omitempty"`
+	Kind               string    `json:"kind,omitempty"`
+	ParentSessionID    string    `json:"parent_session_id,omitempty"`
+	Role               string    `json:"role,omitempty"`
+	Model              string    `json:"model,omitempty"`
+	Task               string    `json:"task,omitempty"`
+	Status             string    `json:"status,omitempty"`
+	Error              string    `json:"error,omitempty"`
+	StartedAt          time.Time `json:"started_at,omitempty"`
+	CompletedAt        time.Time `json:"completed_at,omitempty"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 func metaStatePath(sessionsDir, sessionID string) string {
@@ -87,6 +93,24 @@ func PatchSessionMeta(sessionsDir, sessionID string, patch SessionMeta) (Session
 	}
 	if strings.TrimSpace(patch.Workspace) != "" {
 		cur.Workspace = strings.TrimSpace(patch.Workspace)
+	}
+	if strings.TrimSpace(patch.WorktreeName) != "" {
+		cur.WorktreeName = strings.TrimSpace(patch.WorktreeName)
+	}
+	if strings.TrimSpace(patch.WorktreePath) != "" {
+		cur.WorktreePath = strings.TrimSpace(patch.WorktreePath)
+	}
+	if strings.TrimSpace(patch.WorktreeBranch) != "" {
+		cur.WorktreeBranch = strings.TrimSpace(patch.WorktreeBranch)
+	}
+	if strings.TrimSpace(patch.OriginalWorkspace) != "" {
+		cur.OriginalWorkspace = strings.TrimSpace(patch.OriginalWorkspace)
+	}
+	if strings.TrimSpace(patch.OriginalBranch) != "" {
+		cur.OriginalBranch = strings.TrimSpace(patch.OriginalBranch)
+	}
+	if strings.TrimSpace(patch.OriginalHeadCommit) != "" {
+		cur.OriginalHeadCommit = strings.TrimSpace(patch.OriginalHeadCommit)
 	}
 	if strings.TrimSpace(patch.Kind) != "" {
 		cur.Kind = strings.TrimSpace(patch.Kind)

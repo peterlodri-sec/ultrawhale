@@ -83,7 +83,7 @@ func (s *Service) Dispatch(in Intent) {
 			s.emit(Event{Kind: EventError, Text: err.Error()})
 			return
 		}
-		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("project permissions saved: %s\nconfig: %s", projectApprovalModeDisplay(mode), path)})
+		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("project local permissions saved: %s\nconfig: %s", projectApprovalModeDisplay(mode), path)})
 		s.emit(Event{Kind: EventTurnDone})
 	case IntentClearProjectApproval:
 		mode, path, err := s.app.ClearProjectApprovalMode()
@@ -91,7 +91,7 @@ func (s *Service) Dispatch(in Intent) {
 			s.emit(Event{Kind: EventError, Text: err.Error()})
 			return
 		}
-		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("project permissions default cleared\nconfig: %s\ncurrent session: %s", path, approvalModeDisplay(mode))})
+		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("project local permissions default cleared\nconfig: %s\ncurrent session: %s", path, approvalModeDisplay(mode))})
 		s.emit(Event{Kind: EventTurnDone})
 	case IntentSetViewMode:
 		if err := s.app.SetViewMode(in.ViewMode); err != nil {

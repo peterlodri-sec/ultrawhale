@@ -776,8 +776,8 @@ func (m model) renderPermissionsPicker() string {
 	descriptions := map[string]string{
 		service.ApprovalChoiceAskFirst:           "Prompt before write, patch, shell, or MCP tools run.",
 		service.ApprovalChoiceAutoApproveSession: "No approval prompts until Whale exits.",
-		service.ApprovalChoiceTrustProject:       "Auto-approve by default in this workspace.",
-		service.ApprovalChoiceClearProject:       "Remove permissions.mode from ./.whale/config.toml.",
+		service.ApprovalChoiceTrustProject:       "Auto-approve by default in this workspace for you.",
+		service.ApprovalChoiceClearProject:       "Remove permissions.mode from ./.whale/config.local.toml.",
 	}
 	projectSectionRendered := false
 	for i, item := range m.permissionsPicker.choices {
@@ -811,8 +811,8 @@ func (m model) renderPermissionsProjectTrustConfirm() string {
 		"Trust this project?",
 		[]string{
 			"Auto-approve write, patch, shell, and MCP tools by default in this workspace.",
-			"This affects future sessions in this workspace.",
-			"Config: ./.whale/config.toml",
+			"This affects your future sessions in this workspace.",
+			"Config: ./.whale/config.local.toml",
 		},
 		"Trust this project",
 	)
@@ -822,8 +822,8 @@ func (m model) renderPermissionsProjectClearConfirm() string {
 	return m.renderPermissionsProjectConfirm(
 		"Clear project default?",
 		[]string{
-			"Remove permissions.mode from ./.whale/config.toml.",
-			"Future sessions will use the global/default approval setting.",
+			"Remove permissions.mode from ./.whale/config.local.toml.",
+			"Future sessions will fall back to shared project, global, or default approval settings.",
 		},
 		"Clear project default",
 	)

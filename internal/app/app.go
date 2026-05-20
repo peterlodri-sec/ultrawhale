@@ -23,7 +23,7 @@ import (
 	"github.com/usewhale/whale/internal/tools"
 )
 
-const CommandsHelp = "/help, /model, /permissions, /agent, /ask [prompt], /plan [prompt], /focus, /review [target], /skills, /plugins, /memory, /feedback, /new [id], /fork [name], /resume, /clear, /status, /stats, /mcp, /compact, /init, /exit"
+const CommandsHelp = "/help, /model, /permissions, /agent, /ask [prompt], /plan [prompt], /focus, /review [target], /skills, /plugins, /memory, /feedback, /new [id], /fork [name], /resume, /worktree, /clear, /status, /stats, /mcp, /compact, /init, /exit"
 
 const (
 	ViewModeDefault = "default"
@@ -61,8 +61,19 @@ type StartOptions struct {
 	ModeOverride  string
 	ResumeMenu    bool
 	NewSession    bool
+	Worktree      WorktreeSession
 	ApprovalFunc  policy.ApprovalFunc
 	UserInputFunc agent.UserInputFunc
+}
+
+type WorktreeSession struct {
+	Name               string
+	Workspace          string
+	Path               string
+	Branch             string
+	OriginalWorkspace  string
+	OriginalBranch     string
+	OriginalHeadCommit string
 }
 
 type ResumeChoice struct {
@@ -98,6 +109,7 @@ type App struct {
 	mcpManager       *whalemcp.Manager
 	pluginManager    *plugins.Manager
 	pluginTools      []core.Tool
+	worktree         WorktreeSession
 	mcpInitMu        sync.Mutex
 	mcpInitStarted   bool
 
@@ -209,7 +221,16 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 	}
 	branch := session.DetectGitBranch(workspaceRoot)
 	if start.NewSession || start.ResumeMenu {
-		if _, err := session.PatchSessionMeta(sessionsDir, sessionID, session.SessionMeta{Workspace: workspaceRoot, Branch: branch}); err != nil {
+		meta := session.SessionMeta{Workspace: workspaceRoot, Branch: branch}
+		if strings.TrimSpace(start.Worktree.Name) != "" {
+			meta.WorktreeName = start.Worktree.Name
+			meta.WorktreePath = start.Worktree.Path
+			meta.WorktreeBranch = start.Worktree.Branch
+			meta.OriginalWorkspace = start.Worktree.OriginalWorkspace
+			meta.OriginalBranch = start.Worktree.OriginalBranch
+			meta.OriginalHeadCommit = start.Worktree.OriginalHeadCommit
+		}
+		if _, err := session.PatchSessionMeta(sessionsDir, sessionID, meta); err != nil {
 			return nil, fmt.Errorf("patch session meta failed: %w", err)
 		}
 	}
@@ -300,6 +321,7 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 		mcpManager:       mcpManager,
 		pluginManager:    pluginManager,
 		pluginTools:      append([]core.Tool{}, pluginTools...),
+		worktree:         start.Worktree,
 		apiKey:           apiKey,
 		approvalFn:       defaultApprovalFunc(start.ApprovalFunc),
 		userInput:        defaultUserInputFunc(start.UserInputFunc),
@@ -351,6 +373,9 @@ func (a *App) StartupLines() []string {
 	if len(a.hookSources) > 0 {
 		lines = append(lines, fmt.Sprintf("hooks: %s", strings.Join(a.hookSources, ", ")))
 	}
+	if strings.TrimSpace(a.worktree.Name) != "" {
+		lines = append(lines, fmt.Sprintf("worktree: %s (%s)", a.worktree.Name, a.worktree.Path))
+	}
 	if a.mcpManager != nil {
 		states := a.mcpManager.States()
 		if len(states) > 0 {
@@ -371,6 +396,19 @@ func (a *App) StartupLines() []string {
 		lines = append(lines, fmt.Sprintf("pending user input: tool_call=%s questions=%d", ust.ToolCallID, len(ust.Questions)))
 	}
 	return lines
+}
+
+func (a *App) baseSessionMeta() session.SessionMeta {
+	meta := session.SessionMeta{Workspace: a.workspaceRoot, Branch: a.branch}
+	if strings.TrimSpace(a.worktree.Name) != "" {
+		meta.WorktreeName = a.worktree.Name
+		meta.WorktreePath = a.worktree.Path
+		meta.WorktreeBranch = a.worktree.Branch
+		meta.OriginalWorkspace = a.worktree.OriginalWorkspace
+		meta.OriginalBranch = a.worktree.OriginalBranch
+		meta.OriginalHeadCommit = a.worktree.OriginalHeadCommit
+	}
+	return meta
 }
 
 func (a *App) SessionID() string                 { return a.sessionID }
