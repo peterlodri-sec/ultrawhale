@@ -108,6 +108,7 @@ Review rules:
 - Prefer project conventions over generic style rules.
 - Do not report speculative issues. If evidence is weak, omit the finding.
 - Do not include praise sections by default.
+- Shell commands already run from the workspace root. Do not prefix commands with cd; use the shell_run cwd parameter for subdirectories.
 
 Output format:
 - Start with findings, ordered by severity.

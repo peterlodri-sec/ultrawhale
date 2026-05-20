@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/shellsafe"
 )
 
 type ApprovalMode string
@@ -177,7 +178,12 @@ func normalizeCommandPrefix(v string) string {
 
 var defaultShellAutoAllowPrefixes = []string{
 	"ls", "pwd", "echo", "cat", "head", "tail", "wc", "file", "tree", "find", "grep", "rg",
-	"git status", "git diff", "git log", "git show", "git branch", "git remote", "git rev-parse", "git config --get",
+	"cal", "uptime",
+	"id", "uname", "whoami", "free", "df", "du", "locale", "groups", "nproc",
+	"stat", "strings", "hexdump", "od", "nl",
+	"basename", "dirname", "realpath", "readlink",
+	"cut", "paste", "tr", "column", "tac", "rev", "fold", "expand", "unexpand", "comm", "cmp", "numfmt",
+	"true", "false", "which", "type", "expr", "test", "getconf", "seq", "tsort", "pr",
 	"go version",
 	"rustc --version",
 	"python --version", "python3 --version", "node --version", "npm --version", "npx --version", "cargo --version", "deno --version", "bun --version",
@@ -191,9 +197,23 @@ var defaultShellAutoAllowPrefixes = []string{
 }
 
 func defaultShellAutoAllow(command string) bool {
+	if base, ok := stripTrailingStderrToStdout(command); ok {
+		return defaultShellAutoAllow(base)
+	}
+	if parts, ok := shellsafe.SplitPipeline(command); ok {
+		for _, part := range parts {
+			if !defaultShellAutoAllow(part) {
+				return false
+			}
+		}
+		return true
+	}
 	argv, ok := parseSimpleShellCommand(command)
 	if !ok || len(argv) == 0 {
 		return false
+	}
+	if argv[0] == "git" {
+		return shellsafe.GitCommandReadOnly(argv)
 	}
 	argv = lowerArgv(argv)
 	if autoAllowShellCommandHasUnsafeArgs(argv) {
@@ -210,7 +230,73 @@ func defaultShellAutoAllow(command string) bool {
 	return false
 }
 
+func stripTrailingStderrToStdout(command string) (string, bool) {
+	trimmed := strings.TrimSpace(command)
+	const redirect = "2>&1"
+	if !strings.HasSuffix(trimmed, redirect) {
+		return "", false
+	}
+	start := len(trimmed) - len(redirect)
+	if start == 0 || !isShellWhitespace(rune(trimmed[start-1])) {
+		return "", false
+	}
+	if !shellOffsetOutsideQuotes(trimmed, start) {
+		return "", false
+	}
+	base := strings.TrimSpace(trimmed[:start])
+	if base == "" {
+		return "", false
+	}
+	return base, true
+}
+
+func shellOffsetOutsideQuotes(command string, offset int) bool {
+	var quote rune
+	escaped := false
+	for i, r := range command {
+		if i >= offset {
+			break
+		}
+		if quote == '\'' {
+			if r == '\'' {
+				quote = 0
+			}
+			continue
+		}
+		if escaped {
+			escaped = false
+			continue
+		}
+		switch r {
+		case '\\':
+			if quote == '"' {
+				escaped = true
+			}
+		case '"':
+			if quote == 0 {
+				quote = '"'
+			} else if quote == '"' {
+				quote = 0
+			}
+		case '\'':
+			if quote == 0 {
+				quote = '\''
+			}
+		}
+	}
+	return quote == 0 && !escaped
+}
+
+func isShellWhitespace(r rune) bool {
+	return r == ' ' || r == '\t'
+}
+
 func autoAllowShellCommandHasUnsafeArgs(argv []string) bool {
+	for _, field := range argv[1:] {
+		if shellsafe.ArgContainsUnsafeMeta(field) {
+			return true
+		}
+	}
 	switch {
 	case argvHasPrefix(argv, "find"):
 		for _, field := range argv {
@@ -219,12 +305,6 @@ func autoAllowShellCommandHasUnsafeArgs(argv []string) bool {
 				return true
 			}
 			if strings.HasPrefix(field, "-fprint") {
-				return true
-			}
-		}
-	case argvHasPrefix(argv, "git diff"), argvHasPrefix(argv, "git show"), argvHasPrefix(argv, "git log"):
-		for _, field := range argv {
-			if field == "--output" || strings.HasPrefix(field, "--output=") || field == "--ext-diff" || field == "--external-diff" || field == "--textconv" {
 				return true
 			}
 		}

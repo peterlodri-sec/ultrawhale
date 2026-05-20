@@ -781,7 +781,7 @@ func TestHandleSlashReviewBuildsHiddenPrompt(t *testing.T) {
 	if !handled || out != "" || shouldExit || clearScreen {
 		t.Fatalf("unexpected /review flags handled=%v out=%q shouldExit=%v clearScreen=%v", handled, out, shouldExit, clearScreen)
 	}
-	for _, want := range []string{"You are an expert code reviewer", "Target: local changes", "git diff --cached", "git diff", "inspect the contents of each relevant untracked file", "Start with findings"} {
+	for _, want := range []string{"You are an expert code reviewer", "Target: local changes", "git diff --cached", "git diff", "inspect the contents of each relevant untracked file", "Do not prefix commands with cd", "Start with findings"} {
 		if !strings.Contains(synthetic, want) {
 			t.Fatalf("review prompt missing %q:\n%s", want, synthetic)
 		}
