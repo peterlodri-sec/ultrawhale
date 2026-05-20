@@ -103,7 +103,7 @@ func (a *Assembler) AppendDelta(role, text string) {
 	a.messages = append(a.messages, UIMessage{
 		Role: role,
 		Kind: kindForRole(role),
-		Text: strings.TrimRight(t, "\n"),
+		Text: t,
 	})
 }
 
@@ -179,7 +179,7 @@ func (a *Assembler) AddPlanDelta(text string) {
 	a.messages = append(a.messages, UIMessage{
 		Role: "plan",
 		Kind: KindPlan,
-		Text: strings.TrimRight(t, "\n"),
+		Text: t,
 	})
 }
 
