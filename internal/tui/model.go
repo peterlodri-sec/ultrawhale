@@ -35,6 +35,7 @@ const (
 	modeSkillsManager
 	modePluginsManager
 	modeReviewMenu
+	modeHelp
 )
 
 type page int
@@ -143,6 +144,10 @@ type model struct {
 	}
 	reviewMenu struct {
 		selected int
+	}
+	help struct {
+		selected int
+		offset   int
 	}
 	modelPicker struct {
 		stage     int // 0 model, 1 effort, 2 thinking
@@ -459,7 +464,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) withMouseCaptureCmd(cmds ...tea.Cmd) tea.Cmd {
 	out := make([]tea.Cmd, 0, len(cmds))
-	m.mouseCapture = false
+	wantMouseCapture := m.mode == modeHelp || (m.mode == modeChat && m.busy)
+	if wantMouseCapture && !m.mouseCapture {
+		out = append(out, tea.EnableMouseCellMotion)
+	}
+	if !wantMouseCapture && m.mouseCapture {
+		out = append(out, tea.DisableMouse)
+	}
+	m.mouseCapture = wantMouseCapture
 	for _, cmd := range cmds {
 		if cmd != nil {
 			out = append(out, cmd)

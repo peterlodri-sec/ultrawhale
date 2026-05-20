@@ -23,7 +23,7 @@ import (
 	"github.com/usewhale/whale/internal/tools"
 )
 
-const CommandsHelp = "/model, /permissions, /agent, /ask [prompt], /plan [prompt], /focus, /review [target], /skills, /plugins, /memory, /feedback, /new [id], /resume, /clear, /status, /stats, /mcp, /compact, /init, /exit"
+const CommandsHelp = "/help, /model, /permissions, /agent, /ask [prompt], /plan [prompt], /focus, /review [target], /skills, /plugins, /memory, /feedback, /new [id], /resume, /clear, /status, /stats, /mcp, /compact, /init, /exit"
 
 const (
 	ViewModeDefault = "default"

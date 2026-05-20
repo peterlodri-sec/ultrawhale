@@ -125,6 +125,10 @@ func busySlashBlockedMessage(line string, stopping bool) string {
 
 func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) {
 	cmd := submit.Line
+	if strings.TrimSpace(cmd) == "/help" {
+		m.openHelp()
+		return
+	}
 	m.clearEphemeralMessages()
 	m.recordPromptHistory(cmd)
 	m.resetHistoryNavigation()

@@ -123,6 +123,8 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		return m.handlePluginsManagerKey(msg), false, true
 	case modeReviewMenu:
 		return m.handleReviewMenuKey(msg), false, true
+	case modeHelp:
+		return m.handleHelpKey(msg), false, true
 	}
 	cmd, quit, handled := m.handleGlobalKey(msg)
 	if handled {

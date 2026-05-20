@@ -2730,6 +2730,62 @@ func TestSlashSuggestionEnterAutoRunsSingleCommandAndClearsSuggestions(t *testin
 	}
 }
 
+func TestHelpCommandOpensInteractiveHelp(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.width = 100
+	m.height = 30
+	m.input.SetValue("/help")
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+
+	if len(*intents) != 0 {
+		t.Fatalf("/help should open local help without dispatching, got %+v", *intents)
+	}
+	if m.mode != modeHelp {
+		t.Fatalf("expected help mode, got %v", m.mode)
+	}
+	if got := m.input.Value(); got != "" {
+		t.Fatalf("expected input cleared, got %q", got)
+	}
+	view := m.View()
+	for _, want := range []string{"Whale help", "Browse default commands:", "/feedback", "For more help:", helpDocsURL, "Esc to cancel"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("expected help view to contain %q:\n%s", want, view)
+		}
+	}
+	for _, msg := range m.transcript {
+		if msg.Role == "you" && msg.Text == "/help" {
+			t.Fatalf("/help should not be written as a user transcript row")
+		}
+	}
+}
+
+func TestHelpCommandKeyboardAndMouseNavigation(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 100
+	m.height = 18
+	m.openHelp()
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = next.(model)
+	if m.help.selected != 1 {
+		t.Fatalf("expected down to move help selection, got %d", m.help.selected)
+	}
+
+	next, _ = m.Update(tea.MouseMsg{Button: tea.MouseButtonWheelDown, Action: tea.MouseActionPress})
+	m = next.(model)
+	if m.help.selected != 2 {
+		t.Fatalf("expected mouse wheel to move help selection, got %d", m.help.selected)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(model)
+	if m.mode != modeChat {
+		t.Fatalf("expected esc to close help, got mode %v", m.mode)
+	}
+}
+
 func TestShiftTabModeToggleDoesNotStartWorkingState(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 
@@ -4759,6 +4815,25 @@ func TestLocalSlashCommandsEchoBeforeResults(t *testing.T) {
 	}
 	if strings.Index(got, "/status") > strings.Index(got, "session: test-session") {
 		t.Fatalf("expected /status before its result:\n%s", got)
+	}
+}
+
+func TestHelpInfoRendersAsListInsteadOfCollapsedParagraph(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 100
+	m.height = 30
+
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventLocalSubmitResult, Status: "info", Text: app.BuildHelpText()}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	if strings.Contains(got, "/agent Switch to agent mode /ask") {
+		t.Fatalf("expected help commands to render as a list, got:\n%s", got)
+	}
+	for _, want := range []string{"Whale help", "Browse default commands:", "/agent", "Switch to agent mode", "/feedback", "For more help:"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected help output to contain %q:\n%s", want, got)
+		}
 	}
 }
 

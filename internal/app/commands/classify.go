@@ -62,7 +62,7 @@ func ClassifySubmit(line, help string, localCommands ...string) SubmitClassifica
 
 func classifySlashFields(head string, fields []string, line string) SubmitClass {
 	switch head {
-	case "/status", "/mcp", "/feedback":
+	case "/status", "/mcp", "/feedback", "/help":
 		if len(fields) == 1 {
 			return SubmitLocalReadOnly
 		}

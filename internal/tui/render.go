@@ -134,6 +134,9 @@ func (m model) bottomPartsBeforeInput(mainWidth int) []string {
 	if m.mode == modeReviewMenu {
 		bottomParts = append(bottomParts, m.renderReviewMenu())
 	}
+	if m.mode == modeHelp {
+		bottomParts = append(bottomParts, m.renderHelp())
+	}
 	if m.mode == modeSessionPicker {
 		rows := []string{"sessions (↑/↓ select, enter confirm, esc cancel):"}
 		for i, row := range m.sessionChoices {

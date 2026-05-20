@@ -134,6 +134,12 @@ func (a *App) ExecuteLocalCommand(line string) (CommandExecution, error) {
 	if trimmed == "/mcp" {
 		return CommandExecution{Handled: true, Text: a.buildMCPStatus()}, nil
 	}
+	if trimmed == "/help" {
+		return CommandExecution{Handled: true, Text: BuildHelpText()}, nil
+	}
+	if strings.HasPrefix(trimmed, "/help ") {
+		return CommandExecution{Handled: true}, errors.New("usage: /help")
+	}
 	if trimmed == "/feedback" {
 		return CommandExecution{Handled: true, Text: openFeedbackIssues()}, nil
 	}

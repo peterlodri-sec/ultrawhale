@@ -117,6 +117,7 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/stats all", want: appcommands.SubmitLocalReadOnly},
 		{line: "/mcp", want: appcommands.SubmitLocalReadOnly},
 		{line: "/feedback", want: appcommands.SubmitLocalReadOnly},
+		{line: "/help", want: appcommands.SubmitLocalReadOnly},
 		{line: "/model", want: appcommands.SubmitLocalUI},
 		{line: "/permissions", want: appcommands.SubmitLocalUI},
 		{line: "/focus", want: appcommands.SubmitLocalUI},
@@ -157,6 +158,7 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/new a b", want: appcommands.SubmitUsageError},
 		{line: "/stats bad", want: appcommands.SubmitUsageError},
 		{line: "/feedback now", want: appcommands.SubmitUsageError},
+		{line: "/help now", want: appcommands.SubmitUsageError},
 		{line: "/compact bad", want: appcommands.SubmitUsageError},
 		{line: "/plan show", want: appcommands.SubmitUsageError},
 		{line: "/unknown", want: appcommands.SubmitUsageError},
@@ -537,9 +539,50 @@ func TestHandleLocalCommandFeedbackReportsOpenError(t *testing.T) {
 	}
 }
 
+func TestHandleLocalCommandHelp(t *testing.T) {
+	a := &App{}
+	handled, out, synthetic, err := a.HandleLocalCommand("/help")
+	if err != nil {
+		t.Fatalf("HandleLocalCommand: %v", err)
+	}
+	if !handled {
+		t.Fatal("expected /help to be handled")
+	}
+	if synthetic != "" {
+		t.Fatalf("expected no synthetic prompt, got %q", synthetic)
+	}
+	for _, want := range []string{
+		"Whale help",
+		"Browse default commands:",
+		"/agent",
+		"/ask [prompt]",
+		"/compact",
+		"/review [target]",
+		"/status",
+		"/plugins",
+		"/feedback",
+		"For more help:",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected /help output to contain %q, got:\n%s", want, out)
+		}
+	}
+}
+
+func TestHandleLocalCommandHelpUsageError(t *testing.T) {
+	a := &App{}
+	handled, _, _, err := a.HandleLocalCommand("/help now")
+	if !handled || err == nil || !strings.Contains(err.Error(), "usage: /help") {
+		t.Fatalf("expected /help usage error, handled=%v err=%v", handled, err)
+	}
+}
+
 func TestCommandsHelpKeepsSkillCommandOutOfPrimaryList(t *testing.T) {
 	if !strings.Contains(CommandsHelp, "/agent") {
 		t.Fatalf("expected /agent in help: %s", CommandsHelp)
+	}
+	if !strings.Contains(CommandsHelp, "/help") {
+		t.Fatalf("expected /help in help: %s", CommandsHelp)
 	}
 	if !strings.Contains(CommandsHelp, "/skills") {
 		t.Fatalf("expected /skills in help: %s", CommandsHelp)
