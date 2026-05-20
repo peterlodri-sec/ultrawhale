@@ -49,6 +49,7 @@ type Config struct {
 	CheckForUpdateOnStartup bool
 	ViewMode                string
 	RetryMaxAttempts        int
+	RetryStreamMaxAttempts  int
 	RetryMaxDelay           time.Duration
 	MCPConfigPath           string
 	APIBaseURL              string
@@ -123,6 +124,7 @@ func DefaultConfig() Config {
 		CheckForUpdateOnStartup: true,
 		ViewMode:                ViewModeDefault,
 		RetryMaxAttempts:        llmretry.DefaultPolicy().MaxAttempts,
+		RetryStreamMaxAttempts:  6,
 		RetryMaxDelay:           llmretry.DefaultPolicy().MaxDelay,
 	}
 }
@@ -232,13 +234,14 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 			model = defaults.DefaultModel
 		}
 		return newDeepSeekProvider(providerOptions{
-			APIKey:          apiKey,
-			BaseURL:         cfg.APIBaseURL,
-			Model:           model,
-			ReasoningEffort: effort,
-			ThinkingEnabled: thinking,
-			MaxTokens:       maxTokens,
-			RetryPolicy:     retryPolicyFromConfig(cfg),
+			APIKey:            apiKey,
+			BaseURL:           cfg.APIBaseURL,
+			Model:             model,
+			ReasoningEffort:   effort,
+			ThinkingEnabled:   thinking,
+			MaxTokens:         maxTokens,
+			RetryPolicy:       retryPolicyFromConfig(cfg),
+			StreamMaxAttempts: cfg.RetryStreamMaxAttempts,
 		})
 	}
 	var appRef *App

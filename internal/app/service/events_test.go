@@ -12,6 +12,7 @@ import (
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/app"
 	"github.com/usewhale/whale/internal/core"
+	llmretry "github.com/usewhale/whale/internal/llm/retry"
 	"github.com/usewhale/whale/internal/plugins"
 	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
@@ -137,6 +138,49 @@ func TestTurnDeltaCoalescerDropNoticeIsReliable(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("flushReliable did not return after notice was consumed")
+	}
+}
+
+func TestRunTurnWithStreamResetClearsLastResponse(t *testing.T) {
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	ch := make(chan agent.AgentEvent, 4)
+	ch <- agent.AgentEvent{Type: agent.AgentEventTypeAssistantDelta, Content: "old partial "}
+	ch <- agent.AgentEvent{Type: agent.AgentEventTypeProviderRetryScheduled, ProviderRetry: &llmretry.Info{
+		Attempt:     1,
+		MaxAttempts: 2,
+		Reason:      "API stream disconnected",
+		Stage:       "stream",
+		StreamReset: true,
+	}}
+	ch <- agent.AgentEvent{Type: agent.AgentEventTypeAssistantDelta, Content: "new final"}
+	close(ch)
+
+	svc.runTurnWith(func(context.Context) (<-chan agent.AgentEvent, error) {
+		return ch, nil
+	})
+
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case ev := <-svc.Events():
+			if ev.Kind != EventTurnDone {
+				continue
+			}
+			if ev.LastResponse != "new final" {
+				t.Fatalf("last response should exclude pre-reset delta, got %q", ev.LastResponse)
+			}
+			return
+		case <-deadline:
+			t.Fatal("timed out waiting for turn done")
+		}
 	}
 }
 

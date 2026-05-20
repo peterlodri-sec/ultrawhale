@@ -47,6 +47,11 @@ func metadataInt64(v any) (int64, bool) {
 	}
 }
 
+func metadataBool(v any) bool {
+	b, ok := v.(bool)
+	return ok && b
+}
+
 func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	var eventCmd tea.Cmd
 	switch ev.Kind {
@@ -96,6 +101,9 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		}
 		m.addLog(logEntry{Kind: "plan_update", Source: "plan", Summary: truncateLine(ev.Text, 120), Raw: ev.Text})
 	case service.EventProviderRetry:
+		if ev.Metadata != nil && metadataBool(ev.Metadata["stream_reset"]) {
+			m.resetLiveAttemptForProviderRetry()
+		}
 		m.setProviderRetryStatus(ev)
 		m.addLog(logEntry{Kind: "api_retry", Source: "provider", Summary: ev.Text, Raw: fmt.Sprintf("%+v", ev.Metadata)})
 	case service.EventInfo:
@@ -541,6 +549,14 @@ func (m *model) resetTurnVisibility() {
 	m.sawTerminalToolOutcomeThisTurn = false
 	m.visibleAssistantThisTurn = ""
 	m.turnTranscriptStart = len(m.transcript)
+}
+
+func (m *model) resetLiveAttemptForProviderRetry() {
+	if m.assembler != nil {
+		m.assembler.Reset()
+	}
+	m.resetTurnVisibility()
+	m.refreshLiveViewportContent()
 }
 
 func isAgentTurnDone(ev service.Event) bool {

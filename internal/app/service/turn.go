@@ -81,6 +81,9 @@ func (s *Service) runTurnWith(start func(context.Context) (<-chan agent.AgentEve
 		case agent.AgentEventTypeProviderRetryScheduled:
 			if ev.ProviderRetry != nil {
 				deltas.flushReliable()
+				if ev.ProviderRetry.StreamReset {
+					last = ""
+				}
 				s.emit(providerRetryEvent(ev.ProviderRetry))
 			}
 		case agent.AgentEventTypeToolCall:
@@ -159,6 +162,12 @@ func providerRetryEvent(info *llmretry.Info) Event {
 	}
 	if info.Reason != "" {
 		meta["reason"] = info.Reason
+	}
+	if info.Stage != "" {
+		meta["stage"] = info.Stage
+	}
+	if info.StreamReset {
+		meta["stream_reset"] = true
 	}
 	return Event{Kind: EventProviderRetry, Text: llmretry.FormatInfo(*info), Metadata: meta}
 }

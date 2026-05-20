@@ -50,8 +50,9 @@ type FileAPIConfig struct {
 }
 
 type FileRetryConfig struct {
-	MaxAttempts *int   `toml:"max_attempts,omitempty"`
-	MaxDelay    string `toml:"max_delay,omitempty"`
+	MaxAttempts       *int   `toml:"max_attempts,omitempty"`
+	StreamMaxAttempts *int   `toml:"stream_max_attempts,omitempty"`
+	MaxDelay          string `toml:"max_delay,omitempty"`
 }
 
 type FileBudgetConfig struct {
@@ -205,6 +206,12 @@ func ApplyFileConfig(cfg *Config, file FileConfig) error {
 		}
 		cfg.RetryMaxAttempts = *file.Retry.MaxAttempts
 	}
+	if file.Retry.StreamMaxAttempts != nil {
+		if *file.Retry.StreamMaxAttempts <= 0 {
+			return fmt.Errorf("invalid retry.stream_max_attempts: must be greater than 0")
+		}
+		cfg.RetryStreamMaxAttempts = *file.Retry.StreamMaxAttempts
+	}
 	if strings.TrimSpace(file.Retry.MaxDelay) != "" {
 		d, err := time.ParseDuration(strings.TrimSpace(file.Retry.MaxDelay))
 		if err != nil {
@@ -303,6 +310,9 @@ func overlayExplicitConfig(dst *Config, src Config) {
 	}
 	if src.RetryMaxAttempts != 0 && src.RetryMaxAttempts != def.RetryMaxAttempts {
 		dst.RetryMaxAttempts = src.RetryMaxAttempts
+	}
+	if src.RetryStreamMaxAttempts != 0 && src.RetryStreamMaxAttempts != def.RetryStreamMaxAttempts {
+		dst.RetryStreamMaxAttempts = src.RetryStreamMaxAttempts
 	}
 	if src.RetryMaxDelay != 0 && src.RetryMaxDelay != def.RetryMaxDelay {
 		dst.RetryMaxDelay = src.RetryMaxDelay

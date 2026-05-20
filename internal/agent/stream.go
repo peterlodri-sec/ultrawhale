@@ -68,6 +68,22 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		case llm.EventRetryScheduled:
 			if ev.Retry != nil {
 				info := *ev.Retry
+				if info.StreamReset {
+					assistant.Text = ""
+					assistant.Reasoning = ""
+					assistant.ToolCalls = nil
+					assistant.FinishReason = ""
+					rt.Scratch.ResetTurn()
+					planParser = core.ProposedPlanParser{}
+					planText.Reset()
+					planStarted = false
+					planCompleted = false
+					assistantDeltaSeen = false
+					streamPersisted = false
+					if err := a.store.Update(ctx, assistant); err != nil {
+						return core.Message{}, nil, llm.Usage{}, "", false, err
+					}
+				}
 				events <- AgentEvent{Type: AgentEventTypeProviderRetryScheduled, ProviderRetry: &info}
 			}
 		case llm.EventComplete:

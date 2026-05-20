@@ -3120,6 +3120,35 @@ func TestProviderRetryStatusClearsOnAssistantDelta(t *testing.T) {
 	}
 }
 
+func TestProviderRetryStreamResetClearsLiveAttempt(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.handleServiceEvent(service.Event{Kind: service.EventAssistantDelta, Text: "old answer"})
+	m.handleServiceEvent(service.Event{Kind: service.EventReasoningDelta, Text: "old thought"})
+	m.appendToolCall("tc-old", "shell_run", `{"command":"date"}`)
+
+	if len(m.assembler.Snapshot()) == 0 {
+		t.Fatal("expected live attempt content before retry reset")
+	}
+	m.handleServiceEvent(service.Event{
+		Kind:     service.EventProviderRetry,
+		Text:     "API stream disconnected, retrying in 1s (1/1)",
+		Metadata: map[string]any{"delay_ms": int64(1000), "stage": "stream", "stream_reset": true},
+	})
+
+	if got := len(m.assembler.Snapshot()); got != 0 {
+		t.Fatalf("expected live attempt cleared, got %+v", m.assembler.Snapshot())
+	}
+	if m.visibleAssistantThisTurn != "" || m.sawAssistantThisTurn || m.sawReasoningThisTurn {
+		t.Fatalf("turn visibility not reset: visible=%q assistant=%v reasoning=%v", m.visibleAssistantThisTurn, m.sawAssistantThisTurn, m.sawReasoningThisTurn)
+	}
+	if m.providerRetryStatus == "" {
+		t.Fatal("expected provider retry status after reset")
+	}
+	if len(m.transcript) != 0 {
+		t.Fatalf("retry reset should not append transcript: %+v", m.transcript)
+	}
+}
+
 func TestSkillsManagerRendersSearchesAndToggles(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.handleServiceEvent(service.Event{
