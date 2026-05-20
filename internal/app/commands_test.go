@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,6 +116,7 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/stats recent", want: appcommands.SubmitLocalReadOnly},
 		{line: "/stats all", want: appcommands.SubmitLocalReadOnly},
 		{line: "/mcp", want: appcommands.SubmitLocalReadOnly},
+		{line: "/feedback", want: appcommands.SubmitLocalReadOnly},
 		{line: "/model", want: appcommands.SubmitLocalUI},
 		{line: "/permissions", want: appcommands.SubmitLocalUI},
 		{line: "/focus", want: appcommands.SubmitLocalUI},
@@ -154,6 +156,7 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/resume xxx", want: appcommands.SubmitUsageError},
 		{line: "/new a b", want: appcommands.SubmitUsageError},
 		{line: "/stats bad", want: appcommands.SubmitUsageError},
+		{line: "/feedback now", want: appcommands.SubmitUsageError},
 		{line: "/compact bad", want: appcommands.SubmitUsageError},
 		{line: "/plan show", want: appcommands.SubmitUsageError},
 		{line: "/unknown", want: appcommands.SubmitUsageError},
@@ -479,6 +482,58 @@ func TestHandleLocalCommandFocusTogglesAndPersists(t *testing.T) {
 	}
 	if !ok || loaded.UI.ViewMode != ViewModeFocus {
 		t.Fatalf("persisted view mode: ok=%v cfg=%+v", ok, loaded.UI)
+	}
+}
+
+func TestHandleLocalCommandFeedbackOpensIssues(t *testing.T) {
+	opened := ""
+	oldOpen := openFeedbackURL
+	openFeedbackURL = func(url string) error {
+		opened = url
+		return nil
+	}
+	t.Cleanup(func() { openFeedbackURL = oldOpen })
+
+	a := &App{}
+	handled, out, synthetic, err := a.HandleLocalCommand("/feedback")
+	if err != nil {
+		t.Fatalf("HandleLocalCommand: %v", err)
+	}
+	if !handled {
+		t.Fatal("expected /feedback to be handled")
+	}
+	if synthetic != "" {
+		t.Fatalf("expected no synthetic prompt, got %q", synthetic)
+	}
+	if opened != FeedbackIssuesURL {
+		t.Fatalf("opened %q, want %q", opened, FeedbackIssuesURL)
+	}
+	if !strings.Contains(out, FeedbackIssuesURL) || !strings.Contains(out, "Opening feedback issues") {
+		t.Fatalf("unexpected output: %q", out)
+	}
+}
+
+func TestHandleLocalCommandFeedbackReportsOpenError(t *testing.T) {
+	oldOpen := openFeedbackURL
+	openFeedbackURL = func(url string) error {
+		return errors.New("opener missing")
+	}
+	t.Cleanup(func() { openFeedbackURL = oldOpen })
+
+	a := &App{}
+	handled, out, synthetic, err := a.HandleLocalCommand("/feedback")
+	if err != nil {
+		t.Fatalf("HandleLocalCommand: %v", err)
+	}
+	if !handled {
+		t.Fatal("expected /feedback to be handled")
+	}
+	if synthetic != "" {
+		t.Fatalf("expected no synthetic prompt, got %q", synthetic)
+	}
+	if !strings.Contains(out, FeedbackIssuesURL) ||
+		!strings.Contains(out, "Could not open browser: opener missing") {
+		t.Fatalf("unexpected output: %q", out)
 	}
 }
 

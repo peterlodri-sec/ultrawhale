@@ -134,6 +134,9 @@ func (a *App) ExecuteLocalCommand(line string) (CommandExecution, error) {
 	if trimmed == "/mcp" {
 		return CommandExecution{Handled: true, Text: a.buildMCPStatus()}, nil
 	}
+	if trimmed == "/feedback" {
+		return CommandExecution{Handled: true, Text: openFeedbackIssues()}, nil
+	}
 	if trimmed == "/focus" {
 		mode, err := a.ToggleViewMode()
 		if err != nil {
