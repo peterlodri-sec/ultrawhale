@@ -43,6 +43,8 @@ found:
 	switch subcommand {
 	case "status", "rev-parse":
 		return gitArgsAreReadOnly(args)
+	case "symbolic-ref":
+		return gitArgsAreReadOnly(args) && gitSymbolicRefArgsAreReadOnly(args)
 	case "branch":
 		return gitArgsAreReadOnly(args) && gitBranchArgsAreReadOnly(args)
 	case "remote":
@@ -58,13 +60,39 @@ found:
 	}
 }
 
+func gitSymbolicRefArgsAreReadOnly(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	refs := 0
+	for _, arg := range args {
+		switch arg {
+		case "--short", "-q", "--quiet":
+			continue
+		default:
+			if strings.HasPrefix(arg, "-") {
+				return false
+			}
+			refs++
+		}
+	}
+	return refs == 1
+}
+
 func gitBranchArgsAreReadOnly(args []string) bool {
+	sawList := false
 	for _, arg := range args {
 		switch arg {
 		case "--show-current", "--all", "--remotes", "--list", "--verbose", "--color", "--no-color", "-a", "-r", "-l", "-v", "-vv":
+			if arg == "--list" || arg == "-l" {
+				sawList = true
+			}
 			continue
 		default:
 			if strings.HasPrefix(arg, "--color=") {
+				continue
+			}
+			if sawList && !strings.HasPrefix(arg, "-") {
 				continue
 			}
 			return false

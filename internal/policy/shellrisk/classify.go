@@ -52,6 +52,15 @@ func Classify(command string) Decision {
 	if base, ok := stripTrailingStderrToStdout(command); ok {
 		return Classify(base)
 	}
+	if parts, ok := shellsafe.SplitAndList(command); ok {
+		for _, part := range parts {
+			decision := Classify(part)
+			if !decision.Allow || decision.Level != LevelSafeRead {
+				return Decision{Code: CodeNeedsApproval, Level: LevelNeedsApproval, Reason: "&& list contains a command that is not safe read-only"}
+			}
+		}
+		return safeReadDecision("&& list of read-only commands", "shell:safe:and-list")
+	}
 	if parts, ok := shellsafe.SplitPipeline(command); ok {
 		for _, part := range parts {
 			decision := Classify(part)
@@ -108,8 +117,17 @@ func classifyBuiltinReadOnly(argv, lower []string) Decision {
 		if len(lower) >= 2 && lower[1] == "-v" {
 			return classifyCommandLookup(lower[2:])
 		}
+	case "sed":
+		return classifySedReadOnly(argv)
 	}
 	return Decision{}
+}
+
+func classifySedReadOnly(argv []string) Decision {
+	if !sedPrintRangeReadOnly(argv) {
+		return Decision{Code: CodeNeedsApproval, Level: LevelNeedsApproval, Reason: "sed command is not classified as read-only"}
+	}
+	return safeReadDecision("sed range print command", semanticKey("safe", lowerArgv(argv)))
 }
 
 func classifyDate(argv, lower []string) Decision {
@@ -473,6 +491,63 @@ func containsArg(argv []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func sedPrintRangeReadOnly(argv []string) bool {
+	if len(argv) < 3 || argv[0] != "sed" {
+		return false
+	}
+	i := 1
+	sawQuiet := false
+	for i < len(argv) {
+		switch argv[i] {
+		case "-n", "--quiet", "--silent":
+			sawQuiet = true
+			i++
+		case "--":
+			i++
+			goto script
+		default:
+			goto script
+		}
+	}
+
+script:
+	if !sawQuiet || i >= len(argv) || !sedRangePrintScript(argv[i]) {
+		return false
+	}
+	i++
+	for ; i < len(argv); i++ {
+		if strings.HasPrefix(argv[i], "-") {
+			return false
+		}
+	}
+	return true
+}
+
+func sedRangePrintScript(script string) bool {
+	if script == "" || !strings.HasSuffix(script, "p") {
+		return false
+	}
+	addr := strings.TrimSuffix(script, "p")
+	parts := strings.Split(addr, ",")
+	if len(parts) > 2 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "$" {
+			continue
+		}
+		if part == "" {
+			return false
+		}
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func stripTrailingStderrToStdout(command string) (string, bool) {

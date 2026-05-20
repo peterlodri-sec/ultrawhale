@@ -7,6 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	appcommands "github.com/usewhale/whale/internal/app/commands"
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/store"
 	"github.com/usewhale/whale/internal/telemetry"
@@ -929,7 +933,7 @@ func TestHandleSlashReviewBuildsHiddenPrompt(t *testing.T) {
 	if !handled || out != "" || shouldExit || clearScreen {
 		t.Fatalf("unexpected /review flags handled=%v out=%q shouldExit=%v clearScreen=%v", handled, out, shouldExit, clearScreen)
 	}
-	for _, want := range []string{"You are an expert code reviewer", "Target: local changes", "git diff --cached", "git diff", "inspect the contents of each relevant untracked file", "Do not prefix commands with cd", "Start with findings"} {
+	for _, want := range []string{"You are an expert code reviewer", "Target: local changes", "git diff --cached", "git diff", "inspect the contents of each relevant untracked file", "git symbolic-ref --short refs/remotes/origin/HEAD", "Avoid shell pipelines, redirects", "Do not prefix commands with cd", "Start with findings"} {
 		if !strings.Contains(synthetic, want) {
 			t.Fatalf("review prompt missing %q:\n%s", want, synthetic)
 		}
@@ -938,6 +942,43 @@ func TestHandleSlashReviewBuildsHiddenPrompt(t *testing.T) {
 	_, _, _, _, _, err = app.HandleSlash("/review pr")
 	if err == nil || !strings.Contains(err.Error(), "usage: /review pr <number-or-url>") {
 		t.Fatalf("expected /review pr usage error, got %v", err)
+	}
+}
+
+func TestReviewPRCarriesScopedShellAllowPrefixes(t *testing.T) {
+	app := &App{sessionID: "sess-1", cfg: DefaultConfig()}
+
+	cmd, err := app.ExecuteSlash("/review pr 123")
+	if err != nil {
+		t.Fatalf("ExecuteSlash: %v", err)
+	}
+	if !cmd.Handled || cmd.Turn == nil {
+		t.Fatalf("expected review turn, got %+v", cmd)
+	}
+	if !cmd.Turn.ReadOnly {
+		t.Fatalf("expected review turn to be read-only")
+	}
+	for _, want := range []string{"gh pr list", "gh pr view", "gh pr diff"} {
+		if !slices.Contains(cmd.Turn.ShellAllowPrefixes, want) {
+			t.Fatalf("expected allow prefix %q in %+v", want, cmd.Turn.ShellAllowPrefixes)
+		}
+	}
+	if strings.Contains(strings.Join(cmd.Turn.ShellAllowPrefixes, ","), "curl") {
+		t.Fatalf("review pr should not allow curl: %+v", cmd.Turn.ShellAllowPrefixes)
+	}
+
+	local, err := app.ExecuteSlash("/review local")
+	if err != nil {
+		t.Fatalf("ExecuteSlash local: %v", err)
+	}
+	if local.Turn == nil {
+		t.Fatalf("expected local review turn")
+	}
+	if !local.Turn.ReadOnly {
+		t.Fatalf("expected local review turn to be read-only")
+	}
+	if len(local.Turn.ShellAllowPrefixes) != 0 {
+		t.Fatalf("local review should not carry PR shell prefixes: %+v", local.Turn.ShellAllowPrefixes)
 	}
 }
 
@@ -985,6 +1026,58 @@ func TestReviewPromptQuotesShellTargets(t *testing.T) {
 				t.Fatalf("prompt contains unsafe unquoted command %q:\n%s", tc.notWant, prompt)
 			}
 		})
+	}
+}
+
+func TestReviewPromptGuidesPRDiffRecovery(t *testing.T) {
+	prompt, err := appcommands.ReviewPromptFromArgs("pr 123")
+	if err != nil {
+		t.Fatalf("ReviewPromptFromArgs: %v", err)
+	}
+	for _, want := range []string{
+		"gh pr view '123' --json",
+		"If a PR diff is truncated",
+		"run one plain read-only command at a time",
+		"Do not add redirects, pipes, command substitutions, semicolon chains, && chains, || fallbacks, or temp/workspace diff capture files",
+		"Do not assume gh pr diff supports path filtering",
+		"git diff <base>...<head> -- <path>",
+		"Do not use read_file for PR-added files unless you have confirmed the PR head is checked out locally",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("review prompt missing %q:\n%s", want, prompt)
+		}
+	}
+}
+
+func TestReviewPRPromptCommandsAreScopedAutoAllowed(t *testing.T) {
+	const args = "pr 123"
+	prompt, err := appcommands.ReviewPromptFromArgs(args)
+	if err != nil {
+		t.Fatalf("ReviewPromptFromArgs: %v", err)
+	}
+	allowPrefixes, err := appcommands.ReviewShellAllowPrefixesFromArgs(args)
+	if err != nil {
+		t.Fatalf("ReviewShellAllowPrefixesFromArgs: %v", err)
+	}
+	if len(allowPrefixes) == 0 {
+		t.Fatal("expected /review pr to return scoped allow prefixes")
+	}
+	p := policy.ScopedAllowPolicy{
+		Base:               policy.DefaultToolPolicy{Mode: policy.ApprovalModeOnRequest},
+		ShellAllowPrefixes: allowPrefixes,
+	}
+	spec := core.ToolSpec{Name: "shell_run"}
+	re := regexp.MustCompile(`(?m)^-\s+(gh pr [^\n]+)$`)
+	matches := re.FindAllStringSubmatch(prompt, -1)
+	if len(matches) == 0 {
+		t.Fatalf("expected at least one '- gh pr ...' command line in prompt:\n%s", prompt)
+	}
+	for _, m := range matches {
+		cmd := strings.TrimSpace(m[1])
+		decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":` + strconv.Quote(cmd) + `}`})
+		if !decision.Allow || decision.RequiresApproval || decision.Code != "scoped_allow_prefix" {
+			t.Fatalf("prompt command %q must auto-allow under scoped policy (drifted from whitelist): %+v", cmd, decision)
+		}
 	}
 }
 

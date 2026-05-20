@@ -117,12 +117,15 @@ func TestClassifyRejectsCompoundOrRedirectedCommands(t *testing.T) {
 	for _, command := range []string{
 		"date; rm -rf /tmp/x",
 		"command -v go > out",
-		"which go && rm -rf /tmp/x",
 	} {
 		got := Classify(command)
 		if got.Allow || got.Code != CodeParseFailed {
 			t.Fatalf("Classify(%q) = %+v, want parse failure", command, got)
 		}
+	}
+	got := Classify("which go && rm -rf /tmp/x")
+	if got.Allow || got.Code != CodeNeedsApproval {
+		t.Fatalf("Classify(unsafe && list) = %+v, want needs approval", got)
 	}
 }
 
@@ -130,6 +133,16 @@ func TestClassifyAllowsSafeReadOnlyPipelines(t *testing.T) {
 	got := Classify("uname -a | cat")
 	if !got.Allow || got.Code != CodeSafeRead {
 		t.Fatalf("Classify(read-only pipeline) = %+v, want safe read allow", got)
+	}
+
+	got = Classify("git show HEAD:internal/app/config_file.go | sed -n '300,459p'")
+	if !got.Allow || got.Code != CodeSafeRead {
+		t.Fatalf("Classify(git show sed pipeline) = %+v, want safe read allow", got)
+	}
+
+	got = Classify("git branch --list 'feature/worktree-command' && git rev-parse --abbrev-ref HEAD")
+	if !got.Allow || got.Code != CodeSafeRead {
+		t.Fatalf("Classify(read-only && list) = %+v, want safe read allow", got)
 	}
 }
 
@@ -145,6 +158,19 @@ func TestClassifyRejectsUnsafeExistingAutoAllowVariants(t *testing.T) {
 		got := Classify(command)
 		if got.Allow || got.Code != CodeUnsafeArgs {
 			t.Fatalf("Classify(%q) = %+v, want unsafe args", command, got)
+		}
+	}
+}
+
+func TestClassifyRequiresApprovalForUnsafeReadOnlyPipelinesAndLists(t *testing.T) {
+	for _, command := range []string{
+		"git show HEAD:internal/app/config_file.go | sed -i '300,459p'",
+		"git show HEAD:internal/app/config_file.go | sed -n '300,459w out.txt'",
+		"git status --short && git branch -D feature",
+	} {
+		got := Classify(command)
+		if got.Allow || got.Code != CodeNeedsApproval {
+			t.Fatalf("Classify(%q) = %+v, want needs approval", command, got)
 		}
 	}
 }

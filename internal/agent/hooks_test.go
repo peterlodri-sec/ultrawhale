@@ -75,6 +75,40 @@ func TestAgentPreToolHookBlockSkipsDispatch(t *testing.T) {
 	}
 }
 
+func TestReadOnlyTurnPolicyDeniesBeforePreToolHook(t *testing.T) {
+	store := NewInMemoryStore()
+	hookCalled := false
+	a := NewAgentWithRegistry(
+		&preBlockProvider{},
+		store,
+		core.NewToolRegistry([]core.Tool{writeLikeTool{}}),
+		WithHooks([]ResolvedHook{{HookConfig: HookConfig{Command: "side-effect"}, Event: HookEventPreToolUse}}, "."),
+	)
+	a.hooks.spawner = func(_ context.Context, _ HookSpawnInput) HookSpawnResult {
+		hookCalled = true
+		return HookSpawnResult{ExitCode: 0}
+	}
+	events, err := a.RunStreamWithTurnOptions(context.Background(), "s-readonly-hook", "review", RunOptions{ReadOnly: true})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	var sawPolicyDeny bool
+	for ev := range events {
+		if ev.Type == AgentEventTypeHookStarted || ev.Type == AgentEventTypeHookCompleted || ev.Type == AgentEventTypeHookBlocked || ev.Type == AgentEventTypeHookFailed || ev.Type == AgentEventTypeHookWarned {
+			t.Fatalf("PreToolUse hook should not run before read-only denial")
+		}
+		if ev.Type == AgentEventTypeToolPolicyDecision && ev.Policy != nil && ev.Policy.Code == "read_only_turn_denied" {
+			sawPolicyDeny = true
+		}
+	}
+	if hookCalled {
+		t.Fatal("PreToolUse hook side effect ran before read-only denial")
+	}
+	if !sawPolicyDeny {
+		t.Fatal("expected read-only policy denial")
+	}
+}
+
 func TestLoadHooksProjectThenLocalThenGlobalOrder(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")

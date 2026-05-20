@@ -10,20 +10,21 @@ import (
 )
 
 type Result struct {
-	Handled      bool
-	ShouldExit   bool
-	ClearScreen  bool
-	SessionID    string
-	Output       string
-	ShowStatus   bool
-	Mode         string
-	AskPrompt    string
-	PlanPrompt   string
-	InitMemory   bool
-	ShowSkills   bool
-	ReviewPrompt string
-	ForkName     string
-	BtwQuestion  string
+	Handled            bool
+	ShouldExit         bool
+	ClearScreen        bool
+	SessionID          string
+	Output             string
+	ShowStatus         bool
+	Mode               string
+	AskPrompt          string
+	PlanPrompt         string
+	InitMemory         bool
+	ShowSkills         bool
+	ReviewPrompt       string
+	AllowShellPrefixes []string
+	ForkName           string
+	BtwQuestion        string
 }
 
 func NewSessionID(now time.Time) string {
@@ -110,11 +111,16 @@ func Parse(line, currentSessionID string, now time.Time) (Result, error) {
 		return Result{}, fmt.Errorf("usage: /skills")
 	}
 	if head == "/review" {
-		prompt, err := ReviewPromptFromArgs(strings.TrimSpace(strings.TrimPrefix(trimmed, "/review")))
+		args := strings.TrimSpace(strings.TrimPrefix(trimmed, "/review"))
+		prompt, err := ReviewPromptFromArgs(args)
 		if err != nil {
 			return Result{}, err
 		}
-		return Result{Handled: true, SessionID: currentSessionID, ReviewPrompt: prompt}, nil
+		allowPrefixes, err := ReviewShellAllowPrefixesFromArgs(args)
+		if err != nil {
+			return Result{}, err
+		}
+		return Result{Handled: true, SessionID: currentSessionID, ReviewPrompt: prompt, AllowShellPrefixes: allowPrefixes}, nil
 	}
 	if head == "/btw" {
 		question := strings.TrimSpace(strings.TrimPrefix(trimmed, "/btw"))

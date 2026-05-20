@@ -40,6 +40,66 @@ type ToolPolicy interface {
 	Decide(spec core.ToolSpec, call core.ToolCall) PolicyDecision
 }
 
+type ScopedAllowPolicy struct {
+	Base               ToolPolicy
+	ShellAllowPrefixes []string
+}
+
+func (p ScopedAllowPolicy) Decide(spec core.ToolSpec, call core.ToolCall) PolicyDecision {
+	base := p.Base
+	if base == nil {
+		base = DefaultToolPolicy{Mode: ApprovalModeOnRequest}
+	}
+	decision := base.Decide(spec, call)
+	if !decision.Allow {
+		return decision
+	}
+	if spec.Name == "shell_run" {
+		cmd := shellCommandFromInput(call.Input)
+		if shellCommandEligibleForScopedAllow(cmd) {
+			for _, allow := range p.ShellAllowPrefixes {
+				if hasAllowCommandPrefix(cmd, allow) && scopedAllowCommandAllowed(cmd, allow) {
+					return PolicyDecision{
+						Allow:            true,
+						RequiresApproval: false,
+						Code:             "scoped_allow_prefix",
+						Phase:            "allowed",
+						MatchedRule:      allow,
+					}
+				}
+			}
+		}
+	}
+	return decision
+}
+
+type ReadOnlyTurnPolicy struct {
+	Base ToolPolicy
+}
+
+func (p ReadOnlyTurnPolicy) Decide(spec core.ToolSpec, call core.ToolCall) PolicyDecision {
+	base := p.Base
+	if base == nil {
+		base = DefaultToolPolicy{Mode: ApprovalModeOnRequest}
+	}
+	decision := base.Decide(spec, call)
+	if !decision.Allow {
+		return decision
+	}
+	if core.IsReadOnlyToolCall(spec, call) {
+		return decision
+	}
+	if spec.Name == "shell_run" && decision.Code == "scoped_allow_prefix" && !decision.RequiresApproval {
+		return decision
+	}
+	return PolicyDecision{
+		Allow:  false,
+		Reason: "review turns are read-only",
+		Code:   "read_only_turn_denied",
+		Phase:  "denied",
+	}
+}
+
 type DefaultToolPolicy struct {
 	Mode          ApprovalMode
 	AllowPrefixes []string
@@ -150,6 +210,101 @@ func shellCommandFromInput(input string) string {
 	}
 	cmd, _ := body["command"].(string)
 	return strings.TrimSpace(cmd)
+}
+
+func shellCommandEligibleForScopedAllow(command string) bool {
+	if command == "" {
+		return false
+	}
+	return !strings.ContainsAny(command, "\n\r;&|<>$`(){}#")
+}
+
+// The gh pr * argv whitelist below is intentionally narrow and assumes the
+// exact command shapes emitted by the /review pr prompt in
+// internal/app/commands/review.go. If that prompt changes (different flags,
+// different field lists, additional args), update the corresponding
+// ghPR*ScopedAllowArgs helper so legitimate review calls keep auto-allowing.
+func scopedAllowCommandAllowed(command, rule string) bool {
+	rule = normalizeCommandPrefix(rule)
+	if !strings.HasPrefix(rule, "gh pr ") {
+		return true
+	}
+	return ghPRScopedAllowCommandAllowed(command, rule)
+}
+
+func ghPRScopedAllowCommandAllowed(command, rule string) bool {
+	argv := strings.Fields(command)
+	if len(argv) < 3 || strings.ToLower(argv[0]) != "gh" || strings.ToLower(argv[1]) != "pr" {
+		return false
+	}
+	for _, arg := range argv[3:] {
+		if arg == "--web" || arg == "-w" {
+			return false
+		}
+	}
+	switch rule {
+	case "gh pr view":
+		return ghPRViewScopedAllowArgs(argv[3:])
+	case "gh pr list":
+		return ghPRListScopedAllowArgs(argv[3:])
+	case "gh pr diff":
+		return ghPRDiffScopedAllowArgs(argv[3:])
+	default:
+		return false
+	}
+}
+
+func ghPRViewScopedAllowArgs(args []string) bool {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") || strings.TrimSpace(args[0]) == "" {
+		return false
+	}
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--comments":
+			continue
+		case "--json":
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") || strings.TrimSpace(args[i+1]) == "" {
+				return false
+			}
+			i++
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func ghPRListScopedAllowArgs(args []string) bool {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--limit", "--json", "--state", "--author", "--base", "--head", "--label", "--search":
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") || strings.TrimSpace(args[i+1]) == "" {
+				return false
+			}
+			i++
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func ghPRDiffScopedAllowArgs(args []string) bool {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") || strings.TrimSpace(args[0]) == "" {
+		return false
+	}
+	for _, arg := range args[1:] {
+		switch arg {
+		case "--patch", "--name-only":
+			continue
+		default:
+			if strings.HasPrefix(arg, "--color=") {
+				continue
+			}
+			return false
+		}
+	}
+	return true
 }
 
 func hasAllowCommandPrefix(command, rule string) bool {

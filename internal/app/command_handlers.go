@@ -63,8 +63,10 @@ func (a *App) ExecuteSlash(line string) (CommandExecution, error) {
 		return CommandExecution{Handled: true, Turn: &plugins.CommandTurn{
 			Input:               cmdResult.ReviewPrompt,
 			Hidden:              true,
+			ReadOnly:            true,
 			SkipUserPromptHooks: true,
 			SkipSkillInjection:  true,
+			ShellAllowPrefixes:  append([]string(nil), cmdResult.AllowShellPrefixes...),
 		}}, nil
 	}
 	if strings.TrimSpace(cmdResult.ForkName) != "" || trimmedCommandHead(line) == "/fork" {

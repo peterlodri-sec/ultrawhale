@@ -36,6 +36,9 @@ const (
 	modeSkillsManager
 	modePluginsManager
 	modeReviewMenu
+	modeReviewBranchPicker
+	modeReviewCommitPicker
+	modeReviewPRPicker
 	modeHelp
 )
 
@@ -147,7 +150,8 @@ type model struct {
 	reviewMenu struct {
 		selected int
 	}
-	help struct {
+	reviewTargetPicker reviewTargetPickerState
+	help               struct {
 		selected int
 		offset   int
 	}
@@ -426,6 +430,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.cwd == m.cwdPath {
 			m.gitBranch = msg.branch
 		}
+		return m, m.withMouseCaptureCmd()
+	case reviewCommitsLoadedMsg:
+		m.handleReviewCommitsLoaded(msg)
+		return m, m.withMouseCaptureCmd()
+	case reviewBranchesLoadedMsg:
+		m.handleReviewBranchesLoaded(msg)
+		return m, m.withMouseCaptureCmd()
+	case reviewPRsLoadedMsg:
+		m.handleReviewPRsLoaded(msg)
 		return m, m.withMouseCaptureCmd()
 	case tea.KeyMsg:
 		prevMainWidth, _ := m.layoutDims()

@@ -53,6 +53,125 @@ func TestDefaultToolPolicyPrefixRulesRequireTokenBoundary(t *testing.T) {
 	}
 }
 
+func TestScopedAllowPolicyAllowsOnlyConfiguredShellPrefixes(t *testing.T) {
+	p := ScopedAllowPolicy{
+		Base:               DefaultToolPolicy{Mode: ApprovalModeOnRequest},
+		ShellAllowPrefixes: []string{"gh pr list", "gh pr view", "gh pr diff"},
+	}
+	spec := core.ToolSpec{Name: "shell_run"}
+
+	allow := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":"gh pr diff 123"}`})
+	if !allow.Allow || allow.RequiresApproval || allow.Code != "scoped_allow_prefix" || allow.MatchedRule != "gh pr diff" {
+		t.Fatalf("expected scoped allow for gh pr diff: %+v", allow)
+	}
+	view := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":"gh pr view 123 --json title,body"}`})
+	if !view.Allow || view.RequiresApproval || view.Code != "scoped_allow_prefix" || view.MatchedRule != "gh pr view" {
+		t.Fatalf("expected scoped allow for gh pr view json: %+v", view)
+	}
+	list := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":"gh pr list --limit 30 --json number,title"}`})
+	if !list.Allow || list.RequiresApproval || list.Code != "scoped_allow_prefix" || list.MatchedRule != "gh pr list" {
+		t.Fatalf("expected scoped allow for gh pr list json: %+v", list)
+	}
+
+	curl := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":"curl https://example.com"}`})
+	if !curl.Allow || !curl.RequiresApproval {
+		t.Fatalf("expected curl to keep default approval requirement: %+v", curl)
+	}
+
+	wideGh := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":"gh repo clone usewhale/whale"}`})
+	if !wideGh.Allow || !wideGh.RequiresApproval {
+		t.Fatalf("expected unrelated gh command to keep default approval requirement: %+v", wideGh)
+	}
+
+	for _, command := range []string{
+		"gh pr view 123 --web",
+		"gh pr view 123 -w",
+		"gh pr list --web",
+		"gh pr diff 123 --web",
+		"gh pr diff 123 | head -c 1000",
+		"gh pr diff 123 2>/dev/null",
+		"gh pr diff 123 $(echo x)",
+		"gh pr diff 123 && echo done",
+		"gh pr diff 123 --output file",
+		"gh pr view 123 --jq .body",
+		"gh pr list --repo other/repo",
+	} {
+		decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":` + strconv.Quote(command) + `}`})
+		if !decision.Allow || !decision.RequiresApproval {
+			t.Fatalf("expected scoped allow to reject shell compound %q: %+v", command, decision)
+		}
+	}
+
+	for _, command := range []string{
+		"gh pr view 123",
+		"gh pr view 123 --comments",
+		"gh pr view 123 --json title,body",
+		"gh pr view 123 --comments --json title,body",
+		"gh pr list",
+		"gh pr list --limit 30",
+		"gh pr list --state open --limit 30 --json number,title",
+		"gh pr diff 123 --patch",
+		"gh pr diff 123 --name-only",
+		"gh pr diff 123 --color=never",
+	} {
+		decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":` + strconv.Quote(command) + `}`})
+		if !decision.Allow || decision.RequiresApproval || decision.Code != "scoped_allow_prefix" {
+			t.Fatalf("expected scoped allow without approval for %q: %+v", command, decision)
+		}
+	}
+}
+
+func TestScopedAllowPolicyDoesNotOverrideBaseDeny(t *testing.T) {
+	p := ScopedAllowPolicy{
+		Base: DefaultToolPolicy{
+			Mode:         ApprovalModeOnRequest,
+			DenyPrefixes: []string{"gh pr diff"},
+		},
+		ShellAllowPrefixes: []string{"gh pr diff"},
+	}
+	decision := p.Decide(
+		core.ToolSpec{Name: "shell_run"},
+		core.ToolCall{Name: "shell_run", Input: `{"command":"gh pr diff 123"}`},
+	)
+	if decision.Allow || decision.Code != "policy_denied" {
+		t.Fatalf("expected base deny to win over scoped allow: %+v", decision)
+	}
+}
+
+func TestReadOnlyTurnPolicyDeniesMutatingToolsWithoutApproval(t *testing.T) {
+	p := ReadOnlyTurnPolicy{Base: DefaultToolPolicy{Mode: ApprovalModeOnRequest}}
+	decision := p.Decide(
+		core.ToolSpec{Name: "edit"},
+		core.ToolCall{Name: "edit", Input: `{"file_path":"a.txt","search":"a","replace":"b"}`},
+	)
+	if decision.Allow || decision.RequiresApproval || decision.Code != "read_only_turn_denied" {
+		t.Fatalf("expected read-only turn denial for edit: %+v", decision)
+	}
+}
+
+func TestReadOnlyTurnPolicyAllowsReadOnlyShellAndScopedPRShell(t *testing.T) {
+	p := ReadOnlyTurnPolicy{Base: ScopedAllowPolicy{
+		Base:               DefaultToolPolicy{Mode: ApprovalModeOnRequest},
+		ShellAllowPrefixes: []string{"gh pr view", "gh pr diff"},
+	}}
+	spec := productionShellRunSpec(t)
+
+	for _, command := range []string{
+		"git status --short",
+		"gh pr view 123 --json title,body",
+	} {
+		decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":` + strconv.Quote(command) + `}`})
+		if !decision.Allow || decision.RequiresApproval {
+			t.Fatalf("expected read-only turn to allow %q: %+v", command, decision)
+		}
+	}
+
+	decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":"make test"}`})
+	if decision.Allow || decision.RequiresApproval || decision.Code != "read_only_turn_denied" {
+		t.Fatalf("expected read-only turn to deny mutating shell without approval: %+v", decision)
+	}
+}
+
 func TestDefaultToolPolicyAutoAllowsCommonShellChecksInOnRequest(t *testing.T) {
 	p := DefaultToolPolicy{Mode: ApprovalModeOnRequest}
 	spec := productionShellRunSpec(t)
@@ -65,6 +184,8 @@ func TestDefaultToolPolicyAutoAllowsCommonShellChecksInOnRequest(t *testing.T) {
 		"git diff --cached 2>&1",
 		"git diff -- internal/policy/policy_test.go | tail -80",
 		"git diff -- internal/tools/catalog_shell.go | head -40",
+		"git show feature/worktree-command:internal/worktree/worktree.go | sed -n '300,459p'",
+		"git branch --list 'feature/worktree-command' && git rev-parse --abbrev-ref HEAD",
 		"rg whale internal | wc -l",
 		"git diff --stat",
 		"git diff main...HEAD",
@@ -76,6 +197,8 @@ func TestDefaultToolPolicyAutoAllowsCommonShellChecksInOnRequest(t *testing.T) {
 		"git remote -v",
 		"git remote get-url origin",
 		"git rev-parse --abbrev-ref HEAD",
+		"git symbolic-ref --short refs/remotes/origin/HEAD",
+		"git symbolic-ref -q --short refs/remotes/origin/HEAD",
 		"git config --get remote.origin.url",
 		"rg whale internal",
 		"ls -u",
@@ -183,6 +306,9 @@ func TestDefaultToolPolicyDoesNotAutoAllowUnsafeShellVariants(t *testing.T) {
 		"cd /Users/goranka/Engineer/ai/dsk/whale-review-command && git status --short",
 		"cd /Users/goranka/Engineer/ai/dsk/whale-review-command && git status --short 2>&1",
 		"git branch -d feature",
+		"git symbolic-ref HEAD refs/heads/main",
+		"git symbolic-ref --delete HEAD",
+		"git symbolic-ref --short HEAD refs/heads/main",
 		"git remote add origin git@example.com:repo.git",
 		"git show --ext-diff HEAD",
 		"git log --textconv",
@@ -190,6 +316,9 @@ func TestDefaultToolPolicyDoesNotAutoAllowUnsafeShellVariants(t *testing.T) {
 		"git diff -- internal/policy/policy_test.go || tail -80",
 		"git diff -- internal/policy/policy_test.go | tail -80 > out.txt",
 		"git diff --output=out.patch | tail -80",
+		"git show HEAD:internal/app/config_file.go | sed -i '300,459p'",
+		"git show HEAD:internal/app/config_file.go | sed -n '300,459w out.txt'",
+		"git status --short && git branch -D feature",
 		"cd /Users/goranka/Engineer/ai/dsk/whale-review-command && git diff | tail -80",
 		"rg --pre ./danger pattern",
 		"date -s now",

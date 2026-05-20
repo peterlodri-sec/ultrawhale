@@ -13,14 +13,22 @@ import (
 )
 
 func (s *Service) runTurn(line string, hiddenInput bool) {
+	s.runTurnWithOptions(line, agent.RunOptions{HiddenInput: hiddenInput})
+}
+
+func (s *Service) runTurnWithOptions(line string, opts agent.RunOptions) {
 	s.runTurnWith(func(ctx context.Context) (<-chan agent.AgentEvent, error) {
-		return s.app.RunTurn(ctx, line, hiddenInput)
+		return s.app.RunTurnWithOptions(ctx, line, opts)
 	})
 }
 
 func (s *Service) runInjectedTurn(visibleInput, hiddenInput string) {
+	s.runInjectedTurnWithOptions(visibleInput, hiddenInput, agent.RunOptions{})
+}
+
+func (s *Service) runInjectedTurnWithOptions(visibleInput, hiddenInput string, opts agent.RunOptions) {
 	s.runTurnWith(func(ctx context.Context) (<-chan agent.AgentEvent, error) {
-		return s.app.RunTurnWithInjectedInput(ctx, visibleInput, hiddenInput)
+		return s.app.RunTurnWithInjectedInputOptions(ctx, visibleInput, hiddenInput, opts)
 	})
 }
 

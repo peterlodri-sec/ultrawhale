@@ -3457,10 +3457,13 @@ func TestReviewMenuDispatchesAndPrefillsTargets(t *testing.T) {
 		t.Fatalf("expected review menu mode, got %v", m.mode)
 	}
 	rendered := m.renderReviewMenu()
-	for _, want := range []string{"Review", "Local changes", "Current branch vs default branch", "Pull request", "Custom instructions"} {
+	for _, want := range []string{"Review", "Local changes", "Branch", "vs default branch", "Pull request", "Custom instructions"} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("expected review menu render to contain %q, got:\n%s", want, rendered)
 		}
+	}
+	if strings.Contains(rendered, "Current branch") {
+		t.Fatalf("review menu should not contain duplicate Current branch entry:\n%s", rendered)
 	}
 
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -3482,15 +3485,181 @@ func TestReviewMenuDispatchesAndPrefillsTargets(t *testing.T) {
 	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	m = next.(model)
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	m = next.(model)
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(model)
-	if got := m.input.Value(); got != "/review pr " {
-		t.Fatalf("expected PR review prefill, got %q", got)
+	if m.mode != modeReviewBranchPicker || !m.reviewTargetPicker.loading {
+		t.Fatalf("expected branch picker loading mode, mode=%v picker=%+v", m.mode, m.reviewTargetPicker)
+	}
+}
+
+func TestReviewTargetPickersSubmitSelectedTargets(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 2
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if m.mode != modeReviewPRPicker {
+		t.Fatalf("expected PR picker, got %v", m.mode)
+	}
+	m, _ = updateTestModel(t, m, reviewPRsLoadedMsg{items: []reviewPRItem{
+		{Number: 102, Title: "Improve review command", Head: "feat/review", Author: "alice"},
+	}})
+	rendered := m.renderReviewTargetPicker()
+	if !strings.Contains(rendered, "#102 Improve review command") || !strings.Contains(rendered, "Type number or URL manually") {
+		t.Fatalf("unexpected PR picker render:\n%s", rendered)
+	}
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentSubmit || (*intents)[0].Input != "/review pr 102" {
+		t.Fatalf("expected selected PR submit intent, got %+v", *intents)
+	}
+
+	m, intents = newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 3
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if m.mode != modeReviewCommitPicker {
+		t.Fatalf("expected commit picker, got %v", m.mode)
+	}
+	m, _ = updateTestModel(t, m, reviewCommitsLoadedMsg{items: []reviewCommitItem{
+		{SHA: "abc1234", Subject: "fix review picker", Author: "g", When: "2 minutes ago"},
+	}})
+	rendered = m.renderReviewTargetPicker()
+	if !strings.Contains(rendered, "abc1234 fix review picker") || !strings.Contains(rendered, "Type SHA manually") {
+		t.Fatalf("unexpected commit picker render:\n%s", rendered)
+	}
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentSubmit || (*intents)[0].Input != "/review commit abc1234" {
+		t.Fatalf("expected selected commit submit intent, got %+v", *intents)
 	}
 	if m.mode != modeChat {
-		t.Fatalf("expected chat mode after prefill, got %v", m.mode)
+		t.Fatalf("expected chat mode after commit submit, got %v", m.mode)
+	}
+
+	m, intents = newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 1
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if m.mode != modeReviewBranchPicker {
+		t.Fatalf("expected branch picker, got %v", m.mode)
+	}
+	m, _ = updateTestModel(t, m, reviewBranchesLoadedMsg{items: []reviewBranchItem{
+		{Name: "feature/review", Current: true},
+		{Name: "diagnose/input-scroll"},
+	}, defaultBranch: "origin/main"})
+	rendered = m.renderReviewTargetPicker()
+	if !strings.Contains(rendered, "Type to search branches") ||
+		!strings.Contains(rendered, "feature/review -> origin/main") ||
+		!strings.Contains(rendered, "feature/review -> diagnose/input-scroll") ||
+		strings.Contains(rendered, "feature/review -> feature/review") ||
+		!strings.Contains(rendered, "Type branch manually") {
+		t.Fatalf("unexpected branch picker render:\n%s", rendered)
+	}
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentSubmit || (*intents)[0].Input != "/review branch origin/main" {
+		t.Fatalf("expected selected branch submit intent, got %+v", *intents)
+	}
+}
+
+func TestReviewBranchPickerFiltersBranches(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 1
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	m, _ = updateTestModel(t, m, reviewBranchesLoadedMsg{items: []reviewBranchItem{
+		{Name: "main"},
+		{Name: "feat/btw-command", Current: true},
+		{Name: "diagnose/input-scroll-garbled"},
+		{Name: "design/plugin-memory"},
+	}})
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("diag")})
+	m = next.(model)
+	rendered := m.renderReviewTargetPicker()
+	if !strings.Contains(rendered, "Type to search branches: diag") ||
+		!strings.Contains(rendered, "feat/btw-command -> diagnose/input-scroll-garbled") ||
+		strings.Contains(rendered, "feat/btw-command -> design/plugin-memory") ||
+		strings.Contains(rendered, "feat/btw-command -> feat/btw-command") {
+		t.Fatalf("unexpected filtered branch picker render:\n%s", rendered)
+	}
+}
+
+func TestReviewBranchPickerDefaultFirstAndLimitsVisibleRows(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 1
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	m, _ = updateTestModel(t, m, reviewBranchesLoadedMsg{items: []reviewBranchItem{
+		{Name: "topic", Current: true},
+		{Name: "z-last"},
+		{Name: "main"},
+		{Name: "branch-1"},
+		{Name: "branch-2"},
+		{Name: "branch-3"},
+		{Name: "branch-4"},
+		{Name: "branch-5"},
+		{Name: "branch-6"},
+	}, defaultBranch: "origin/main"})
+
+	branches := m.filteredReviewBranches()
+	if len(branches) == 0 || branches[0].Name != "origin/main" {
+		t.Fatalf("expected default branch first, got %+v", branches)
+	}
+	rendered := m.renderReviewTargetPicker()
+	if !strings.Contains(rendered, "topic -> origin/main") || strings.Contains(rendered, "topic -> branch-6") || strings.Contains(rendered, "Type branch manually") {
+		t.Fatalf("expected first page of 6 branch rows, got:\n%s", rendered)
+	}
+
+	for i := 0; i < 7; i++ {
+		next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		m = next.(model)
+	}
+	rendered = m.renderReviewTargetPicker()
+	if !strings.Contains(rendered, "topic -> branch-5") {
+		t.Fatalf("expected down arrow to scroll branch rows, got:\n%s", rendered)
+	}
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentSubmit || (*intents)[0].Input != "/review branch branch-5" {
+		t.Fatalf("expected selected branch submit intent, got %+v", *intents)
+	}
+}
+
+func TestParseReviewBranchesParsesTabSeparator(t *testing.T) {
+	items := parseReviewBranches("main\t\nfeature\t*\n")
+	if len(items) != 2 || items[0].Name != "main" || items[0].Current || items[1].Name != "feature" || !items[1].Current {
+		t.Fatalf("unexpected parsed branches: %+v", items)
+	}
+}
+
+func TestReviewTargetPickerManualInputAndEsc(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 3
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	m, _ = updateTestModel(t, m, reviewCommitsLoadedMsg{})
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m = next.(model)
+	if m.mode != modeChat || m.input.Value() != "/review commit a" {
+		t.Fatalf("expected manual commit prefill, mode=%v input=%q", m.mode, m.input.Value())
+	}
+
+	m, _ = newModelWithDispatchSpy()
+	m.handleServiceEvent(service.Event{Kind: service.EventReviewMenu})
+	m.reviewMenu.selected = 1
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	m, _ = updateTestModel(t, m, reviewPRsLoadedMsg{})
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(model)
+	if m.mode != modeReviewMenu || m.status != "review" {
+		t.Fatalf("expected esc to return to review menu, mode=%v status=%q", m.mode, m.status)
 	}
 }
 

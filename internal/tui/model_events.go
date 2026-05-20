@@ -369,6 +369,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.stopping = false
 		m.mode = modeReviewMenu
 		m.reviewMenu.selected = 0
+		m.reviewTargetPicker = reviewTargetPickerState{}
 		m.slash.matches = nil
 		m.slash.selected = 0
 		m.slash.argumentHint = ""

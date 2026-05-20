@@ -84,6 +84,14 @@ func shellReadOnlyCheckWithRuntime(rt shell.RuntimeDescription, args map[string]
 	if cmd == "" {
 		return false
 	}
+	if parts, ok := shellsafe.SplitAndList(cmd); ok {
+		for _, part := range parts {
+			if !shellReadOnlyCheckWithRuntime(rt, map[string]any{"command": part}) {
+				return false
+			}
+		}
+		return true
+	}
 	if parts, ok := shellsafe.SplitPipeline(cmd); ok {
 		for _, part := range parts {
 			if !shellReadOnlyCheckWithRuntime(rt, map[string]any{"command": part}) {
@@ -102,6 +110,9 @@ func shellReadOnlyCheckWithRuntime(rt shell.RuntimeDescription, args map[string]
 	lowerArgv := lowerShellArgv(argv)
 	if shellReadOnlyCommandHasUnsafeArgs(lowerArgv) {
 		return false
+	}
+	if lowerArgv[0] == "sed" {
+		return sedPrintRangeReadOnly(argv)
 	}
 	for _, prefix := range shellReadOnlyAllowPrefixes {
 		if shellArgvHasPrefix(lowerArgv, prefix) {
@@ -219,4 +230,61 @@ func posixReadOnlyRejectedRune(r rune) bool {
 	default:
 		return false
 	}
+}
+
+func sedPrintRangeReadOnly(argv []string) bool {
+	if len(argv) < 3 || argv[0] != "sed" {
+		return false
+	}
+	i := 1
+	sawQuiet := false
+	for i < len(argv) {
+		switch argv[i] {
+		case "-n", "--quiet", "--silent":
+			sawQuiet = true
+			i++
+		case "--":
+			i++
+			goto script
+		default:
+			goto script
+		}
+	}
+
+script:
+	if !sawQuiet || i >= len(argv) || !sedRangePrintScript(argv[i]) {
+		return false
+	}
+	i++
+	for ; i < len(argv); i++ {
+		if strings.HasPrefix(argv[i], "-") {
+			return false
+		}
+	}
+	return true
+}
+
+func sedRangePrintScript(script string) bool {
+	if script == "" || !strings.HasSuffix(script, "p") {
+		return false
+	}
+	addr := strings.TrimSuffix(script, "p")
+	parts := strings.Split(addr, ",")
+	if len(parts) > 2 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "$" {
+			continue
+		}
+		if part == "" {
+			return false
+		}
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+	}
+	return true
 }

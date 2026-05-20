@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/app"
 	appcommands "github.com/usewhale/whale/internal/app/commands"
 	"github.com/usewhale/whale/internal/core"
@@ -298,6 +299,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 	}
 	skipHooks := false
 	skipSkillInjection := false
+	turnOptions := agent.RunOptions{HiddenInput: hiddenInput}
 	line = appcommands.ExpandUniqueSlashPrefix(line, app.CommandsHelp, "/mcp")
 	prevSessionID := s.app.SessionID()
 	if line == "/model" {
@@ -413,6 +415,11 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		}
 		line = cmd.Turn.Input
 		hiddenInput = cmd.Turn.Hidden
+		turnOptions = agent.RunOptions{
+			HiddenInput:        cmd.Turn.Hidden,
+			ReadOnly:           cmd.Turn.ReadOnly,
+			ShellAllowPrefixes: append([]string(nil), cmd.Turn.ShellAllowPrefixes...),
+		}
 		skipHooks = cmd.Turn.SkipUserPromptHooks
 		skipSkillInjection = cmd.Turn.SkipSkillInjection
 	}
@@ -432,6 +439,11 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		}
 		line = cmd.Turn.Input
 		hiddenInput = cmd.Turn.Hidden
+		turnOptions = agent.RunOptions{
+			HiddenInput:        cmd.Turn.Hidden,
+			ReadOnly:           cmd.Turn.ReadOnly,
+			ShellAllowPrefixes: append([]string(nil), cmd.Turn.ShellAllowPrefixes...),
+		}
 		skipHooks = cmd.Turn.SkipUserPromptHooks
 		skipSkillInjection = cmd.Turn.SkipSkillInjection
 	}
@@ -455,7 +467,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		}
 	}
 	if hiddenInput || skipSkillInjection {
-		go s.runTurn(line, hiddenInput)
+		go s.runTurnWithOptions(line, turnOptions)
 		return
 	}
 	skillMention, skillOut, skillSynthetic, err := s.app.BuildSkillMentionSyntheticPromptWithBinding(line, skillBinding)
