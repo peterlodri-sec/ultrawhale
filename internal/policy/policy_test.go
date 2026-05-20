@@ -120,6 +120,24 @@ func TestDefaultToolPolicyAutoAllowsCommonShellChecksInOnRequest(t *testing.T) {
 		"seq 1 3",
 		"tsort internal/policy/policy.go",
 		"pr internal/policy/policy.go",
+		"date",
+		"date -u",
+		"date +%Y-%m-%d",
+		"which go",
+		"command -v go",
+		"python -m pytest tests",
+	} {
+		decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":` + strconv.Quote(command) + `}`})
+		if !decision.Allow || decision.RequiresApproval {
+			t.Fatalf("expected no approval for %q: %+v", command, decision)
+		}
+	}
+}
+
+func TestDefaultToolPolicyRequiresApprovalForBoundedWriteShellCommands(t *testing.T) {
+	p := DefaultToolPolicy{Mode: ApprovalModeOnRequest}
+	spec := core.ToolSpec{Name: "shell_run"}
+	for _, command := range []string{
 		"make test",
 		"make test-tui",
 		"make build",
@@ -128,12 +146,12 @@ func TestDefaultToolPolicyAutoAllowsCommonShellChecksInOnRequest(t *testing.T) {
 		"go vet ./internal/app/commands/... ./internal/app/... ./internal/policy/... ./internal/tui/... 2>&1",
 		"npm run test -- --runInBand",
 		"npm run typecheck",
-		"python -m pytest tests",
+		"pnpm run build",
 		"cargo check --workspace",
 	} {
 		decision := p.Decide(spec, core.ToolCall{Name: "shell_run", Input: `{"command":` + strconv.Quote(command) + `}`})
-		if !decision.Allow || decision.RequiresApproval {
-			t.Fatalf("expected no approval for %q: %+v", command, decision)
+		if !decision.Allow || !decision.RequiresApproval || decision.Code != "bounded_write" {
+			t.Fatalf("expected bounded_write approval for %q: %+v", command, decision)
 		}
 	}
 }
@@ -174,6 +192,15 @@ func TestDefaultToolPolicyDoesNotAutoAllowUnsafeShellVariants(t *testing.T) {
 		"git diff --output=out.patch | tail -80",
 		"cd /Users/goranka/Engineer/ai/dsk/whale-review-command && git diff | tail -80",
 		"rg --pre ./danger pattern",
+		"date -s now",
+		"date -f dates.txt",
+		"env",
+		"printenv",
+		"go test -c ./pkg",
+		"go test -exec ./wrapper ./pkg",
+		"go test -toolexec ./wrapper ./pkg",
+		"go build ./cmd/whale",
+		"command -v go > out.txt",
 		"go test ./... > out.txt",
 		"go test ./... > out.txt 2>&1",
 		"go test ./... 2> out.txt",

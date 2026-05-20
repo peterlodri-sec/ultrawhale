@@ -6706,12 +6706,36 @@ func TestApprovalViewShowsFileReviewSessionScope(t *testing.T) {
 	for _, want := range []string{
 		"Approval required: file diff review",
 		"Review file changes before Whale applies them.",
-		"Allow for session = these files: a.txt, b.txt",
+		"Allow for session",
 		"a.txt (+1 -1)",
 	} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("expected approval view to contain %q:\n%s", want, view)
 		}
+	}
+	if strings.Contains(view, "Allow for session =") || strings.Contains(view, "these files: a.txt, b.txt") {
+		t.Fatalf("approval view should not expose session scope detail:\n%s", view)
+	}
+}
+
+func TestApprovalViewUsesSimilarCommandsLabelForShellFamily(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 30
+	m.mode = modeApproval
+	m.approval.toolName = "shell_run"
+	m.approval.reason = "shell_run: go test ./internal/policy"
+	m.approval.metadata = map[string]any{
+		"approval_session_scope": "this bounded shell command family",
+		"shell_approval_family":  true,
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "Allow similar commands") {
+		t.Fatalf("expected similar-commands option:\n%s", view)
+	}
+	if strings.Contains(view, "this bounded shell command family") || strings.Contains(view, "Allow for session =") {
+		t.Fatalf("approval view should not expose shell scope detail:\n%s", view)
 	}
 }
 
@@ -6764,11 +6788,14 @@ func TestApprovalViewShowsMemoryWriteMetadata(t *testing.T) {
 		"Description: prefers concise Chinese answers",
 		"Content:",
 		"Answer in concise Chinese with repo evidence.",
-		"Allow for session = global memory: response-style",
+		"Allow for session",
 	} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("expected approval view to contain %q:\n%s", want, view)
 		}
+	}
+	if strings.Contains(view, "Allow for session =") || strings.Contains(view, "global memory: response-style") {
+		t.Fatalf("approval view should not expose memory session scope detail:\n%s", view)
 	}
 }
 
@@ -6797,11 +6824,14 @@ func TestApprovalViewShowsMemoryDeleteMetadata(t *testing.T) {
 		"Name: roadmap",
 		"Description: plugin-first memory",
 		"Memory is the first official plugin.",
-		"Allow for session = project memory: roadmap",
+		"Allow for session",
 	} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("expected approval view to contain %q:\n%s", want, view)
 		}
+	}
+	if strings.Contains(view, "Allow for session =") || strings.Contains(view, "project memory: roadmap") {
+		t.Fatalf("approval view should not expose memory session scope detail:\n%s", view)
 	}
 }
 

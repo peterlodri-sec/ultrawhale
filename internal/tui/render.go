@@ -217,9 +217,6 @@ func (m model) renderApprovalPrompt() string {
 	if detail := approvalDisplayBody(m.approval.toolName, m.approval.reason); detail != "" {
 		bodyParts = append(bodyParts, detail)
 	}
-	if scope := approvalSessionScope(m.approval.metadata); scope != "" {
-		bodyParts = append(bodyParts, "Allow for session = "+scope)
-	}
 	approvalBody := body.Render(indentApprovalBody(strings.Join(bodyParts, "\n")))
 	if diff := renderApprovalDiffMetadata(m.approval.metadata, approvalFileDiffPreviewMaxLines); diff != "" {
 		if isReadableApprovalDiff(diff) {
@@ -237,7 +234,7 @@ func (m model) renderApprovalPrompt() string {
 
 	opts := []string{
 		renderApprovalOption("Allow once", "a", m.approval.selected == 0, false),
-		renderApprovalOption("Allow for session", "s", m.approval.selected == 1, false),
+		renderApprovalOption(approvalSessionOptionLabel(m.approval.metadata), "s", m.approval.selected == 1, false),
 		renderApprovalOption("Deny", "d", m.approval.selected == 2, true),
 	}
 
@@ -278,6 +275,13 @@ func memoryApprovalKind(metadata map[string]any) string {
 
 func approvalSessionScope(metadata map[string]any) string {
 	return strings.TrimSpace(asString(metadata["approval_session_scope"]))
+}
+
+func approvalSessionOptionLabel(metadata map[string]any) string {
+	if asBool(metadata["shell_approval_family"]) {
+		return "Allow similar commands"
+	}
+	return "Allow for session"
 }
 
 func approvalToolDisplayName(toolName string) string {

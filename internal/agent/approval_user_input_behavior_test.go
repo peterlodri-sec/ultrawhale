@@ -378,6 +378,52 @@ func TestApprovalAllowForSessionCachesBySessionKey(t *testing.T) {
 	}
 }
 
+type semanticShellApprovalProvider struct {
+	calls int
+}
+
+func (p *semanticShellApprovalProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	p.calls++
+	switch p.calls {
+	case 1:
+		return eventStream(toolUseEvent(toolCall("tc-shell-1", "shell_run", `{"command":"go test ./internal/policy"}`)))
+	case 2:
+		return eventStream(toolUseEvent(toolCall("tc-shell-2", "shell_run", `{"command":"go test ./internal/tools"}`)))
+	default:
+		return eventStream(endTurnEvent("done"))
+	}
+}
+
+func TestApprovalAllowForSessionCachesSemanticShellFamily(t *testing.T) {
+	store := NewInMemoryStore()
+	prov := &semanticShellApprovalProvider{}
+	asked := 0
+	var keys [][]string
+	a := NewAgentWithRegistry(
+		prov,
+		store,
+		NewToolRegistry([]Tool{namedNoopTool("shell_run")}),
+		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
+			asked++
+			keys = append(keys, append([]string(nil), req.Keys...))
+			return ApprovalAllowForSession
+		}),
+	)
+
+	if _, err := a.Run(context.Background(), "s-semantic-shell-cache", "t1"); err != nil {
+		t.Fatalf("run1 failed: %v", err)
+	}
+	if _, err := a.Run(context.Background(), "s-semantic-shell-cache", "t2"); err != nil {
+		t.Fatalf("run2 failed: %v", err)
+	}
+	if asked != 1 {
+		t.Fatalf("expected asked once due to semantic shell approval cache, got %d", asked)
+	}
+	if !reflect.DeepEqual(keys, [][]string{{"shell:bounded:go:test"}}) {
+		t.Fatalf("approval keys = %v, want shell:bounded:go:test", keys)
+	}
+}
+
 type namedNoopTool string
 
 func (n namedNoopTool) Name() string { return string(n) }
