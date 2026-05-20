@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/store"
 	"github.com/usewhale/whale/internal/telemetry"
+	whaleworktree "github.com/usewhale/whale/internal/worktree"
 )
 
 func TestResolveInitialSessionID(t *testing.T) {
@@ -140,6 +142,12 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/mcp", want: appcommands.SubmitLocalReadOnly},
 		{line: "/feedback", want: appcommands.SubmitLocalReadOnly},
 		{line: "/help", want: appcommands.SubmitLocalReadOnly},
+		{line: "/worktree", want: appcommands.SubmitLocalReadOnly},
+		{line: "/worktree list", want: appcommands.SubmitLocalReadOnly},
+		{line: "/worktree status", want: appcommands.SubmitLocalReadOnly},
+		{line: "/worktree status feature", want: appcommands.SubmitLocalReadOnly},
+		{line: "/worktree remove feature", want: appcommands.SubmitLocalMutating},
+		{line: "/worktree remove feature --force", want: appcommands.SubmitLocalMutating},
 		{line: "/model", want: appcommands.SubmitLocalUI},
 		{line: "/permissions", want: appcommands.SubmitLocalUI},
 		{line: "/focus", want: appcommands.SubmitLocalUI},
@@ -185,6 +193,8 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/stats bad", want: appcommands.SubmitUsageError},
 		{line: "/feedback now", want: appcommands.SubmitUsageError},
 		{line: "/help now", want: appcommands.SubmitUsageError},
+		{line: "/worktree remove feature --bad", want: appcommands.SubmitUsageError},
+		{line: "/worktree remove", want: appcommands.SubmitUsageError},
 		{line: "/compact bad", want: appcommands.SubmitUsageError},
 		{line: "/plan show", want: appcommands.SubmitUsageError},
 		{line: "/unknown", want: appcommands.SubmitUsageError},
@@ -196,6 +206,63 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 				t.Fatalf("ClassifySubmit(%q) = %v, want %v", tc.line, got.Class, tc.want)
 			}
 		})
+	}
+}
+
+func TestHandleLocalCommandWorktreeStatusAndList(t *testing.T) {
+	repo := newAppGitRepo(t)
+	sess, err := whaleworktree.Start(repo, "feature")
+	if err != nil {
+		t.Fatalf("Start worktree: %v", err)
+	}
+	app := &App{
+		workspaceRoot: repo,
+		worktree: WorktreeSession{
+			Name:   "feature",
+			Path:   sess.Path,
+			Branch: sess.Branch,
+		},
+	}
+
+	handled, out, _, err := app.HandleLocalCommand("/worktree")
+	if err != nil {
+		t.Fatalf("/worktree: %v", err)
+	}
+	if !handled || !strings.Contains(out, "current: feature") || !strings.Contains(out, sess.Path) {
+		t.Fatalf("unexpected /worktree output:\n%s", out)
+	}
+
+	handled, out, _, err = app.HandleLocalCommand("/worktree list")
+	if err != nil {
+		t.Fatalf("/worktree list: %v", err)
+	}
+	if !handled || !strings.Contains(out, "feature") || !strings.Contains(out, "clean") {
+		t.Fatalf("unexpected /worktree list output:\n%s", out)
+	}
+}
+
+func TestHandleLocalCommandWorktreeRemoveDirtyGuard(t *testing.T) {
+	repo := newAppGitRepo(t)
+	sess, err := whaleworktree.Start(repo, "dirty")
+	if err != nil {
+		t.Fatalf("Start worktree: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sess.Path, "dirty.txt"), []byte("dirty\n"), 0o600); err != nil {
+		t.Fatalf("write dirty: %v", err)
+	}
+	app := &App{workspaceRoot: repo}
+
+	handled, _, _, err := app.HandleLocalCommand("/worktree remove dirty")
+	if !handled || err == nil || !strings.Contains(err.Error(), "has changes") {
+		t.Fatalf("expected dirty guard, handled=%v err=%v", handled, err)
+	}
+
+	handled, out, _, err := app.HandleLocalCommand("/worktree remove dirty --force")
+	if err != nil {
+		t.Fatalf("/worktree remove --force: %v", err)
+	}
+	if !handled || !strings.Contains(out, "Removed worktree") {
+		t.Fatalf("unexpected remove output:\n%s", out)
 	}
 }
 
@@ -736,6 +803,24 @@ func TestStartupLinesIncludeEffectiveThinkingAndEffort(t *testing.T) {
 	}
 }
 
+func TestStartupLinesIncludeWorktree(t *testing.T) {
+	app := &App{
+		sessionID:    "sess-1",
+		currentMode:  "agent",
+		approvalMode: "never",
+		worktree: WorktreeSession{
+			Name: "feature",
+			Path: "/tmp/repo/.whale/worktrees/feature",
+		},
+	}
+
+	lines := app.StartupLines()
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "worktree: feature (/tmp/repo/.whale/worktrees/feature)") {
+		t.Fatalf("expected worktree startup line, got:\n%s", joined)
+	}
+}
+
 func TestBuildStatusIncludesEffectiveThinkingAndEffort(t *testing.T) {
 	dir := t.TempDir()
 	sessionsDir := filepath.Join(dir, "sessions")
@@ -866,7 +951,7 @@ func TestReviewPromptQuotesShellTargets(t *testing.T) {
 	}
 }
 
-func TestSetSkillEnabledUpdatesProjectConfig(t *testing.T) {
+func TestSetSkillEnabledUpdatesProjectLocalConfig(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	dir := t.TempDir()
@@ -883,12 +968,15 @@ func TestSetSkillEnabledUpdatesProjectConfig(t *testing.T) {
 	if !containsString(app.cfg.SkillsDisabled, "test-skill") {
 		t.Fatalf("expected in-memory disabled list to include test-skill, got %+v", app.cfg.SkillsDisabled)
 	}
-	projectCfg, loaded, err := LoadConfigFile(ProjectConfigPath(dir))
+	projectCfg, loaded, err := LoadConfigFile(ProjectLocalConfigPath(dir))
 	if err != nil || !loaded {
-		t.Fatalf("load project config loaded=%v err=%v", loaded, err)
+		t.Fatalf("load project local config loaded=%v err=%v", loaded, err)
 	}
 	if !containsString(projectCfg.Skills.Disabled, "test-skill") {
-		t.Fatalf("expected project config disabled list to include test-skill, got %+v", projectCfg.Skills.Disabled)
+		t.Fatalf("expected project local config disabled list to include test-skill, got %+v", projectCfg.Skills.Disabled)
+	}
+	if _, loaded, err := LoadConfigFile(ProjectConfigPath(dir)); err != nil || loaded {
+		t.Fatalf("shared project config should not be written by skill toggle, loaded=%v err=%v", loaded, err)
 	}
 	if _, _, _, err := app.BuildSkillMentionSyntheticPrompt("$test-skill"); err == nil || !strings.Contains(err.Error(), "skill disabled") {
 		t.Fatalf("expected disabled skill mention error, got %v", err)
@@ -907,12 +995,54 @@ func TestSetSkillEnabledUpdatesProjectConfig(t *testing.T) {
 	if containsString(app.cfg.SkillsDisabled, "test-skill") {
 		t.Fatalf("expected in-memory disabled list to drop test-skill, got %+v", app.cfg.SkillsDisabled)
 	}
-	projectCfg, loaded, err = LoadConfigFile(ProjectConfigPath(dir))
+	projectCfg, loaded, err = LoadConfigFile(ProjectLocalConfigPath(dir))
 	if err != nil || !loaded {
-		t.Fatalf("reload project config loaded=%v err=%v", loaded, err)
+		t.Fatalf("reload project local config loaded=%v err=%v", loaded, err)
 	}
 	if containsString(projectCfg.Skills.Disabled, "test-skill") {
-		t.Fatalf("expected project config disabled list to drop test-skill, got %+v", projectCfg.Skills.Disabled)
+		t.Fatalf("expected project local config disabled list to drop test-skill, got %+v", projectCfg.Skills.Disabled)
+	}
+	ok, out, synthetic, err := app.BuildSkillMentionSyntheticPrompt("$test-skill")
+	if err != nil || !ok || !strings.Contains(out, "loaded skill: test-skill") || !strings.Contains(synthetic, "Follow workspace instructions") {
+		t.Fatalf("expected enabled skill mention, ok=%v out=%q synthetic=%q err=%v", ok, out, synthetic, err)
+	}
+}
+
+func TestSetSkillEnabledLocalEnableOverridesSharedDisabled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	dir := t.TempDir()
+	writeAppSkill(t, filepath.Join(dir, ".whale", "skills", "test-skill"), "test-skill", "Workspace skill.", "# Test Skill\n\nFollow workspace instructions.")
+	if err := SaveConfigFile(ProjectConfigPath(dir), FileConfig{
+		Skills: FileSkillsConfig{Disabled: []string{"test-skill"}},
+	}); err != nil {
+		t.Fatalf("save shared project config: %v", err)
+	}
+	app := &App{sessionID: "sess-1", workspaceRoot: dir, cfg: Config{SkillsDisabled: []string{"test-skill"}}}
+
+	out, err := app.SetSkillEnabled("test-skill", true)
+	if err != nil {
+		t.Fatalf("enable unexpected err: %v", err)
+	}
+	if !strings.Contains(out, "enabled skill: test-skill") {
+		t.Fatalf("unexpected enable result out=%q", out)
+	}
+	if containsString(app.cfg.SkillsDisabled, "test-skill") {
+		t.Fatalf("expected in-memory disabled list to drop test-skill, got %+v", app.cfg.SkillsDisabled)
+	}
+	projectLocal, loaded, err := LoadConfigFile(ProjectLocalConfigPath(dir))
+	if err != nil || !loaded {
+		t.Fatalf("load project local config loaded=%v err=%v", loaded, err)
+	}
+	if !containsString(projectLocal.Skills.Enabled, "test-skill") {
+		t.Fatalf("expected project local config enabled list to include test-skill, got %+v", projectLocal.Skills.Enabled)
+	}
+	reloaded, err := LoadAndApplyConfig(Config{}, dir)
+	if err != nil {
+		t.Fatalf("LoadAndApplyConfig: %v", err)
+	}
+	if containsString(reloaded.SkillsDisabled, "test-skill") {
+		t.Fatalf("expected local enable to override shared disabled on reload, got %+v", reloaded.SkillsDisabled)
 	}
 	ok, out, synthetic, err := app.BuildSkillMentionSyntheticPrompt("$test-skill")
 	if err != nil || !ok || !strings.Contains(out, "loaded skill: test-skill") || !strings.Contains(synthetic, "Follow workspace instructions") {
@@ -1201,6 +1331,37 @@ func TestHandleSlashForkRequiresConversation(t *testing.T) {
 	}
 	if app.SessionID() != "empty" {
 		t.Fatalf("session changed on failed fork: %s", app.SessionID())
+	}
+}
+
+func newAppGitRepo(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	runAppGit(t, dir, "init", "-b", "main")
+	runAppGit(t, dir, "config", "user.email", "test@example.com")
+	runAppGit(t, dir, "config", "user.name", "Test User")
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("test\n"), 0o600); err != nil {
+		t.Fatalf("write README: %v", err)
+	}
+	runAppGit(t, dir, "add", "README.md")
+	runAppGit(t, dir, "commit", "-m", "initial")
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatalf("resolve repo: %v", err)
+	}
+	return resolved
+}
+
+func runAppGit(t *testing.T, cwd string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = cwd
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, string(out))
 	}
 }
 

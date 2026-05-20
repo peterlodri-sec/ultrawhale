@@ -396,9 +396,9 @@ func TestPluginsCommandOpensManagerAndToggleUpdatesRuntime(t *testing.T) {
 	if !hasServicePlugin(ev.Plugins, "memory", false) {
 		t.Fatalf("expected memory plugin disabled, got %+v", ev.Plugins)
 	}
-	cfgFile, loaded, err := app.LoadConfigFile(app.ProjectConfigPath(work))
+	cfgFile, loaded, err := app.LoadConfigFile(app.ProjectLocalConfigPath(work))
 	if err != nil || !loaded {
-		t.Fatalf("load project config loaded=%v err=%v", loaded, err)
+		t.Fatalf("load project local config loaded=%v err=%v", loaded, err)
 	}
 	if len(cfgFile.Plugins.Disabled) != 1 || cfgFile.Plugins.Disabled[0] != "memory" {
 		t.Fatalf("expected memory disabled in config, got %+v", cfgFile.Plugins.Disabled)
@@ -687,15 +687,15 @@ func TestProjectApprovalIntentWritesProjectConfig(t *testing.T) {
 	svc.Dispatch(Intent{Kind: IntentSetProjectApproval, ApprovalMode: "never-ask"})
 
 	info := waitForServiceEvent(t, svc, EventInfo)
-	if !strings.Contains(info.Text, "project permissions saved") ||
+	if !strings.Contains(info.Text, "project local permissions saved") ||
 		!strings.Contains(info.Text, "auto-approve by default in this workspace") ||
-		!strings.Contains(info.Text, app.ProjectConfigPath(work)) {
+		!strings.Contains(info.Text, app.ProjectLocalConfigPath(work)) {
 		t.Fatalf("unexpected project approval info: %q", info.Text)
 	}
 	waitForServiceEvent(t, svc, EventTurnDone)
-	projectCfg, loaded, err := app.LoadConfigFile(app.ProjectConfigPath(work))
+	projectCfg, loaded, err := app.LoadConfigFile(app.ProjectLocalConfigPath(work))
 	if err != nil || !loaded {
-		t.Fatalf("load project config loaded=%v err=%v", loaded, err)
+		t.Fatalf("load project local config loaded=%v err=%v", loaded, err)
 	}
 	if projectCfg.Permissions.Mode != "never" {
 		t.Fatalf("project permissions.mode: want never, got %q", projectCfg.Permissions.Mode)

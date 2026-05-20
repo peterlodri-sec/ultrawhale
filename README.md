@@ -153,6 +153,10 @@ Whale's goal is to make DeepSeek's pricing, cache behavior, and coding capabilit
 | `whale setup` | Save a DeepSeek API key |
 | `whale doctor` | Run health checks |
 | `whale exec "prompt"` | Run one prompt non-interactively |
+| `whale --worktree [name]` | Create or reuse an isolated git worktree for this interactive session |
+| `whale exec --worktree [name] "prompt"` | Run one prompt inside an isolated git worktree |
+| `whale worktree list` | List Whale-managed worktrees |
+| `whale worktree remove <name> [--force]` | Remove a Whale-managed worktree |
 | `whale --dangerously-skip-permissions` | Skip tool approval prompts for this run; suitable for external sandboxes or fully trusted repos |
 | `whale migrate-config` | Migrate Whale v0.1.8-or-earlier config files to `config.toml` |
 | `whale resume` | Open the session picker |
@@ -163,7 +167,9 @@ Whale's goal is to make DeepSeek's pricing, cache behavior, and coding capabilit
 | `/focus` | Toggle focused view to hide thinking and tool details |
 | `/ask [prompt]` | Read-only question mode |
 | `/plan [prompt]` | Plan first, then decide whether to execute |
+| `/review [target]` | Build a code-review prompt for local changes, branches, PRs, or commits |
 | `/status` | Show current session, mode, model, and config status |
+| `/worktree` | Show or manage the current worktree |
 | `/compact` | Compact the current conversation context |
 | `/init` | Generate AGENTS.md for the current repository |
 | `/skills` | Open the Skills menu to list, insert, or enable/disable local skills |
@@ -193,7 +199,11 @@ See [docs/plugins.md](docs/plugins.md) for details.
 
 ## Configuration
 
-Whale uses `~/.whale/config.toml` for global settings and `./.whale/config.toml` for project settings.
+Whale uses `~/.whale/config.toml` for global settings, `./.whale/config.toml` for shared project settings, and `./.whale/config.local.toml` for private project-local overrides. Config loads in this order:
+
+```text
+defaults < global < project shared < project local < CLI flags/env
+```
 
 Run this only if you used Whale v0.1.8 or earlier and have local
 `preferences.json` or `settings.json` files:
@@ -205,6 +215,19 @@ whale migrate-config
 If you started with Whale v0.1.9 or newer, you do not need this command.
 
 See [docs/configuration.md](docs/configuration.md) for details.
+
+## Worktrees
+
+In a git repository, use `--worktree` to create or reuse an isolated worktree for the current run:
+
+```bash
+whale --worktree feature-x
+whale exec --worktree feature-x "implement and test this change"
+```
+
+Whale stores managed worktrees under `./.whale/worktrees/<name>` and uses branches named `worktree-<name>`. If you omit the name, Whale generates a `session-*` name. On creation, Whale best-effort copies only `./.whale/config.local.toml`; it does not copy session logs, API keys, private MCP config, or the whole `./.whale` directory.
+
+Use `whale worktree list`, `whale worktree status [name]`, and `whale worktree remove <name> [--force]` to manage these worktrees. Removal refuses dirty worktrees by default; `--force` discards changes. `whale resume <id>` uses session metadata to return to the matching worktree. If that worktree was deleted, Whale asks you to inspect with `whale worktree list`. This version does not yet include tmux, automatic exit cleanup, or stale sweeping.
 
 ## Coding Plan Support
 
