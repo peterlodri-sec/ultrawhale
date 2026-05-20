@@ -156,6 +156,22 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 			m.syncModelEffortFromInfo(ev.Text)
 			m.refreshViewportContentFollow(true)
 		}
+	case service.EventBtwStarted:
+		m.clearProviderRetryStatus()
+		m.startBtwPanel(ev.Count, ev.Text)
+		m.refreshViewportContent()
+	case service.EventBtwDelta:
+		m.clearProviderRetryStatus()
+		m.appendBtwDelta(ev.Count, ev.Text)
+		m.refreshViewportContent()
+	case service.EventBtwDone:
+		m.clearProviderRetryStatus()
+		m.finishBtwPanel(ev.Count, ev.Text)
+		m.refreshViewportContent()
+	case service.EventBtwError:
+		m.clearProviderRetryStatus()
+		m.failBtwPanel(ev.Count, ev.Text)
+		m.refreshViewportContent()
 	case service.EventToolCall:
 		m.clearProviderRetryStatus()
 		if ev.ToolName != "update_plan" {

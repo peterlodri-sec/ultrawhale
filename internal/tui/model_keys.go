@@ -85,6 +85,11 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		m.updateSlashMatches()
 		return nil, false, true
 	}
+	if m.btwPanel.visible {
+		if handled := m.handleBtwPanelKey(msg); handled {
+			return nil, false, true
+		}
+	}
 	if msg.String() == "ctrl+c" && m.busy {
 		return m.interruptBusyTurn(), false, true
 	}
@@ -528,7 +533,14 @@ func (m *model) handleGlobalKey(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		}
 		if m.hasSlashSuggestions() {
 			if cmd := safeChoice(m.slash.matches, m.slash.selected); cmd != "" {
+				current := strings.TrimSpace(m.input.Value())
+				if current == cmd && !m.shouldAutoRunSlash(cmd) {
+					return tea.Sequence(m.flushNativeScrollbackCmd(), m.submitPrompt(cmd)), false, true
+				}
 				m.input.SetValue(cmd)
+				if !m.shouldAutoRunSlash(cmd) {
+					m.input.SetValue(cmd + " ")
+				}
 				m.skillBinding = nil
 				m.updateSlashMatches()
 				if m.shouldAutoRunSlash(cmd) {

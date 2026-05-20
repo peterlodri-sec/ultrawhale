@@ -7,8 +7,25 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
+
+var (
+	metaLocksMu sync.Mutex
+	metaLocks   = map[string]*sync.Mutex{}
+)
+
+func metaLock(path string) *sync.Mutex {
+	metaLocksMu.Lock()
+	defer metaLocksMu.Unlock()
+	if m, ok := metaLocks[path]; ok {
+		return m
+	}
+	m := &sync.Mutex{}
+	metaLocks[path] = m
+	return m
+}
 
 type SessionMeta struct {
 	Branch             string    `json:"branch,omitempty"`
@@ -41,6 +58,13 @@ func metaStatePath(sessionsDir, sessionID string) string {
 
 func LoadSessionMeta(sessionsDir, sessionID string) (SessionMeta, error) {
 	path := metaStatePath(sessionsDir, sessionID)
+	lock := metaLock(path)
+	lock.Lock()
+	defer lock.Unlock()
+	return loadSessionMetaAt(path)
+}
+
+func loadSessionMetaAt(path string) (SessionMeta, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -56,12 +80,19 @@ func LoadSessionMeta(sessionsDir, sessionID string) (SessionMeta, error) {
 }
 
 func SaveSessionMeta(sessionsDir, sessionID string, st SessionMeta) error {
+	path := metaStatePath(sessionsDir, sessionID)
+	lock := metaLock(path)
+	lock.Lock()
+	defer lock.Unlock()
+	return saveSessionMetaAt(path, st)
+}
+
+func saveSessionMetaAt(path string, st SessionMeta) error {
 	st.UpdatedAt = time.Now()
 	b, err := json.Marshal(st)
 	if err != nil {
 		return fmt.Errorf("marshal session meta: %w", err)
 	}
-	path := metaStatePath(sessionsDir, sessionID)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("mkdir session meta dir: %w", err)
 	}
@@ -71,8 +102,30 @@ func SaveSessionMeta(sessionsDir, sessionID string, st SessionMeta) error {
 	return nil
 }
 
+// UpdateSessionMeta atomically loads, mutates, and saves session meta under
+// a per-file lock so concurrent writers cannot lose each other's updates.
+func UpdateSessionMeta(sessionsDir, sessionID string, mutate func(*SessionMeta)) (SessionMeta, error) {
+	path := metaStatePath(sessionsDir, sessionID)
+	lock := metaLock(path)
+	lock.Lock()
+	defer lock.Unlock()
+	cur, err := loadSessionMetaAt(path)
+	if err != nil {
+		return SessionMeta{}, err
+	}
+	mutate(&cur)
+	if err := saveSessionMetaAt(path, cur); err != nil {
+		return SessionMeta{}, err
+	}
+	return cur, nil
+}
+
 func PatchSessionMeta(sessionsDir, sessionID string, patch SessionMeta) (SessionMeta, error) {
-	cur, err := LoadSessionMeta(sessionsDir, sessionID)
+	path := metaStatePath(sessionsDir, sessionID)
+	lock := metaLock(path)
+	lock.Lock()
+	defer lock.Unlock()
+	cur, err := loadSessionMetaAt(path)
 	if err != nil {
 		return SessionMeta{}, err
 	}
@@ -139,7 +192,7 @@ func PatchSessionMeta(sessionsDir, sessionID string, patch SessionMeta) (Session
 	if !patch.CompletedAt.IsZero() {
 		cur.CompletedAt = patch.CompletedAt
 	}
-	if err := SaveSessionMeta(sessionsDir, sessionID, cur); err != nil {
+	if err := saveSessionMetaAt(path, cur); err != nil {
 		return SessionMeta{}, err
 	}
 	return cur, nil

@@ -239,6 +239,14 @@ func (s *Service) handleLocalSubmit(line string) {
 		s.emit(localSubmitResultEvent("error", "usage: /model"))
 		return
 	}
+	if question, ok := btwQuestionFromLine(line); ok {
+		if question == "" {
+			s.emit(localSubmitResultEvent("error", "Usage: /btw <your question>"))
+			return
+		}
+		s.runSideQuestion(question)
+		return
+	}
 	cmd, err := s.app.ExecuteSlash(line)
 	if err != nil {
 		s.emit(localSubmitResultEvent("error", err.Error()))
@@ -365,6 +373,16 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 	}
 	if strings.HasPrefix(line, "/model ") {
 		s.emit(Event{Kind: EventError, Text: "usage: /model"})
+		s.emit(Event{Kind: EventTurnDone})
+		return
+	}
+	if question, ok := btwQuestionFromLine(line); ok {
+		if question == "" {
+			s.emit(Event{Kind: EventError, Text: "Usage: /btw <your question>"})
+			s.emit(Event{Kind: EventTurnDone})
+			return
+		}
+		s.runSideQuestion(question)
 		s.emit(Event{Kind: EventTurnDone})
 		return
 	}
@@ -499,4 +517,12 @@ func localSubmitResultEvent(status, text string) Event {
 
 func localSubmitDoneEvent() Event {
 	return Event{Kind: EventLocalSubmitDone, Metadata: map[string]any{EventMetadataLocalSubmit: true}}
+}
+
+func btwQuestionFromLine(line string) (string, bool) {
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) == 0 || fields[0] != "/btw" {
+		return "", false
+	}
+	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "/btw")), true
 }

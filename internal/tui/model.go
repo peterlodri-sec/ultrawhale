@@ -79,6 +79,7 @@ type model struct {
 	providerRetryUntil   time.Time
 	localSubmitPending   int
 	localSubmitCommands  []string
+	btwPanel             btwPanelState
 	deferredPlanPicker   bool
 	mouseCapture         bool
 	stopping             bool

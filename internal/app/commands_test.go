@@ -158,6 +158,7 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/review pr 123", want: appcommands.SubmitTurnStarting},
 		{line: "/review commit abc123", want: appcommands.SubmitTurnStarting},
 		{line: "/review inspect auth changes", want: appcommands.SubmitTurnStarting},
+		{line: "/btw what is happening?", want: appcommands.SubmitLocalReadOnly},
 		{line: "/memory", want: appcommands.SubmitLocalReadOnly},
 		{line: "/memory list", want: appcommands.SubmitLocalReadOnly},
 		{line: "/memory path", want: appcommands.SubmitLocalReadOnly},
@@ -183,6 +184,8 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/focus now", want: appcommands.SubmitUsageError},
 		{line: "/skills xxx", want: appcommands.SubmitUsageError},
 		{line: "/plugins status memory", want: appcommands.SubmitUsageError},
+		{line: "/btw", want: appcommands.SubmitUsageError},
+		{line: "/btw   ", want: appcommands.SubmitUsageError},
 		{line: "/review pr", want: appcommands.SubmitTurnStarting},
 		{line: "/memory bad", want: appcommands.SubmitUsageError},
 		{line: "/memory show", want: appcommands.SubmitUsageError},
@@ -282,8 +285,27 @@ func TestExpandUniqueSlashPrefix(t *testing.T) {
 	if got := expandUniqueSlashPrefix("/as"); got != "/ask" {
 		t.Fatalf("expected /ask, got %q", got)
 	}
+	if got := expandUniqueSlashPrefix("/bt"); got != "/btw" {
+		t.Fatalf("expected /btw, got %q", got)
+	}
 	if got := expandUniqueSlashPrefix("/Users/goranka/Engineer/ai/dsk"); got != "/Users/goranka/Engineer/ai/dsk" {
 		t.Fatalf("absolute path should stay unchanged, got %q", got)
+	}
+}
+
+func TestClassifyBtwBusyImmediate(t *testing.T) {
+	got := appcommands.ClassifySubmit("/btw summarize this", CommandsHelp, "/mcp")
+	if !got.LocalNoTurn() {
+		t.Fatal("expected /btw to be local no-turn")
+	}
+	if !got.BusyImmediate() {
+		t.Fatal("expected /btw to be available while busy")
+	}
+}
+
+func TestCommandsHelpMarksBtwQuestionRequired(t *testing.T) {
+	if !strings.Contains(CommandsHelp, "/btw <question>") {
+		t.Fatalf("expected /btw to advertise a required question: %s", CommandsHelp)
 	}
 }
 
@@ -744,6 +766,20 @@ func TestHandleSlashClearReturnsClearScreenFlag(t *testing.T) {
 	}
 	if out != "" {
 		t.Fatalf("expected /clear to avoid appending a local result, got: %q", out)
+	}
+}
+
+func TestHandleSlashBtwReturnsTUIOnlyError(t *testing.T) {
+	app := &App{sessionID: "sess-1", workspaceRoot: t.TempDir()}
+	handled, out, synthetic, shouldExit, clearScreen, err := app.HandleSlash("/btw quick question")
+	if err == nil {
+		t.Fatal("expected /btw to return an error outside the TUI service path")
+	}
+	if !strings.Contains(err.Error(), "interactive TUI") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !handled || out != "" || synthetic != "" || shouldExit || clearScreen {
+		t.Fatalf("unexpected result: handled=%v out=%q synthetic=%q shouldExit=%v clear=%v", handled, out, synthetic, shouldExit, clearScreen)
 	}
 }
 

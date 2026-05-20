@@ -34,7 +34,7 @@ func (c SubmitClassification) LocalNoTurn() bool {
 }
 
 func (c SubmitClassification) BusyImmediate() bool {
-	return c.Class == SubmitLocalReadOnly || c.Class == SubmitExit || c.Line == "/focus"
+	return c.Class == SubmitLocalReadOnly || c.Class == SubmitExit || c.Line == "/focus" || strings.HasPrefix(c.Line, "/btw ")
 }
 
 func (c SubmitClassification) SubmitBarrier() bool {
@@ -100,6 +100,11 @@ func classifySlashFields(head string, fields []string, line string) SubmitClass 
 			return SubmitLocalUI
 		}
 		return SubmitTurnStarting
+	case "/btw":
+		if strings.TrimSpace(strings.TrimPrefix(line, "/btw")) == "" {
+			return SubmitUsageError
+		}
+		return SubmitLocalReadOnly
 	case "/focus":
 		if len(fields) == 1 {
 			return SubmitLocalUI

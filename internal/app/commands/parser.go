@@ -23,6 +23,7 @@ type Result struct {
 	ShowSkills   bool
 	ReviewPrompt string
 	ForkName     string
+	BtwQuestion  string
 }
 
 func NewSessionID(now time.Time) string {
@@ -114,6 +115,13 @@ func Parse(line, currentSessionID string, now time.Time) (Result, error) {
 			return Result{}, err
 		}
 		return Result{Handled: true, SessionID: currentSessionID, ReviewPrompt: prompt}, nil
+	}
+	if head == "/btw" {
+		question := strings.TrimSpace(strings.TrimPrefix(trimmed, "/btw"))
+		if question == "" {
+			return Result{}, fmt.Errorf("Usage: /btw <your question>")
+		}
+		return Result{Handled: true, SessionID: currentSessionID, BtwQuestion: question}, nil
 	}
 	return Result{}, nil
 }

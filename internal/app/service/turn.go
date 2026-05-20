@@ -24,6 +24,34 @@ func (s *Service) runInjectedTurn(visibleInput, hiddenInput string) {
 	})
 }
 
+func (s *Service) runSideQuestion(question string) {
+	id := int(s.btwNextID.Add(1))
+	s.emit(Event{Kind: EventBtwStarted, Text: question, Count: id})
+	go func() {
+		events, err := s.app.RunSideQuestion(s.ctx, question)
+		if err != nil {
+			s.emit(Event{Kind: EventBtwError, Text: err.Error(), Count: id})
+			return
+		}
+		for ev := range events {
+			switch ev.Type {
+			case agent.SideQuestionEventDelta:
+				if ev.Content != "" {
+					s.emit(Event{Kind: EventBtwDelta, Text: ev.Content, Count: id})
+				}
+			case agent.SideQuestionEventDone:
+				s.emit(Event{Kind: EventBtwDone, Text: ev.Content, Count: id})
+			case agent.SideQuestionEventError:
+				if ev.Content != "" {
+					s.emit(Event{Kind: EventBtwError, Text: ev.Content, Count: id})
+				} else if ev.Err != nil {
+					s.emit(Event{Kind: EventBtwError, Text: ev.Err.Error(), Count: id})
+				}
+			}
+		}
+	}()
+}
+
 func (s *Service) runTurnWith(start func(context.Context) (<-chan agent.AgentEvent, error)) {
 	turnCtx, cancel := context.WithCancel(s.ctx)
 	s.cancelMu.Lock()

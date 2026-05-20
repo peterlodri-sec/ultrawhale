@@ -129,6 +129,10 @@ func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) {
 		m.openHelp()
 		return
 	}
+	if m.btwPanel.loading && isBtwCommand(cmd) {
+		m.status = "/btw is already answering"
+		return
+	}
 	m.clearEphemeralMessages()
 	m.recordPromptHistory(cmd)
 	m.resetHistoryNavigation()
@@ -144,6 +148,11 @@ func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) {
 	}
 	m.dispatchIntent(service.Intent{Kind: service.IntentSubmitLocal, Input: cmd})
 	m.refreshViewportContent()
+}
+
+func isBtwCommand(line string) bool {
+	fields := strings.Fields(strings.TrimSpace(line))
+	return len(fields) > 0 && fields[0] == "/btw"
 }
 
 func (m *model) enqueuePrompt(value string) bool {

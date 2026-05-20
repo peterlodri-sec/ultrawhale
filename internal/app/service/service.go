@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/usewhale/whale/internal/app"
 	"github.com/usewhale/whale/internal/core"
@@ -85,6 +86,10 @@ const (
 	EventSessionsListed    EventKind = "sessions_listed"
 	EventLocalSubmitResult EventKind = "local_submit_result"
 	EventLocalSubmitDone   EventKind = "local_submit_done"
+	EventBtwStarted        EventKind = "btw_started"
+	EventBtwDelta          EventKind = "btw_delta"
+	EventBtwDone           EventKind = "btw_done"
+	EventBtwError          EventKind = "btw_error"
 	EventTurnDone          EventKind = "turn_done"
 	EventModelPicker       EventKind = "model_picker"
 	EventPermissionsPicker EventKind = "permissions_picker"
@@ -146,6 +151,8 @@ type Service struct {
 
 	inputMu sync.Mutex
 	inputs  map[string]chan userInputDecision
+
+	btwNextID atomic.Int64
 }
 
 type userInputDecision struct {

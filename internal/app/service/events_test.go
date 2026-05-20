@@ -464,6 +464,39 @@ func hasServicePlugin(all []plugins.PluginStatus, id string, enabled bool) bool 
 	return false
 }
 
+func TestBtwDeltaEventDeliversUnderBackpressure(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s := &Service{ctx: ctx, events: make(chan Event, 1)}
+	s.events <- Event{Kind: EventInfo, Text: "fill buffer"}
+
+	done := make(chan struct{})
+	go func() {
+		s.emit(Event{Kind: EventBtwDelta, Text: "stream", Count: 7})
+		close(done)
+	}()
+
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case ev := <-s.Events():
+			if ev.Kind == EventBtwDelta {
+				if ev.Text != "stream" || ev.Count != 7 {
+					t.Fatalf("unexpected btw delta event: %+v", ev)
+				}
+				select {
+				case <-done:
+				case <-time.After(2 * time.Second):
+					t.Fatal("btw delta emit remained blocked after event was consumed")
+				}
+				return
+			}
+		case <-deadline:
+			t.Fatal("timed out waiting for btw delta event")
+		}
+	}
+}
+
 func TestLocalSubmitDoesNotEmitTurnDone(t *testing.T) {
 	cfg := app.DefaultConfig()
 	cfg.DataDir = t.TempDir()
@@ -711,6 +744,25 @@ func TestLocalSubmitEmitsDone(t *testing.T) {
 
 	errEvent := waitForServiceEvent(t, svc, EventLocalSubmitResult)
 	if errEvent.Status != "error" || errEvent.Text != "usage: /model" {
+		t.Fatalf("unexpected local submit error: status=%q text=%q", errEvent.Status, errEvent.Text)
+	}
+	waitForServiceEvent(t, svc, EventLocalSubmitDone)
+}
+
+func TestLocalSubmitBtwWithoutQuestionEmitsUsage(t *testing.T) {
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	svc.Dispatch(Intent{Kind: IntentSubmitLocal, Input: "/btw"})
+
+	errEvent := waitForServiceEvent(t, svc, EventLocalSubmitResult)
+	if errEvent.Status != "error" || errEvent.Text != "Usage: /btw <your question>" {
 		t.Fatalf("unexpected local submit error: status=%q text=%q", errEvent.Status, errEvent.Text)
 	}
 	waitForServiceEvent(t, svc, EventLocalSubmitDone)

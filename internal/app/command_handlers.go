@@ -56,6 +56,9 @@ func (a *App) ExecuteSlash(line string) (CommandExecution, error) {
 	if cmdResult.ShowSkills {
 		return CommandExecution{Handled: true, Text: a.buildSkillsList()}, nil
 	}
+	if cmdResult.BtwQuestion != "" {
+		return CommandExecution{Handled: true}, errors.New("/btw is only available in the interactive TUI")
+	}
 	if cmdResult.ReviewPrompt != "" {
 		return CommandExecution{Handled: true, Turn: &plugins.CommandTurn{
 			Input:               cmdResult.ReviewPrompt,
