@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	appcommands "github.com/usewhale/whale/internal/app/commands"
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/store"
@@ -50,16 +51,27 @@ func TestHandleCommandResumeAndNew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
-	if res.SessionID != "20260502-102030" {
-		t.Fatalf("unexpected generated id: %s", res.SessionID)
+	if _, err := uuid.Parse(res.SessionID); err != nil {
+		t.Fatalf("expected valid UUID, got %s", res.SessionID)
+	}
+	if res.SessionID == "cur" {
+		t.Fatalf("expected different session ID, got %s", res.SessionID)
 	}
 
-	res, err = handleCommand("/new", "20260502-102030", now)
+	u7, err := uuid.NewV7()
+	if err != nil {
+		t.Fatalf("failed to generate uuid v7: %v", err)
+	}
+	currentUUID := u7.String()
+	res, err = handleCommand("/new", currentUUID, now)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
-	if res.SessionID != "20260502-102030.000000000" {
-		t.Fatalf("expected collision-resistant generated id, got %s", res.SessionID)
+	if _, err := uuid.Parse(res.SessionID); err != nil {
+		t.Fatalf("expected valid UUID, got %s", res.SessionID)
+	}
+	if res.SessionID == currentUUID {
+		t.Fatalf("expected different session ID, got %s", res.SessionID)
 	}
 
 	res, err = handleCommand("/new s2", "cur", now)
