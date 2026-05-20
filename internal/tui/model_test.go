@@ -3,7 +3,6 @@ package tui
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -4442,7 +4441,7 @@ func TestChatIdleViewDoesNotRenderEmptyViewportFrame(t *testing.T) {
 	}
 }
 
-func TestChatFooterStaysPinnedAfterSlashSuggestionsClose(t *testing.T) {
+func TestChatFooterFollowsContentAfterSlashSuggestionsClose(t *testing.T) {
 	m := newModel(nil, "deepseek-v4-pro", "normal", "on")
 	m.width = 80
 	m.height = 24
@@ -4467,8 +4466,8 @@ func TestChatFooterStaysPinnedAfterSlashSuggestionsClose(t *testing.T) {
 	if strings.Contains(afterDelete, "Tab/Enter pick") {
 		t.Fatalf("expected slash suggestions to disappear after deleting /:\n%s", afterDelete)
 	}
-	if got := strings.Count(afterDelete, "\n") + 1; got != m.height {
-		t.Fatalf("expected view to keep terminal height %d after slash closes, got %d:\n%s", m.height, got, afterDelete)
+	if got := countVisibleLines(afterDelete); got >= m.height {
+		t.Fatalf("expected short chat view to use natural height below terminal height %d, got %d:\n%s", m.height, got, afterDelete)
 	}
 }
 
@@ -4881,39 +4880,167 @@ func TestBusyLocalCommandResultDoesNotDuplicateCompletedPlan(t *testing.T) {
 	}
 }
 
-func TestChatStartupHeaderRendersInsideViewportHeight(t *testing.T) {
+func TestChatStartupHeaderPrintsCompactWhenShort(t *testing.T) {
 	m := newModel(nil, "deepseek-v4-flash", "max", "off")
 	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
 	m = next.(model)
+	if !m.startupHeaderPrinted {
+		t.Fatal("expected window size update to mark startup header printed")
+	}
 	view := m.View()
 	if !strings.Contains(view, "WHALE") {
-		t.Fatalf("expected startup header in chat view:\n%s", view)
+		t.Fatalf("expected compact startup header in chat viewport:\n%s", view)
 	}
-	if strings.Contains(view, "██╗") {
-		t.Fatalf("expected compact short-terminal header, got large logo:\n%s", view)
+	header := m.startupHeaderText()
+	if !strings.Contains(header, "WHALE") {
+		t.Fatalf("expected compact startup header text:\n%s", header)
+	}
+	if strings.Contains(header, "██╗") {
+		t.Fatalf("expected compact short-terminal header, got large logo:\n%s", header)
 	}
 	for _, want := range []string{"model: deepseek-v4-flash"} {
-		if !strings.Contains(view, want) {
-			t.Fatalf("expected startup header to contain %q:\n%s", want, view)
+		if !strings.Contains(header, want) {
+			t.Fatalf("expected startup header to contain %q:\n%s", want, header)
 		}
 	}
-	if got := strings.Count(strings.TrimRight(view, "\n"), "\n") + 1; got != m.height {
-		t.Fatalf("expected view to keep terminal height %d, got %d:\n%s", m.height, got, view)
+	if got := countVisibleLines(view); got >= m.height {
+		t.Fatalf("expected compact header view to use natural height below terminal height %d, got %d:\n%s", m.height, got, view)
 	}
 }
 
-func TestChatStartupHeaderUsesLargeLogoWhenTall(t *testing.T) {
+func TestChatStartupHeaderPrintsLargeLogoWhenTall(t *testing.T) {
 	m := newModel(nil, "deepseek-v4-flash", "max", "off")
 	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = next.(model)
-	view := m.View()
-	if !strings.Contains(view, "███████╗") {
-		t.Fatalf("expected large startup header in tall chat view:\n%s", view)
+	if !m.startupHeaderPrinted {
+		t.Fatal("expected window size update to mark startup header printed")
+	}
+	header := m.startupHeaderText()
+	if !strings.Contains(header, "███████╗") {
+		t.Fatalf("expected large startup header:\n%s", header)
 	}
 	for _, want := range []string{"model:     deepseek-v4-flash", "effort:    max", "thinking:  off"} {
-		if !strings.Contains(view, want) {
-			t.Fatalf("expected startup header to contain %q:\n%s", want, view)
+		if !strings.Contains(header, want) {
+			t.Fatalf("expected startup header to contain %q:\n%s", want, header)
 		}
+	}
+}
+
+func TestChatStartupHeaderPrintCommandIsOneShot(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "max", "off")
+	m.width = 80
+	m.height = 24
+	if cmd := m.startupHeaderPrintCmd(); cmd != nil {
+		t.Fatal("startup header is rendered in the chat viewport, not printed")
+	}
+	if !m.startupHeaderPrinted {
+		t.Fatal("expected startup header to be marked printed")
+	}
+	if cmd := m.startupHeaderPrintCmd(); cmd != nil {
+		t.Fatal("expected startup header print command to be one-shot")
+	}
+}
+
+func TestChatStartupHeaderStaysVisibleWithSmallTranscript(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "max", "off")
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = next.(model)
+
+	m.appendTranscript("info", tuirender.KindText, "first content")
+	view := m.View()
+	if !strings.Contains(view, "███████╗") {
+		t.Fatalf("expected startup header to remain visible while content fits:\n%s", view)
+	}
+	if !strings.Contains(view, "first content") {
+		t.Fatalf("expected transcript content in view:\n%s", view)
+	}
+	if got := countVisibleLines(view); got >= m.height {
+		t.Fatalf("expected short transcript view to use natural height below terminal height %d, got %d:\n%s", m.height, got, view)
+	}
+}
+
+func TestChatStartupHeaderStaysOutOfViewportAfterFirstPrompt(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.model = "deepseek-v4-flash"
+	m.effort = "max"
+	m.thinking = "off"
+	m.width = 80
+	m.height = 24
+	m.startupHeaderPrintCmd()
+	m.input.SetValue("hi")
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+
+	view := m.View()
+	if !strings.Contains(view, "███████╗") {
+		t.Fatalf("expected startup header to remain visible while first prompt fits:\n%s", view)
+	}
+	if !strings.Contains(view, "hi") {
+		t.Fatalf("expected first prompt in view:\n%s", view)
+	}
+}
+
+func TestChatStartupHeaderReturnsAfterNewSessionNotice(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "max", "off")
+	m.width = 80
+	m.height = 24
+	m.startupHeaderPrinted = true
+	m.appendTranscript("assistant", tuirender.KindText, "old content")
+
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventClearScreen}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind: service.EventInfo,
+		Text: "New session\n\nsession: fresh",
+	}))
+	m = next.(model)
+
+	if !m.startupHeaderPrinted {
+		t.Fatal("expected clear screen to schedule a fresh startup header print")
+	}
+	view := m.View()
+	if strings.Contains(view, "old content") {
+		t.Fatalf("expected old content cleared after new session:\n%s", view)
+	}
+	if strings.Contains(view, "session: fresh") {
+		t.Fatalf("expected printed new session notice not to repeat in tail viewport:\n%s", view)
+	}
+}
+
+func TestSessionHydratedPreservesPrintedStartupHeaderForInitialEmptySession(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "max", "off")
+	m.width = 80
+	m.height = 24
+	if cmd := m.startupHeaderPrintCmd(); cmd != nil {
+		t.Fatal("startup header is rendered in the chat viewport, not printed")
+	}
+
+	next, cmd := m.Update(svcMsg(service.Event{Kind: service.EventSessionHydrated, SessionID: "s1"}))
+	m = next.(model)
+	if cmd == nil {
+		t.Fatal("expected wait command after hydration")
+	}
+	if !m.startupHeaderPrinted || m.startupHeaderOnce == nil || !*m.startupHeaderOnce {
+		t.Fatal("expected initial empty hydration to preserve printed startup header")
+	}
+}
+
+func TestSessionHydratedResetsStartupHeaderForNewEmptySession(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "max", "off")
+	m.width = 80
+	m.height = 24
+	m.sessionID = "old"
+	if cmd := m.startupHeaderPrintCmd(); cmd != nil {
+		t.Fatal("startup header is rendered in the chat viewport, not printed")
+	}
+
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventSessionHydrated, SessionID: "new"}))
+	m = next.(model)
+	if !m.startupHeaderPrinted || m.startupHeaderOnce == nil || !*m.startupHeaderOnce {
+		t.Fatal("expected new empty session hydration to schedule startup header print")
+	}
+	if m.sessionID != "new" {
+		t.Fatalf("expected session id to update, got %q", m.sessionID)
 	}
 }
 
@@ -4923,10 +5050,32 @@ func TestChatHeaderOmittedWhenBodyTooShort(t *testing.T) {
 	m.height = countVisibleLines(m.renderBottom(80)) + 2
 	view := m.View()
 	if strings.Contains(view, "╭") || strings.Contains(view, "╰") || strings.Contains(view, "WHALE") {
-		t.Fatalf("expected header to be omitted instead of partially clipped:\n%s", view)
+		t.Fatalf("startup header should not render inside chat viewport:\n%s", view)
 	}
+	if got := countVisibleLines(view); got != countVisibleLines(m.renderBottom(80)) {
+		t.Fatalf("expected body to collapse when header cannot fit, got %d lines:\n%s", got, view)
+	}
+}
+
+func TestChatViewPinsBottomAfterContentExceedsScreen(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "max", "off")
+	m.width = 80
+	m.height = 12
+	m.transcript = nil
+	for i := 0; i < 40; i++ {
+		m.appendTranscript("info", tuirender.KindText, fmt.Sprintf("entry-%02d", i))
+	}
+
+	view := m.View()
 	if got := countVisibleLines(view); got != m.height {
-		t.Fatalf("expected view height %d, got %d:\n%s", m.height, got, view)
+		t.Fatalf("expected overflowing chat view to occupy terminal height %d, got %d:\n%s", m.height, got, view)
+	}
+	assertFooterLastLine(t, view, "model: deepseek-v4-flash")
+	if !strings.Contains(view, "entry-39") {
+		t.Fatalf("expected overflowing chat view to follow latest content:\n%s", view)
+	}
+	if strings.Contains(view, "entry-00") {
+		t.Fatalf("expected overflowing chat view to scroll older content out of the visible frame:\n%s", view)
 	}
 }
 
@@ -4946,8 +5095,8 @@ func TestChatViewportScrollsTranscript(t *testing.T) {
 
 	m.handleViewportScrollKey("home")
 	atTop := m.View()
-	if !strings.Contains(atTop, "entry-00") {
-		t.Fatalf("expected home to scroll chat transcript to top:\n%s", atTop)
+	if !strings.Contains(atTop, "WHALE") {
+		t.Fatalf("expected home to scroll chat transcript to startup header:\n%s", atTop)
 	}
 }
 
@@ -4985,8 +5134,11 @@ func TestChatViewportScrollKeysUseTranscriptBeforeComposer(t *testing.T) {
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
 	m = next.(model)
-	if m.viewport.YOffset != bottomOffset {
-		t.Fatalf("expected End to jump to bottom, offset=%d bottom=%d", m.viewport.YOffset, bottomOffset)
+	if !m.followTail {
+		t.Fatal("expected End to resume tail following")
+	}
+	if m.viewport.YOffset != 0 {
+		t.Fatalf("expected printed transcript to leave an empty tail viewport, offset=%d", m.viewport.YOffset)
 	}
 }
 
@@ -5304,7 +5456,7 @@ func TestChatViewportIdleFollowTailUsesTailRenderWindow(t *testing.T) {
 	}
 }
 
-func TestChatViewportBusyFollowTailCropsSingleLargeLiveMessage(t *testing.T) {
+func TestChatViewportBusyFollowTailKeepsSingleLargeLiveMessageScrollable(t *testing.T) {
 	for _, height := range []int{8, 10, 20} {
 		t.Run(fmt.Sprintf("height_%d", height), func(t *testing.T) {
 			m := newModel(nil, "", "", "")
@@ -5318,16 +5470,17 @@ func TestChatViewportBusyFollowTailCropsSingleLargeLiveMessage(t *testing.T) {
 			}
 			m.refreshViewportContentFollow(false)
 
-			lineLimit := max(chatTailRenderLineFloor, m.viewportBodyHeight(m.width)*4)
-			if lines := m.viewport.TotalLineCount(); lines > lineLimit {
-				t.Fatalf("expected single coalesced live message to be cropped to %d lines, got %d", lineLimit, lines)
+			if lines := m.viewport.TotalLineCount(); lines <= m.viewportBodyHeight(m.width) {
+				t.Fatalf("expected single coalesced live message to exceed viewport height, got %d lines", lines)
 			}
 			view := m.View()
-			if strings.Contains(view, "single-live-000") {
-				t.Fatalf("expected old single-message live lines to be cropped out:\n%s", view)
+			if !strings.Contains(view, "live-399") {
+				t.Fatalf("expected single-message live tail to remain visible:\n%s", view)
 			}
-			if !strings.Contains(view, "single-live-399") {
-				t.Fatalf("expected cropped single-message live tail to remain visible:\n%s", view)
+			m.handleViewportScrollKey("home")
+			view = m.View()
+			if !strings.Contains(view, "live-000") {
+				t.Fatalf("expected full single-message live output to be scrollable to the top:\n%s", view)
 			}
 		})
 	}
@@ -5597,8 +5750,8 @@ func TestChatViewportResizePreservesUserScrollPosition(t *testing.T) {
 	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
 	m = next.(model)
 	view := m.View()
-	if !strings.Contains(view, "entry-00") {
-		t.Fatalf("expected resized scrolled-up view to preserve top position:\n%s", view)
+	if !strings.Contains(view, "WHALE") {
+		t.Fatalf("expected resized scrolled-up view to preserve top position at startup header:\n%s", view)
 	}
 	if strings.Contains(view, "entry-49") {
 		t.Fatalf("expected resized scrolled-up view not to jump to tail:\n%s", view)
@@ -5611,8 +5764,8 @@ func TestChatViewportResizePreservesUserScrollPosition(t *testing.T) {
 	next, _ = m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
 	m = next.(model)
 	view = m.View()
-	if !strings.Contains(view, "entry-49") {
-		t.Fatalf("expected resized view to follow tail after End:\n%s", view)
+	if strings.Contains(view, "entry-49") {
+		t.Fatalf("expected printed tail content not to repeat in viewport after End:\n%s", view)
 	}
 }
 
@@ -5630,15 +5783,69 @@ func TestNativeScrollbackSkipsHeaderAndPrintsNewTranscriptOnce(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected new transcript entry to produce a native scrollback print command")
 	}
-	msg := cmd()
-	if got := reflect.TypeOf(msg).String(); got != "tea.printLineMessage" {
-		t.Fatalf("expected Bubble Tea print message, got %s", got)
-	}
-	if got := fmt.Sprintf("%#v", msg); !strings.Contains(got, "hello native scrollback") {
-		t.Fatalf("expected printed message to include transcript text, got %s", got)
+	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "hello native scrollback") || !strings.Contains(got, "WHALE") {
+		t.Fatalf("expected printed message to include startup header and transcript text, got %s", got)
 	}
 	if cmd := m.flushNativeScrollbackCmd(); cmd != nil {
 		t.Fatal("expected transcript entry not to be printed twice")
+	}
+}
+
+func TestPrintedNativeScrollbackIsNotRepeatedInTailViewport(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "high", "on")
+	m.width = 80
+	m.height = 24
+	m.startupHeaderPrintCmd()
+	m.appendTranscript("you", tuirender.KindText, "hi")
+	m.appendTranscript("think", tuirender.KindThinking, "thinking once")
+	m.appendTranscript("assistant", tuirender.KindText, "hello once")
+	cmd := m.flushNativeScrollbackCmd()
+	if cmd == nil {
+		t.Fatal("expected committed turn to print to native scrollback")
+	}
+
+	view := m.View()
+	for _, repeated := range []string{"thinking once", "hello once"} {
+		if strings.Contains(view, repeated) {
+			t.Fatalf("expected printed transcript %q not to repeat in tail viewport:\n%s", repeated, view)
+		}
+	}
+	if strings.Contains(view, "███████╗") || strings.Contains(view, "WHALE") {
+		t.Fatalf("expected printed startup header not to repeat in tail viewport:\n%s", view)
+	}
+
+	m.startBusy()
+	m.append("assistant", "live tail")
+	view = m.View()
+	if !strings.Contains(view, "live tail") {
+		t.Fatalf("expected uncommitted live output to remain visible:\n%s", view)
+	}
+}
+
+func TestFirstNativeScrollbackFlushKeepsStartupHeaderVisibleOutsideViewport(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-flash", "high", "on")
+	m.width = 80
+	m.height = 24
+	m.startupHeaderPrintCmd()
+	m.appendTranscript("you", tuirender.KindText, "hi")
+	m.appendTranscript("assistant", tuirender.KindText, "hello once")
+
+	cmd := m.flushNativeScrollbackCmd()
+	if cmd == nil {
+		t.Fatal("expected first committed turn to print to native scrollback")
+	}
+	printed := fmt.Sprintf("%#v", cmd())
+	for _, want := range []string{"███████", "version:", "hello once"} {
+		if !strings.Contains(printed, want) {
+			t.Fatalf("expected first native scrollback flush to include %q, got %s", want, printed)
+		}
+	}
+
+	view := m.View()
+	for _, repeated := range []string{"███████", "hello once"} {
+		if strings.Contains(view, repeated) {
+			t.Fatalf("expected first native scrollback content %q not to repeat in tail viewport:\n%s", repeated, view)
+		}
 	}
 }
 
@@ -5647,7 +5854,6 @@ func TestNativeScrollbackWaitsWhileChatIsScrolledUpAndFlushesAtTail(t *testing.T
 	m.width = 80
 	m.height = 10
 	printed := m.nativeScrollbackPrinted
-
 	m.appendTranscript("assistant", tuirender.KindText, "pending native scrollback")
 	m.followTail = false
 
@@ -5676,7 +5882,6 @@ func TestNativeScrollbackWaitsWhileChatViewportFrozenAndFlushesAtTail(t *testing
 	m.width = 80
 	m.height = 10
 	printed := m.nativeScrollbackPrinted
-
 	m.appendTranscript("assistant", tuirender.KindText, "pending frozen scrollback")
 	m.viewportFrozen = true
 
@@ -6095,10 +6300,13 @@ func TestChatFooterShowsEffectiveThinkingAndEffort(t *testing.T) {
 
 func TestModelSetRefreshesHeaderCache(t *testing.T) {
 	m := newModel(nil, "old-model", "high", "on")
-	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	next, cmd := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = next.(model)
-	if view := m.View(); !strings.Contains(view, "model:     old-model") {
-		t.Fatalf("expected initial header model:\n%s", view)
+	if cmd != nil {
+		t.Fatal("startup header is rendered in the chat viewport, not printed")
+	}
+	if header := m.startupHeaderText(); !strings.Contains(header, "model:     old-model") {
+		t.Fatalf("expected initial header model:\n%s", header)
 	}
 
 	next, _ = m.Update(svcMsg(service.Event{
@@ -6108,15 +6316,20 @@ func TestModelSetRefreshesHeaderCache(t *testing.T) {
 	}))
 	m = next.(model)
 
+	header := m.startupHeaderText()
+	if !strings.Contains(header, "model:     newer-model") {
+		t.Fatalf("expected refreshed header after model set:\n%s", header)
+	}
+	if strings.Contains(header, "model:     old-model") {
+		t.Fatalf("expected stale header model to disappear:\n%s", header)
+	}
 	view := m.View()
-	if !strings.Contains(view, "model:     newer-model") ||
-		!strings.Contains(view, "effort:    low") ||
-		!strings.Contains(view, "thinking:  off") {
-		t.Fatalf("expected refreshed header after model set:\n%s", view)
+	if strings.Contains(view, "model set: newer-model") {
+		t.Fatalf("expected printed model set result not to repeat in tail viewport:\n%s", view)
 	}
-	if strings.Contains(view, "model:     old-model") {
-		t.Fatalf("expected stale header model to disappear:\n%s", view)
-	}
+	assertFooterLastLine(t, view, "model: newer-model")
+	assertFooterLastLine(t, view, "effort: low")
+	assertFooterLastLine(t, view, "thinking: off")
 }
 
 func TestChatStoppingViewShowsStoppingAboveComposer(t *testing.T) {
@@ -6926,7 +7139,7 @@ func TestClearScreenResetsStateAndShowsHeader(t *testing.T) {
 	if len(m2.diffs) != 0 {
 		t.Fatalf("expected diffs cleared, got %d", len(m2.diffs))
 	}
-	// The transcript is cleared; the header is rendered as chat chrome.
+	// The transcript is cleared; the header is rendered as the first chat item.
 	snap := m2.assembler.Snapshot()
 	if len(snap) != 0 {
 		t.Fatalf("expected empty live assembler, got %+v", snap)
@@ -6936,7 +7149,10 @@ func TestClearScreenResetsStateAndShowsHeader(t *testing.T) {
 	}
 	view := m2.View()
 	if !strings.Contains(view, "WHALE") && !strings.Contains(view, "██╗") {
-		t.Fatalf("expected header banner in view after clear:\n%s", view)
+		t.Fatalf("expected startup header in chat viewport after clear:\n%s", view)
+	}
+	if !m2.startupHeaderPrinted {
+		t.Fatal("expected clear screen to schedule startup header print")
 	}
 	if m2.nativeScrollbackPrinted != len(m2.transcript) {
 		t.Fatalf("expected clear screen to reset native scrollback cursor, got cursor %d for %d transcript items", m2.nativeScrollbackPrinted, len(m2.transcript))
@@ -6959,7 +7175,10 @@ func TestClearScreenInvalidatesRenderedChatCache(t *testing.T) {
 		t.Fatalf("expected first clear to remove cached content:\n%s", view)
 	}
 	if !strings.Contains(view, "WHALE") && !strings.Contains(view, "██╗") {
-		t.Fatalf("expected header after first clear:\n%s", view)
+		t.Fatalf("expected startup header in chat viewport after first clear:\n%s", view)
+	}
+	if !m.startupHeaderPrinted {
+		t.Fatal("expected first clear to schedule startup header print")
 	}
 }
 

@@ -101,7 +101,11 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	case service.EventInfo:
 		m.clearProviderRetryStatus()
 		if !isEnvironmentInventoryBlock(ev.Text) {
-			m.append("info", ev.Text)
+			if isSessionNotice(ev.Text) {
+				m.appendTranscript("notice", tuirender.KindNotice, ev.Text)
+			} else {
+				m.append("info", ev.Text)
+			}
 		} else {
 			m.addLog(logEntry{
 				Kind:    "env_summary",
@@ -113,6 +117,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.addLog(logEntry{Kind: "info", Source: "system", Summary: ev.Text, Raw: ev.Text})
 		m.status = "ready"
 		m.syncModelEffortFromInfo(ev.Text)
+		m.refreshViewportContentFollow(true)
 	case service.EventError:
 		m.clearProviderRetryStatus()
 		m.append("error", ev.Text)
@@ -141,6 +146,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		}
 		if role == "info" {
 			m.syncModelEffortFromInfo(ev.Text)
+			m.refreshViewportContentFollow(true)
 		}
 	case service.EventToolCall:
 		m.clearProviderRetryStatus()
@@ -362,8 +368,14 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.logs = nil
 		m.diffs = nil
 		m.status = "terminal cleared"
-		return tea.Sequence(clearScreenCmd(), waitEventCmd(m.svc)), false, true
+		return tea.Sequence(clearScreenCmd(), m.startupHeaderPrintCmd(), waitEventCmd(m.svc)), false, true
 	case service.EventSessionHydrated:
+		prevSessionID := m.sessionID
+		if strings.TrimSpace(ev.SessionID) != "" {
+			m.sessionID = strings.TrimSpace(ev.SessionID)
+		}
+		sessionChanged := prevSessionID != "" && m.sessionID != "" && m.sessionID != prevSessionID
+		hadStartupHeaderPrinted := m.startupHeaderPrinted || (m.startupHeaderOnce != nil && *m.startupHeaderOnce)
 		m.clearProviderRetryStatus()
 		m.assembler.Reset()
 		m.clearPendingToolCalls()
@@ -375,6 +387,17 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.hydrateSessionMessages(ev.Messages)
 		m.commitLiveTranscript(true)
 		m.trimHydratedTranscriptForDisplay(maxHydratedTranscriptLines)
+		if sessionChanged {
+			hadStartupHeaderPrinted = false
+			eventCmd = clearScreenCmd()
+		}
+		if len(m.transcript) > 0 || hadStartupHeaderPrinted {
+			m.startupHeaderPrinted = true
+			if m.startupHeaderOnce == nil {
+				m.startupHeaderOnce = new(bool)
+			}
+			*m.startupHeaderOnce = true
+		}
 		m.status = "ready"
 	case service.EventExitRequested:
 		m.clearProviderRetryStatus()

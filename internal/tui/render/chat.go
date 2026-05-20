@@ -40,6 +40,9 @@ func renderEntryText(role, text string, width int) string {
 }
 
 func renderCard(m UIMessage, block string, width int) []string {
+	if m.Role == "header" {
+		return strings.Split(strings.TrimRight(block, "\n"), "\n")
+	}
 	if m.Role == "you" {
 		return renderUserPrompt(block, width)
 	}

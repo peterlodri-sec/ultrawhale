@@ -53,6 +53,9 @@ type model struct {
 	assembler            *tuirender.Assembler
 	pendingToolCalls     map[string]struct{}
 	transcript           []tuirender.UIMessage
+	sessionID            string
+	startupHeaderPrinted bool
+	startupHeaderOnce    *bool
 	ephemeralMessages    []tuirender.UIMessage
 	logs                 []logEntry
 	diffs                []diffEntry
@@ -244,26 +247,29 @@ func newModel(svc *service.Service, modelName, effort, thinking string) model {
 		viewMode = svc.ViewMode()
 	}
 	m := model{
-		svc:              svc,
-		input:            composer.New(),
-		viewport:         vp,
-		chat:             newChatList(),
-		assembler:        tuirender.NewAssembler(),
-		pendingToolCalls: map[string]struct{}{},
-		status:           "ready",
-		followTail:       true,
-		page:             pageChat,
-		sidebar:          false,
-		logFilterInput:   filter,
-		model:            modelName,
-		effort:           effort,
-		thinking:         thinking,
-		viewMode:         viewMode,
-		chatMode:         "agent",
-		product:          "Whale",
-		version:          resolveVersion(),
-		cwd:              resolveWorkingDirectory(),
-		historyIndex:     -1,
+		svc:               svc,
+		input:             composer.New(),
+		viewport:          vp,
+		chat:              newChatList(),
+		assembler:         tuirender.NewAssembler(),
+		pendingToolCalls:  map[string]struct{}{},
+		startupHeaderOnce: new(bool),
+		status:            "ready",
+		followTail:        true,
+		page:              pageChat,
+		sidebar:           false,
+		logFilterInput:    filter,
+		width:             80,
+		height:            24,
+		model:             modelName,
+		effort:            effort,
+		thinking:          thinking,
+		viewMode:          viewMode,
+		chatMode:          "agent",
+		product:           "Whale",
+		version:           resolveVersion(),
+		cwd:               resolveWorkingDirectory(),
+		historyIndex:      -1,
 	}
 	if svc != nil {
 		m.dispatch = svc.Dispatch
@@ -357,8 +363,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.SetWidth(max(20, m.width-4))
+		headerCmd := m.startupHeaderPrintCmd()
 		m.refreshViewportContent()
-		return m, m.withMouseCaptureCmd()
+		return m, m.withMouseCaptureCmd(headerCmd)
 	case svcMsg:
 		eventCmd, quit, direct := m.handleServiceEvents([]service.Event{service.Event(msg)})
 		if quit {
@@ -367,7 +374,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if direct {
 			return m, m.withMouseCaptureCmd(eventCmd)
 		}
-		return m, m.withMouseCaptureCmd(eventCmd, m.flushNativeScrollbackCmd(), waitEventCmd(m.svc))
+		headerCmd := m.startupHeaderPrintCmd()
+		scrollbackCmd := m.flushNativeScrollbackCmd()
+		return m, m.withMouseCaptureCmd(eventCmd, headerCmd, scrollbackCmd, waitEventCmd(m.svc))
 	case svcBatchMsg:
 		eventCmd, quit, direct := m.handleServiceEvents([]service.Event(msg))
 		if quit {
@@ -376,7 +385,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if direct {
 			return m, m.withMouseCaptureCmd(eventCmd)
 		}
-		return m, m.withMouseCaptureCmd(eventCmd, m.flushNativeScrollbackCmd(), waitEventCmd(m.svc))
+		headerCmd := m.startupHeaderPrintCmd()
+		scrollbackCmd := m.flushNativeScrollbackCmd()
+		return m, m.withMouseCaptureCmd(eventCmd, headerCmd, scrollbackCmd, waitEventCmd(m.svc))
 	case windowsDeferredEnterMsg:
 		return m, m.withMouseCaptureCmd(m.handleWindowsDeferredEnter(msg))
 	case windowsPendingEnterTailMsg:

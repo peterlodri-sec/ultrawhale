@@ -54,6 +54,14 @@ func TestHandleCommandResumeAndNew(t *testing.T) {
 		t.Fatalf("unexpected generated id: %s", res.SessionID)
 	}
 
+	res, err = handleCommand("/new", "20260502-102030", now)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if res.SessionID != "20260502-102030.000000000" {
+		t.Fatalf("expected collision-resistant generated id, got %s", res.SessionID)
+	}
+
 	res, err = handleCommand("/new s2", "cur", now)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)

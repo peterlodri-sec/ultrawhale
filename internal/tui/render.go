@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/usewhale/whale/internal/app/service"
+	tuirender "github.com/usewhale/whale/internal/tui/render"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
 
@@ -24,33 +25,41 @@ func (m model) renderBody(mainWidth, bodyHeight int) string {
 			BorderForeground(tuitheme.Default.Border).
 			Render(m.viewport.View())
 	}
-	header, headerHeight := m.chatHeaderForLayout(mainWidth, bodyHeight)
-	chatHeight := max(0, bodyHeight-headerHeight)
-	m.ensureViewportContentForSize(mainWidth, chatHeight)
-	if chatHeight <= 0 {
-		return lipgloss.NewStyle().Width(mainWidth).Render(header)
-	}
-	chat := lipgloss.NewStyle().Width(mainWidth).Render(m.chat.View())
-	if header == "" {
-		return chat
-	}
-	return lipgloss.JoinVertical(lipgloss.Left, header, chat)
+	m.ensureViewportContentForSize(mainWidth, bodyHeight)
+	return lipgloss.NewStyle().Width(mainWidth).Render(m.chat.View())
 }
 
 func (m model) View() string {
 	mainWidth, _ := m.layoutDims()
 	bottom := m.renderBottom(mainWidth)
-	bodyHeight := m.height - countVisibleLines(bottom)
+	bottomHeight := countVisibleLines(bottom)
+	bodyHeight := m.height - bottomHeight
 	if m.height <= 0 {
 		bodyHeight = 0
 	}
 	bodyHeight = max(0, bodyHeight)
+	if m.page == pageChat {
+		bodyHeight = m.chatBodyHeightForView(mainWidth, bodyHeight)
+	}
 	body := m.renderBody(mainWidth, bodyHeight)
-	body = padVisibleLines(body, bodyHeight, mainWidth)
+	if m.page != pageChat {
+		body = padVisibleLines(body, bodyHeight, mainWidth)
+	}
 	if body == "" {
 		return bottom
 	}
 	return body + "\n" + bottom
+}
+
+func (m model) chatBodyHeightForView(mainWidth, maxBodyHeight int) int {
+	if maxBodyHeight <= 0 {
+		return 0
+	}
+	lines := tuirender.ChatLines(m.chatViewportMessages(), max(20, mainWidth-2))
+	if len(lines) == 0 {
+		return 0
+	}
+	return min(len(lines), maxBodyHeight)
 }
 
 func (m model) viewportBodyHeight(mainWidth int) int {
@@ -60,20 +69,8 @@ func (m model) viewportBodyHeight(mainWidth int) int {
 	return max(0, m.height-countVisibleLines(m.renderBottom(mainWidth)))
 }
 
-func (m model) chatHeaderForLayout(mainWidth, bodyHeight int) (string, int) {
-	if bodyHeight <= 0 {
-		return "", 0
-	}
-	header := buildHeaderBanner(m.model, m.effort, m.thinking, m.cwd, m.version, max(20, mainWidth), bodyHeight)
-	return header, countVisibleLines(header)
-}
-
 func (m model) chatViewportBodyHeight(mainWidth, bodyHeight int) int {
-	if m.page != pageChat {
-		return bodyHeight
-	}
-	_, headerHeight := m.chatHeaderForLayout(mainWidth, bodyHeight)
-	return max(0, bodyHeight-headerHeight)
+	return max(0, bodyHeight)
 }
 
 func (m model) renderBottom(mainWidth int) string {
