@@ -6483,6 +6483,28 @@ func TestApprovalViewShowsFileReviewSessionScope(t *testing.T) {
 	}
 }
 
+func TestApprovalViewKeepsLargeDiffPreviewBounded(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 120
+	m.height = 30
+	m.mode = modeApproval
+	m.approval.toolName = "apply_patch"
+	m.approval.reason = "apply_patch: roadmap.md"
+	m.approval.metadata = largeTranslationDiffMetadata(190, 190)
+	m.approval.metadata["approval_kind"] = "file_diff_review"
+
+	view := m.View()
+	if !strings.Contains(view, "Allow once") || !strings.Contains(view, "Deny") {
+		t.Fatalf("expected approval controls to remain visible:\n%s", view)
+	}
+	if !strings.Contains(view, "... diff truncated (") {
+		t.Fatalf("expected approval diff preview to stay bounded:\n%s", view)
+	}
+	if strings.Contains(view, "+English 189") {
+		t.Fatalf("approval preview should not render the full large diff:\n%s", view)
+	}
+}
+
 func TestApprovalViewShowsMemoryWriteMetadata(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 100
@@ -6609,6 +6631,45 @@ func TestApprovalDiffMetadataTruncatesLongPreview(t *testing.T) {
 	}
 }
 
+func TestFileDiffMetadataPreviewAllowsLargeTranslationDiff(t *testing.T) {
+	metadata := largeTranslationDiffMetadata(190, 190)
+	got := renderFileDiffMetadataPlain(metadata, fileDiffPreviewMaxLines)
+	if !strings.Contains(got, "-中文 000") {
+		t.Fatalf("expected diff preview to include deletions:\n%s", got)
+	}
+	if !strings.Contains(got, "+English 189") {
+		t.Fatalf("expected 400-line diff preview to include additions:\n%s", got)
+	}
+	if strings.Contains(got, "... diff truncated (") {
+		t.Fatalf("expected translation-size diff to fit in preview:\n%s", got)
+	}
+}
+
+func largeTranslationDiffMetadata(deletions, additions int) map[string]any {
+	lines := []string{
+		"--- a/roadmap.md",
+		"+++ b/roadmap.md",
+		fmt.Sprintf("@@ -1,%d +1,%d @@", deletions, additions),
+	}
+	for i := 0; i < deletions; i++ {
+		lines = append(lines, fmt.Sprintf("-中文 %03d", i))
+	}
+	for i := 0; i < additions; i++ {
+		lines = append(lines, fmt.Sprintf("+English %03d", i))
+	}
+	return map[string]any{
+		"kind": "file_diff",
+		"files": []any{
+			map[string]any{
+				"path":         "roadmap.md",
+				"unified_diff": strings.Join(lines, "\n"),
+				"additions":    additions,
+				"deletions":    deletions,
+			},
+		},
+	}
+}
+
 func TestApprovalDiffMetadataShowsFileTruncatedMarker(t *testing.T) {
 	metadata := map[string]any{
 		"kind": "file_diff",
@@ -6657,6 +6718,40 @@ func TestToolResultShowsDiffMetadata(t *testing.T) {
 	}
 	if got := strings.Join(m.renderDiffs(), "\n"); !strings.Contains(got, "+whale") {
 		t.Fatalf("expected /diff content from metadata:\n%s", got)
+	}
+}
+
+func TestToolResultShowsLargeTranslationDiffTailInChat(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 120
+	m.height = 30
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolCall,
+		ToolCallID: "tc-translation",
+		ToolName:   "write",
+		Text:       `write: roadmap.md`,
+	}))
+	m = next.(model)
+	next, cmd := m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolResult,
+		ToolCallID: "tc-translation",
+		ToolName:   "write",
+		Text:       `{"success":true,"data":{"payload":{"file_path":"roadmap.md"}}}`,
+		Metadata:   largeTranslationDiffMetadata(190, 190),
+	}))
+	m = next.(model)
+	if cmd == nil {
+		t.Fatal("expected wait-event command")
+	}
+	got := strings.Join(tuirender.ChatLines(m.transcript, 120), "\n")
+	if !strings.Contains(got, "Edited roadmap.md") {
+		t.Fatalf("expected completed tool cell in transcript:\n%s", got)
+	}
+	if !strings.Contains(got, "+English 189") {
+		t.Fatalf("expected output box diff preview to include translated additions:\n%s", got)
+	}
+	if strings.Contains(got, "... diff truncated (") {
+		t.Fatalf("expected translation-size diff to fit in output preview:\n%s", got)
 	}
 }
 

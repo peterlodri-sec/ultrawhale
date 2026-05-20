@@ -216,7 +216,7 @@ func (m model) renderApprovalPrompt() string {
 		bodyParts = append(bodyParts, "Allow for session = "+scope)
 	}
 	approvalBody := body.Render(indentApprovalBody(strings.Join(bodyParts, "\n")))
-	if diff := renderApprovalDiffMetadata(m.approval.metadata, 80); diff != "" {
+	if diff := renderApprovalDiffMetadata(m.approval.metadata, approvalFileDiffPreviewMaxLines); diff != "" {
 		if isReadableApprovalDiff(diff) {
 			if approvalBody != "" {
 				approvalBody += "\n\n" + diff
