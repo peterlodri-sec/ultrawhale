@@ -75,7 +75,20 @@ func TestRulePolicyExternalDirectory(t *testing.T) {
 }
 
 func TestRulePolicyExternalDirectoryResolvesHomeAndParentRelativePaths(t *testing.T) {
-	home := t.TempDir()
+	// Create the home directory outside /tmp/ or /private/tmp/ so the
+	// externalDirs filter (which whitelists those prefixes as trusted temp
+	// locations) does not suppress paths that should trigger external-directory
+	// detection. On Linux CI t.TempDir() returns a path under /tmp/, so use
+	// the current directory (the workspace root) instead.
+	home, err := os.MkdirTemp(".", "whale-ext-home-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err = filepath.Abs(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(home) })
 	t.Setenv("HOME", home)
 	root := filepath.Join(home, "repo")
 	p := RulePolicy{Default: PermissionAllow, Rules: DefaultRules(), WorkspaceRoot: root}
@@ -237,7 +250,15 @@ func TestRulePolicyExternalDirectoryCatchesFlagValuePaths(t *testing.T) {
 }
 
 func TestRulePolicyExternalDirectoryMatchesDirectoryOperandItself(t *testing.T) {
-	home := t.TempDir()
+	home, err := os.MkdirTemp(".", "whale-ext-dir-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err = filepath.Abs(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(home) })
 	t.Setenv("HOME", home)
 	root := filepath.Join(home, "repo")
 	extDir := filepath.Join(home, "external-dir")
