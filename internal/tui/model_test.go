@@ -2467,6 +2467,102 @@ func TestTurnDoneRecoversAssistantWhenAllDeltasDropped(t *testing.T) {
 	}
 }
 
+func TestTurnDoneAddsDurationNoticeForLongTurn(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true}
+	m.busySince = time.Now().Add(-(3*time.Minute + 5*time.Second))
+
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(got, "done") {
+		t.Fatalf("expected final assistant response in transcript:\n%s", got)
+	}
+	if !strings.Contains(got, "✻ Worked for 3m ") {
+		t.Fatalf("expected turn duration notice in transcript:\n%s", got)
+	}
+}
+
+func TestTurnDoneSkipsDurationNoticeForShortTurn(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true}
+	m.busySince = time.Now().Add(-29 * time.Second)
+
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if strings.Contains(got, "Worked for") {
+		t.Fatalf("did not expect turn duration notice for short turn:\n%s", got)
+	}
+}
+
+func TestTurnDoneSkipsDurationNoticeWhileStopping(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true, stopping: true}
+	m.busySince = time.Now().Add(-2 * time.Minute)
+
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if strings.Contains(got, "Worked for") {
+		t.Fatalf("did not expect turn duration notice for stopped turn:\n%s", got)
+	}
+}
+
+func TestAppendTurnDurationNoticeThresholdAndBusyState(t *testing.T) {
+	m := model{width: 80, height: 24, viewportFrozen: true}
+	m.appendTurnDurationNotice(true, false, 30*time.Second)
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(got, "✻ Worked for 30s") {
+		t.Fatalf("expected duration notice at threshold:\n%s", got)
+	}
+
+	m = model{width: 80, height: 24, viewportFrozen: true}
+	m.appendTurnDurationNotice(true, false, 29*time.Second)
+	if len(m.transcript) != 0 {
+		t.Fatalf("did not expect duration notice below threshold, got %+v", m.transcript)
+	}
+
+	m = model{width: 80, height: 24, viewportFrozen: true}
+	m.appendTurnDurationNotice(false, false, 2*time.Minute)
+	if len(m.transcript) != 0 {
+		t.Fatalf("did not expect duration notice when turn was not busy, got %+v", m.transcript)
+	}
+}
+
+func TestFormatTurnDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		duration time.Duration
+		want     string
+	}{
+		{name: "negative", duration: -time.Second, want: "0s"},
+		{name: "seconds", duration: 45 * time.Second, want: "45s"},
+		{name: "minutes", duration: 2*time.Minute + 9*time.Second, want: "2m 9s"},
+		{name: "hours", duration: time.Hour + 2*time.Minute + 3*time.Second, want: "1h 2m 3s"},
+		{name: "days", duration: 24*24*time.Hour + time.Minute + 2*time.Second, want: "24d 0h 1m 2s"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := formatTurnDuration(tt.duration); got != tt.want {
+				t.Fatalf("formatTurnDuration(%s) = %q, want %q", tt.duration, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestReplacingCurrentTurnAssistantRewindsNativeScrollback(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
@@ -3590,6 +3686,162 @@ func TestReviewMenuEscCloses(t *testing.T) {
 	m = next.(model)
 	if m.mode != modeChat || m.status != "ready" {
 		t.Fatalf("expected review menu to close, mode=%v status=%q", m.mode, m.status)
+	}
+}
+
+func TestPickerAndModalViewsHideComposer(t *testing.T) {
+	const draft = "composer draft should stay hidden"
+	base := func() model {
+		m := newModel(nil, "deepseek-chat", "medium", "on")
+		m.width = 100
+		m.height = 30
+		m.input.SetValue(draft)
+		return m
+	}
+
+	chat := base()
+	chat.mode = modeChat
+	if view := chat.renderBottom(100); !strings.Contains(view, draft) {
+		t.Fatalf("chat mode should render composer draft:\n%s", view)
+	}
+
+	cases := []struct {
+		name  string
+		setup func(*model)
+		want  string
+	}{
+		{
+			name: "review menu",
+			setup: func(m *model) {
+				m.mode = modeReviewMenu
+			},
+			want: "Choose what to review",
+		},
+		{
+			name: "review target picker",
+			setup: func(m *model) {
+				m.mode = modeReviewBranchPicker
+				m.reviewTargetPicker.branches = []reviewBranchItem{{Name: "main"}}
+			},
+			want: "Type to search branches",
+		},
+		{
+			name: "review commit picker",
+			setup: func(m *model) {
+				m.mode = modeReviewCommitPicker
+				m.reviewTargetPicker.commits = []reviewCommitItem{{SHA: "abc1234", Subject: "fix picker"}}
+			},
+			want: "Choose commit",
+		},
+		{
+			name: "review pr picker",
+			setup: func(m *model) {
+				m.mode = modeReviewPRPicker
+				m.reviewTargetPicker.prs = []reviewPRItem{{Number: 12, Title: "Fix picker"}}
+			},
+			want: "Choose pull request",
+		},
+		{
+			name: "approval",
+			setup: func(m *model) {
+				m.mode = modeApproval
+				m.approval.toolCallID = "tool-1"
+				m.approval.toolName = "shell_run"
+				m.approval.reason = "ls"
+			},
+			want: "Approval required",
+		},
+		{
+			name: "user input",
+			setup: func(m *model) {
+				m.mode = modeUserInput
+				m.userInput.questions = []core.UserInputQuestion{{
+					ID:       "continue",
+					Question: "Continue?",
+					Options:  []core.UserInputOption{{Label: "Yes", Description: "Continue now."}},
+				}}
+			},
+			want: "Continue?",
+		},
+		{
+			name: "model picker",
+			setup: func(m *model) {
+				m.mode = modeModelPicker
+				m.modelPicker.models = []string{"deepseek-chat"}
+				m.modelPicker.efforts = []string{"medium"}
+				m.modelPicker.thinkings = []string{"on"}
+			},
+			want: "Select Model and Effort",
+		},
+		{
+			name: "session picker",
+			setup: func(m *model) {
+				m.mode = modeSessionPicker
+				m.sessionChoices = []string{"session-1"}
+			},
+			want: "sessions",
+		},
+		{
+			name: "permissions picker",
+			setup: func(m *model) {
+				m.mode = modePermissionsPicker
+				m.permissionsPicker.choices = []string{service.ApprovalChoiceAskFirst}
+			},
+			want: "Permissions",
+		},
+		{
+			name: "plan implementation picker",
+			setup: func(m *model) {
+				m.mode = modePlanImplementation
+			},
+			want: "Implement this plan?",
+		},
+		{
+			name: "skills menu",
+			setup: func(m *model) {
+				m.mode = modeSkillsMenu
+			},
+			want: "Skills",
+		},
+		{
+			name: "skills manager",
+			setup: func(m *model) {
+				m.mode = modeSkillsManager
+				m.skillsManager.all = []skillManagerItem{{Name: "code-review", Enabled: true, Toggleable: true}}
+				m.skillsManager.matches = []int{0}
+			},
+			want: "Enable/Disable Skills",
+		},
+		{
+			name: "plugins manager",
+			setup: func(m *model) {
+				m.mode = modePluginsManager
+				m.pluginsManager.all = []pluginManagerItem{{ID: "memory", Name: "Memory", Enabled: true}}
+				m.pluginsManager.matches = []int{0}
+			},
+			want: "Plugins",
+		},
+		{
+			name: "help",
+			setup: func(m *model) {
+				m.mode = modeHelp
+			},
+			want: "Whale help",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := base()
+			tc.setup(&m)
+			view := m.renderBottom(100)
+			if strings.Contains(view, draft) || strings.Contains(view, "Type message or command") {
+				t.Fatalf("composer should be hidden while %s is active:\n%s", tc.name, view)
+			}
+			if !strings.Contains(view, tc.want) {
+				t.Fatalf("expected %s view to contain %q:\n%s", tc.name, tc.want, view)
+			}
+		})
 	}
 }
 
@@ -6296,6 +6548,54 @@ func TestTurnDoneWhileScrolledDefersNativeScrollbackUntilTail(t *testing.T) {
 	}
 	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "tail while scrolled") {
 		t.Fatalf("expected deferred native scrollback to include turn tail, got %s", got)
+	}
+}
+
+func TestLongTurnDoneWhileScrolledPreservesViewportAndDefersDurationNotice(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 80
+	m.height = 10
+	m.transcript = nil
+	for i := 0; i < 40; i++ {
+		m.appendTranscript("info", tuirender.KindText, fmt.Sprintf("entry-%02d", i))
+	}
+	m.nativeScrollbackPrinted = len(m.transcript)
+	m.beginTurnTranscript()
+	m.startBusy()
+	m.busySince = time.Now().Add(-(3*time.Minute + 5*time.Second))
+	m.append("assistant", "live-head\n")
+	m.refreshViewportContentFollow(true)
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyPgUp})
+	m = next.(model)
+	m.append("assistant", "tail while scrolled\n")
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	if m.followTail {
+		t.Fatal("expected long turn completion to preserve user-scrolled position")
+	}
+	if m.nativeScrollbackPrinted == len(m.transcript) {
+		t.Fatal("expected long turn completion while scrolled to defer native scrollback")
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(rendered, "✻ Worked for 3m ") {
+		t.Fatalf("expected duration notice to be appended to transcript:\n%s", rendered)
+	}
+	if view := m.View(); strings.Contains(view, "✻ Worked for 3m ") {
+		t.Fatalf("duration notice should not force scrolled viewport to tail:\n%s", view)
+	}
+
+	cmd := m.resumeChatTail()
+	if cmd == nil {
+		t.Fatal("expected returning to tail to flush deferred long-turn output")
+	}
+	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "✻ Worked for 3m ") {
+		t.Fatalf("expected deferred native scrollback to include duration notice, got %s", got)
 	}
 }
 

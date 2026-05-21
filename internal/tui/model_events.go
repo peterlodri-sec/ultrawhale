@@ -478,6 +478,7 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 	wasStopping := m.stopping
 	wasFrozen := m.viewportFrozen
 	wasBlockingModal := m.mode == modeApproval || m.mode == modeUserInput
+	turnDuration := m.completedTurnDuration(wasBusy)
 	m.stopBusy()
 	m.stopping = false
 	if wasBlockingModal {
@@ -490,6 +491,7 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 	m.markMissingProposedPlanIfNeeded(wasBusy)
 	m.markNoFinalAnswerIfNeeded()
 	m.commitLiveTranscript(reconciledAssistant && !wasFrozen)
+	m.appendTurnDurationNotice(wasBusy, wasStopping, turnDuration)
 	if wasFrozen {
 		m.unfreezeChatViewport()
 		m.refreshViewportContentFollow(false)
@@ -520,6 +522,52 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 	}
 	m.resetTurnVisibility()
 	return eventCmd
+}
+
+const turnDurationNoticeThreshold = 30 * time.Second
+
+func (m *model) completedTurnDuration(wasBusy bool) time.Duration {
+	if !wasBusy || m.busySince.IsZero() {
+		return 0
+	}
+	return time.Since(m.busySince)
+}
+
+func (m *model) appendTurnDurationNotice(wasBusy, wasStopping bool, duration time.Duration) {
+	if !wasBusy || wasStopping || duration < turnDurationNoticeThreshold {
+		return
+	}
+	m.appendTranscriptMessages([]tuirender.UIMessage{{
+		Role: "notice",
+		Kind: tuirender.KindNotice,
+		Text: "✻ Worked for " + formatTurnDuration(duration),
+	}})
+	if !m.viewportFrozen {
+		m.refreshViewportContentFollow(true)
+	}
+}
+
+func formatTurnDuration(duration time.Duration) string {
+	if duration < 0 {
+		duration = 0
+	}
+	totalSeconds := int(duration / time.Second)
+	if totalSeconds < 60 {
+		return fmt.Sprintf("%ds", totalSeconds)
+	}
+	minutes := totalSeconds / 60
+	seconds := totalSeconds % 60
+	if minutes < 60 {
+		return fmt.Sprintf("%dm %ds", minutes, seconds)
+	}
+	hours := minutes / 60
+	minutes %= 60
+	if hours < 24 {
+		return fmt.Sprintf("%dh %dm %ds", hours, minutes, seconds)
+	}
+	days := hours / 24
+	hours %= 24
+	return fmt.Sprintf("%dd %dh %dm %ds", days, hours, minutes, seconds)
 }
 
 func (m *model) openPlanImplementationPicker() {
