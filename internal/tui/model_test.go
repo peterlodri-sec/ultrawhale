@@ -2547,6 +2547,102 @@ func TestTurnDoneRecoversAssistantWhenAllDeltasDropped(t *testing.T) {
 	}
 }
 
+func TestTurnDoneAddsDurationNoticeForLongTurn(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true}
+	m.busySince = time.Now().Add(-(3*time.Minute + 5*time.Second))
+
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(got, "done") {
+		t.Fatalf("expected final assistant response in transcript:\n%s", got)
+	}
+	if !strings.Contains(got, "✻ Worked for 3m ") {
+		t.Fatalf("expected turn duration notice in transcript:\n%s", got)
+	}
+}
+
+func TestTurnDoneSkipsDurationNoticeForShortTurn(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true}
+	m.busySince = time.Now().Add(-29 * time.Second)
+
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if strings.Contains(got, "Worked for") {
+		t.Fatalf("did not expect turn duration notice for short turn:\n%s", got)
+	}
+}
+
+func TestTurnDoneSkipsDurationNoticeWhileStopping(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true, stopping: true}
+	m.busySince = time.Now().Add(-2 * time.Minute)
+
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if strings.Contains(got, "Worked for") {
+		t.Fatalf("did not expect turn duration notice for stopped turn:\n%s", got)
+	}
+}
+
+func TestAppendTurnDurationNoticeThresholdAndBusyState(t *testing.T) {
+	m := model{width: 80, height: 24, viewportFrozen: true}
+	m.appendTurnDurationNotice(true, false, 30*time.Second)
+	got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(got, "✻ Worked for 30s") {
+		t.Fatalf("expected duration notice at threshold:\n%s", got)
+	}
+
+	m = model{width: 80, height: 24, viewportFrozen: true}
+	m.appendTurnDurationNotice(true, false, 29*time.Second)
+	if len(m.transcript) != 0 {
+		t.Fatalf("did not expect duration notice below threshold, got %+v", m.transcript)
+	}
+
+	m = model{width: 80, height: 24, viewportFrozen: true}
+	m.appendTurnDurationNotice(false, false, 2*time.Minute)
+	if len(m.transcript) != 0 {
+		t.Fatalf("did not expect duration notice when turn was not busy, got %+v", m.transcript)
+	}
+}
+
+func TestFormatTurnDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		duration time.Duration
+		want     string
+	}{
+		{name: "negative", duration: -time.Second, want: "0s"},
+		{name: "seconds", duration: 45 * time.Second, want: "45s"},
+		{name: "minutes", duration: 2*time.Minute + 9*time.Second, want: "2m 9s"},
+		{name: "hours", duration: time.Hour + 2*time.Minute + 3*time.Second, want: "1h 2m 3s"},
+		{name: "days", duration: 24*24*time.Hour + time.Minute + 2*time.Second, want: "24d 0h 1m 2s"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := formatTurnDuration(tt.duration); got != tt.want {
+				t.Fatalf("formatTurnDuration(%s) = %q, want %q", tt.duration, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestReplacingCurrentTurnAssistantRewindsNativeScrollback(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
@@ -6350,6 +6446,54 @@ func TestTurnDoneWhileScrolledDefersNativeScrollbackUntilTail(t *testing.T) {
 	}
 	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "tail while scrolled") {
 		t.Fatalf("expected deferred native scrollback to include turn tail, got %s", got)
+	}
+}
+
+func TestLongTurnDoneWhileScrolledPreservesViewportAndDefersDurationNotice(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 80
+	m.height = 10
+	m.transcript = nil
+	for i := 0; i < 40; i++ {
+		m.appendTranscript("info", tuirender.KindText, fmt.Sprintf("entry-%02d", i))
+	}
+	m.nativeScrollbackPrinted = len(m.transcript)
+	m.beginTurnTranscript()
+	m.startBusy()
+	m.busySince = time.Now().Add(-(3*time.Minute + 5*time.Second))
+	m.append("assistant", "live-head\n")
+	m.refreshViewportContentFollow(true)
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyPgUp})
+	m = next.(model)
+	m.append("assistant", "tail while scrolled\n")
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:         service.EventTurnDone,
+		LastResponse: "done",
+		Metadata:     agentTurnMetadata(),
+	}))
+	m = next.(model)
+
+	if m.followTail {
+		t.Fatal("expected long turn completion to preserve user-scrolled position")
+	}
+	if m.nativeScrollbackPrinted == len(m.transcript) {
+		t.Fatal("expected long turn completion while scrolled to defer native scrollback")
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(rendered, "✻ Worked for 3m ") {
+		t.Fatalf("expected duration notice to be appended to transcript:\n%s", rendered)
+	}
+	if view := m.View(); strings.Contains(view, "✻ Worked for 3m ") {
+		t.Fatalf("duration notice should not force scrolled viewport to tail:\n%s", view)
+	}
+
+	cmd := m.resumeChatTail()
+	if cmd == nil {
+		t.Fatal("expected returning to tail to flush deferred long-turn output")
+	}
+	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "✻ Worked for 3m ") {
+		t.Fatalf("expected deferred native scrollback to include duration notice, got %s", got)
 	}
 }
 
