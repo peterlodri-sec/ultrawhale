@@ -112,12 +112,8 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		return m.handleUserInputKey(msg), false, true
 	case modeModelPicker:
 		return m.handleModelPickerKey(msg), false, true
-	case modePermissionsPicker:
-		return m.handlePermissionsPickerKey(msg), false, true
-	case modePermissionsProjectTrustConfirm:
-		return m.handlePermissionsProjectTrustConfirmKey(msg), false, true
-	case modePermissionsProjectClearConfirm:
-		return m.handlePermissionsProjectClearConfirmKey(msg), false, true
+	case modePermissionsMenu:
+		return m.handlePermissionsMenuKey(msg), false, true
 	case modePlanImplementation:
 		return m.handlePlanImplementationKey(msg), false, true
 	case modeSkillsMenu:
@@ -401,69 +397,27 @@ func (m *model) handleModelPickerKey(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-func (m *model) handlePermissionsPickerKey(msg tea.KeyMsg) tea.Cmd {
+func (m *model) handlePermissionsMenuKey(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
 	case "esc":
 		m.mode = modeChat
-	case "up", "k":
-		if m.permissionsPicker.index > 0 {
-			m.permissionsPicker.index--
+	case "up", "k", "left", "h":
+		if m.permissionsMenu.selected > 0 {
+			m.permissionsMenu.selected--
 		}
-	case "down", "j":
-		if m.permissionsPicker.index < len(m.permissionsPicker.choices)-1 {
-			m.permissionsPicker.index++
+	case "down", "j", "right", "l", "tab":
+		if m.permissionsMenu.selected < 1 {
+			m.permissionsMenu.selected++
 		}
 	case "enter":
-		choice := safeChoice(m.permissionsPicker.choices, m.permissionsPicker.index)
-		switch choice {
-		case service.ApprovalChoiceTrustProject:
-			m.permissionsProjectConfirm.index = 0
-			m.mode = modePermissionsProjectTrustConfirm
-			return nil
-		case service.ApprovalChoiceClearProject:
-			m.permissionsProjectConfirm.index = 0
-			m.mode = modePermissionsProjectClearConfirm
-			return nil
-		}
-		mode := approvalChoiceMode(choice)
-		if mode != "" {
+		if m.permissionsMenu.selected == 0 {
+			mode := "auto_accept"
+			if m.permissionsMenu.autoAccept {
+				mode = "ask"
+			}
 			m.dispatchIntent(service.Intent{Kind: service.IntentSetApprovalMode, ApprovalMode: mode})
 		}
 		m.mode = modeChat
-	}
-	return nil
-}
-
-func (m *model) handlePermissionsProjectTrustConfirmKey(msg tea.KeyMsg) tea.Cmd {
-	switch msg.String() {
-	case "esc":
-		m.mode = modePermissionsPicker
-	case "up", "k", "down", "j":
-		m.permissionsProjectConfirm.index = 1 - m.permissionsProjectConfirm.index
-	case "enter":
-		if m.permissionsProjectConfirm.index == 0 {
-			m.dispatchIntent(service.Intent{Kind: service.IntentSetProjectApproval, ApprovalMode: "never-ask"})
-			m.mode = modeChat
-		} else {
-			m.mode = modePermissionsPicker
-		}
-	}
-	return nil
-}
-
-func (m *model) handlePermissionsProjectClearConfirmKey(msg tea.KeyMsg) tea.Cmd {
-	switch msg.String() {
-	case "esc":
-		m.mode = modePermissionsPicker
-	case "up", "k", "down", "j":
-		m.permissionsProjectConfirm.index = 1 - m.permissionsProjectConfirm.index
-	case "enter":
-		if m.permissionsProjectConfirm.index == 0 {
-			m.dispatchIntent(service.Intent{Kind: service.IntentClearProjectApproval})
-			m.mode = modeChat
-		} else {
-			m.mode = modePermissionsPicker
-		}
 	}
 	return nil
 }

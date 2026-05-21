@@ -54,6 +54,9 @@ func metadataBool(v any) bool {
 
 func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	var eventCmd tea.Cmd
+	if ev.AutoAcceptKnown {
+		m.autoAccept = ev.AutoAccept
+	}
 	switch ev.Kind {
 	case service.EventAssistantDelta:
 		m.clearProviderRetryStatus()
@@ -316,13 +319,19 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		m.modelPicker.modelIx = indexOf(ev.ModelChoices, ev.CurrentModel)
 		m.modelPicker.effIx = indexOf(ev.EffortChoices, ev.CurrentEffort)
 		m.modelPicker.thinkIx = indexOf(ev.ThinkingChoices, ev.CurrentThinking)
-	case service.EventPermissionsPicker:
+	case service.EventPermissionsMenu:
 		m.clearProviderRetryStatus()
 		m.stopBusy()
 		m.stopping = false
-		m.mode = modePermissionsPicker
-		m.permissionsPicker.choices = ev.ApprovalChoices
-		m.permissionsPicker.index = indexOf(ev.ApprovalChoices, ev.CurrentApproval)
+		m.mode = modePermissionsMenu
+		m.permissionsMenu.autoAccept = ev.AutoAccept
+		m.permissionsMenu.selected = 0
+		m.slash.matches = nil
+		m.slash.selected = 0
+		m.slash.argumentHint = ""
+		m.skills.matches = nil
+		m.skills.selected = 0
+		m.status = "permissions"
 	case service.EventSkillLoaded:
 		m.clearProviderRetryStatus()
 		m.addLog(logEntry{Kind: "skill_loaded", Source: "skills", Summary: ev.Text, Raw: ev.Text})

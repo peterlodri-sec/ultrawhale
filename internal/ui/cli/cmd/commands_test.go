@@ -305,7 +305,7 @@ func TestPrepareCLIConfigDangerouslySkipPermissionsOverridesConfig(t *testing.T)
 		t.Fatalf("mkdir .whale: %v", err)
 	}
 	if err := app.SaveConfigFile(filepath.Join(workspace, ".whale", app.ConfigFileName), app.FileConfig{
-		Permissions: app.FilePermissionsConfig{Mode: string(policy.ApprovalModeOnRequest)},
+		Permissions: app.FilePermissionsConfig{Default: "ask"},
 	}); err != nil {
 		t.Fatalf("save project config: %v", err)
 	}
@@ -328,16 +328,16 @@ func TestPrepareCLIConfigDangerouslySkipPermissionsOverridesConfig(t *testing.T)
 	if err := prepareCLIConfig(root, opts); err != nil {
 		t.Fatalf("prepareCLIConfig: %v", err)
 	}
-	if opts.cfg.ApprovalMode != string(policy.ApprovalModeNever) {
-		t.Fatalf("approval mode: want never, got %s", opts.cfg.ApprovalMode)
+	if opts.cfg.PermissionDefault != policy.PermissionAllow || !opts.cfg.AutoAcceptPermissions {
+		t.Fatalf("dangerously skip permissions not applied: default=%s auto_accept=%v", opts.cfg.PermissionDefault, opts.cfg.AutoAcceptPermissions)
 	}
 
 	loaded, _, err := app.LoadConfigFile(filepath.Join(workspace, ".whale", app.ConfigFileName))
 	if err != nil {
 		t.Fatalf("LoadConfigFile: %v", err)
 	}
-	if loaded.Permissions.Mode != string(policy.ApprovalModeOnRequest) {
-		t.Fatalf("project config should remain on-request, got %q", loaded.Permissions.Mode)
+	if loaded.Permissions.Default != "ask" {
+		t.Fatalf("project config should remain ask, got %q", loaded.Permissions.Default)
 	}
 }
 
@@ -364,8 +364,8 @@ func TestPrepareCLIConfigDangerouslySkipPermissionsAppliesToSubcommands(t *testi
 	if err := prepareCLIConfig(execCmd, opts); err != nil {
 		t.Fatalf("prepareCLIConfig: %v", err)
 	}
-	if opts.cfg.ApprovalMode != string(policy.ApprovalModeNever) {
-		t.Fatalf("approval mode: want never, got %s", opts.cfg.ApprovalMode)
+	if opts.cfg.PermissionDefault != policy.PermissionAllow || !opts.cfg.AutoAcceptPermissions {
+		t.Fatalf("dangerously skip permissions not applied: default=%s auto_accept=%v", opts.cfg.PermissionDefault, opts.cfg.AutoAcceptPermissions)
 	}
 }
 

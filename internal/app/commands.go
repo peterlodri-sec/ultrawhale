@@ -12,7 +12,6 @@ import (
 	appcommands "github.com/usewhale/whale/internal/app/commands"
 	"github.com/usewhale/whale/internal/compact"
 	"github.com/usewhale/whale/internal/plugins"
-	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/skills"
 	"github.com/usewhale/whale/internal/store"
@@ -58,7 +57,7 @@ func (a *App) buildStatus() string {
 		"",
 		fmt.Sprintf("- session: %s", a.sessionID),
 		fmt.Sprintf("- mode: %s", modeDisplay(a.currentMode)),
-		fmt.Sprintf("- approval: %s", approvalModeDisplay(a.approvalMode)),
+		fmt.Sprintf("- permissions.default: %s", a.permissionPolicy.Default),
 		fmt.Sprintf("- model: %s", a.model),
 		fmt.Sprintf("- effort: %s", a.reasoningEffort),
 		fmt.Sprintf("- thinking: %s", onOff(a.thinkingEnabled)),
@@ -244,15 +243,6 @@ func modeTitle(mode session.Mode) string {
 		return "Plan"
 	}
 	return "Agent"
-}
-
-func approvalModeDisplay(mode policy.ApprovalMode) string {
-	switch mode {
-	case policy.ApprovalModeNever:
-		return "auto approve"
-	default:
-		return "ask first"
-	}
 }
 
 func formatContextWindowStatus(a *App) string {

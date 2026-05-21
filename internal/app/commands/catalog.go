@@ -23,7 +23,7 @@ func DefaultSlashCommands() []SlashCommandSpec {
 	return []SlashCommandSpec{
 		{Name: "/help", Description: "Show help and available commands", AutoRun: true},
 		{Name: "/model", Description: "Choose model, effort, and thinking settings", ArgumentHint: "[model]", AutoRun: true},
-		{Name: "/permissions", Description: "Choose tool approval behavior", AutoRun: true},
+		{Name: "/permissions", Description: "Configure permission auto-accept", AutoRun: true},
 		{Name: "/agent", Description: "Switch to agent mode", AutoRun: true},
 		{Name: "/ask", Description: "Switch to ask mode, optionally submit a prompt", ArgumentHint: "[prompt]", AutoRun: true},
 		{Name: "/plan", Description: "Switch to plan mode, optionally submit a prompt", ArgumentHint: "[prompt]", AutoRun: true},
