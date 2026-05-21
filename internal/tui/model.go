@@ -28,9 +28,7 @@ const (
 	modeSessionPicker
 	modeUserInput
 	modeModelPicker
-	modePermissionsPicker
-	modePermissionsProjectTrustConfirm
-	modePermissionsProjectClearConfirm
+	modePermissionsMenu
 	modePlanImplementation
 	modeSkillsMenu
 	modeSkillsManager
@@ -92,6 +90,7 @@ type model struct {
 	thinking             string
 	viewMode             string
 	chatMode             string
+	autoAccept           bool
 	product              string
 	version              string
 	cwd                  string
@@ -163,12 +162,9 @@ type model struct {
 		effIx     int
 		thinkIx   int
 	}
-	permissionsPicker struct {
-		choices []string
-		index   int
-	}
-	permissionsProjectConfirm struct {
-		index int
+	permissionsMenu struct {
+		autoAccept bool
+		selected   int
 	}
 	planImplementation struct {
 		index int

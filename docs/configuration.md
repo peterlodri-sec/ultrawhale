@@ -58,11 +58,10 @@ overrides. Whale applies them after merging default, global, project shared, and
 project local config for the current process, and it does not write them back to
 config files.
 
-`--dangerously-skip-permissions` sets the current process to `permissions.mode =
-"never"`. It skips tool approval prompts for writes, patches, shell commands,
-and MCP tools. Use it only in a trusted workspace or an external sandbox; Whale
-does not add command sandboxing for this mode. Shell commands matching
-`deny_shell_prefixes` are still blocked.
+`--dangerously-skip-permissions` enables permission auto-accept for the current
+process. It does not write back to config files. Use it only in a trusted
+workspace or an external sandbox; Whale permissions are UX guardrails, not OS
+sandboxing.
 
 Example:
 
@@ -72,9 +71,35 @@ reasoning_effort = "high"
 thinking_enabled = true
 
 [permissions]
-mode = "on-request"
-allow_shell_prefixes = ["git status", "go test"]
-deny_shell_prefixes = ["rm -rf"]
+default = "allow"
+auto_accept = false
+
+[permissions.read]
+"*" = "allow"
+"*.env" = "ask"
+"*.env.*" = "ask"
+"*.env.example" = "allow"
+
+[permissions.edit]
+"*" = "ask"
+
+[permissions.shell]
+"*" = "allow"
+"git push*" = "ask"
+"npm install*" = "ask"
+"pnpm install*" = "ask"
+"curl *" = "ask"
+"wget *" = "ask"
+"rm -rf*" = "deny"
+
+[permissions.external_directory]
+"*" = "ask"
+
+[permissions.mcp]
+"*" = "ask"
+
+[permissions.memory]
+"*" = "ask"
 
 [api]
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -131,8 +156,8 @@ If you started with Whale v0.1.9 or newer, you do not need this command.
 
 - `whale exec` and the interactive TUI use the same underlying tool loop.
 - Normal approval behavior still applies in headless mode.
-- `whale exec --dangerously-skip-permissions "prompt"` skips approval prompts
-  for that one headless run.
+- `whale exec --dangerously-skip-permissions "prompt"` auto-accepts permission
+  prompts for that one headless run.
 - `reasoning_effort` and `thinking_enabled` in `config.toml` remain the
   long-term defaults when `--effort` or `--thinking` are not passed.
 - `DEEPSEEK_BASE_URL` overrides `[api].base_url`; if neither is set, Whale uses
@@ -160,14 +185,16 @@ Whale exposes shell execution through the `shell_run` tool. Commands run from
 the current workspace root by default. Use relative paths, or pass the `cwd`
 parameter to run from a workspace subdirectory.
 
-In the default `on-request` mode, Whale auto-runs common inspection commands
-such as `git status` and `rg`, plus common project verification commands such
-as `go test`, `go vet`, `make test`, `make test-tui`, and `make build`.
-Verification/build auto-allow is separate from strict read-only mode: Ask mode,
-Plan mode, and read-only subagents still block commands that can write caches or
-artifacts. Other shell commands ask for approval unless they match
-`[permissions].allow_shell_prefixes`. Prefix matching is token-boundary aware:
-`git status --short` matches `git status`, but `git statusfoo` does not.
+By default, Whale allows normal workspace shell commands and asks for higher
+risk patterns such as `git push*`, package installation, `curl *`, and `wget *`.
+Commands matching deny rules such as `rm -rf*` are blocked. If a shell command
+obviously references an absolute path outside the workspace or temp directories,
+Whale also evaluates `[permissions.external_directory]` for that path.
+
+File edits (`edit`, `write`, `apply_patch`) ask for approval by default; set
+`[permissions.edit]` to `"allow"` to apply edits without prompting, or to
+`"deny"` to block them. Reading files is allowed by default except for `.env`
+files, which ask.
 
 ## Worktrees
 

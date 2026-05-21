@@ -824,7 +824,6 @@ func TestStartupLinesIncludeEffectiveThinkingAndEffort(t *testing.T) {
 	app := &App{
 		sessionID:        "sess-1",
 		currentMode:      "agent",
-		approvalMode:     "never",
 		model:            "deepseek-v4-pro",
 		reasoningEffort:  "max",
 		thinkingEnabled:  false,
@@ -846,9 +845,8 @@ func TestStartupLinesIncludeEffectiveThinkingAndEffort(t *testing.T) {
 
 func TestStartupLinesIncludeWorktree(t *testing.T) {
 	app := &App{
-		sessionID:    "sess-1",
-		currentMode:  "agent",
-		approvalMode: "never",
+		sessionID:   "sess-1",
+		currentMode: "agent",
 		worktree: WorktreeSession{
 			Name: "feature",
 			Path: "/tmp/repo/.whale/worktrees/feature",
@@ -876,7 +874,6 @@ func TestBuildStatusIncludesEffectiveThinkingAndEffort(t *testing.T) {
 		msgStore:         msgStore,
 		contextWindow:    1000,
 		currentMode:      "agent",
-		approvalMode:     "never",
 		model:            "deepseek-v4-pro",
 		reasoningEffort:  "max",
 		thinkingEnabled:  false,

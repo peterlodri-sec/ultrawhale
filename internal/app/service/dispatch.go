@@ -65,34 +65,9 @@ func (s *Service) Dispatch(in Intent) {
 		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("model set: %s  effort: %s  thinking: %s", s.app.Model(), s.app.ReasoningEffort(), onOff(s.app.ThinkingEnabled()))})
 		s.emit(Event{Kind: EventTurnDone})
 	case IntentSetApprovalMode:
-		mode, err := policy.ParseApprovalMode(in.ApprovalMode)
-		if err != nil {
-			s.emit(Event{Kind: EventError, Text: err.Error()})
-			return
-		}
-		s.app.SetApprovalMode(mode)
-		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("approval set: %s", approvalModeDisplay(s.app.ApprovalMode()))})
-		s.emit(Event{Kind: EventTurnDone})
-	case IntentSetProjectApproval:
-		mode, err := policy.ParseApprovalMode(in.ApprovalMode)
-		if err != nil {
-			s.emit(Event{Kind: EventError, Text: err.Error()})
-			return
-		}
-		path, err := s.app.SetProjectApprovalMode(mode)
-		if err != nil {
-			s.emit(Event{Kind: EventError, Text: err.Error()})
-			return
-		}
-		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("project local permissions saved: %s\nconfig: %s", projectApprovalModeDisplay(mode), path)})
-		s.emit(Event{Kind: EventTurnDone})
-	case IntentClearProjectApproval:
-		mode, path, err := s.app.ClearProjectApprovalMode()
-		if err != nil {
-			s.emit(Event{Kind: EventError, Text: err.Error()})
-			return
-		}
-		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("project local permissions default cleared\nconfig: %s\ncurrent session: %s", path, approvalModeDisplay(mode))})
+		enabled := in.ApprovalMode == "auto_accept"
+		s.app.SetAutoAcceptPermissions(enabled)
+		s.emit(Event{Kind: EventInfo, Text: autoAcceptMessage(enabled), AutoAccept: enabled, AutoAcceptKnown: true})
 		s.emit(Event{Kind: EventTurnDone})
 	case IntentSetViewMode:
 		if err := s.app.SetViewMode(in.ViewMode); err != nil {
@@ -204,11 +179,7 @@ func (s *Service) handleLocalSubmit(line string) {
 		return
 	}
 	if line == "/permissions" {
-		s.emit(Event{
-			Kind:            EventPermissionsPicker,
-			ApprovalChoices: approvalModeChoices(),
-			CurrentApproval: approvalModeDisplay(s.app.ApprovalMode()),
-		})
+		s.emit(Event{Kind: EventPermissionsMenu, AutoAccept: s.app.AutoAcceptPermissions(), AutoAcceptKnown: true})
 		return
 	}
 	if line == "/focus" {
@@ -315,11 +286,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		return
 	}
 	if line == "/permissions" {
-		s.emit(Event{
-			Kind:            EventPermissionsPicker,
-			ApprovalChoices: approvalModeChoices(),
-			CurrentApproval: approvalModeDisplay(s.app.ApprovalMode()),
-		})
+		s.emit(Event{Kind: EventPermissionsMenu, AutoAccept: s.app.AutoAcceptPermissions(), AutoAcceptKnown: true})
 		return
 	}
 	if line == "/focus" {
@@ -492,7 +459,7 @@ func (s *Service) emitSessionHydrated() {
 		s.emit(Event{Kind: EventError, Text: err.Error()})
 		return
 	}
-	s.emit(Event{Kind: EventSessionHydrated, SessionID: s.app.SessionID(), Messages: msgs})
+	s.emit(Event{Kind: EventSessionHydrated, SessionID: s.app.SessionID(), Messages: msgs, AutoAccept: s.app.AutoAcceptPermissions(), AutoAcceptKnown: true})
 }
 
 func (s *Service) emitSessionChoices() bool {

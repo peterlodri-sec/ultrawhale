@@ -2249,13 +2249,12 @@ func TestPickerEventsClearBusyState(t *testing.T) {
 			mode: modeModelPicker,
 		},
 		{
-			name: "permissions picker",
+			name: "permissions menu",
 			ev: service.Event{
-				Kind:            service.EventPermissionsPicker,
-				ApprovalChoices: []string{service.ApprovalChoiceAskFirst, service.ApprovalChoiceAutoApproveSession},
-				CurrentApproval: service.ApprovalChoiceAskFirst,
+				Kind:       service.EventPermissionsMenu,
+				AutoAccept: true,
 			},
-			mode: modePermissionsPicker,
+			mode: modePermissionsMenu,
 		},
 	}
 	for _, tt := range tests {
@@ -2274,128 +2273,49 @@ func TestPickerEventsClearBusyState(t *testing.T) {
 	}
 }
 
-func TestPermissionsPickerCopyClarifiesAutoApproveScope(t *testing.T) {
-	m := newModel(nil, "", "", "")
-	m.permissionsPicker.choices = []string{
-		service.ApprovalChoiceAskFirst,
-		service.ApprovalChoiceAutoApproveSession,
-		service.ApprovalChoiceTrustProject,
-		service.ApprovalChoiceClearProject,
-	}
-
-	view := m.renderPermissionsPicker()
-	for _, want := range []string{
-		"Session",
-		"Ask before tools run",
-		"Prompt before write, patch, shell, or MCP tools run.",
-		"Auto approve all tools for this session",
-		"No approval prompts until Whale exits.",
-		"Project default",
-		"Trust this project...",
-		"Auto-approve by default in this workspace for you.",
-		"Clear project default",
-		"Remove permissions.mode from ./.whale/config.local.toml.",
-	} {
-		if !strings.Contains(view, want) {
-			t.Fatalf("expected permissions picker to contain %q:\n%s", want, view)
-		}
-	}
-	if strings.Contains(view, "Never ask; auto-approve tool calls.") {
-		t.Fatalf("permissions picker should not use ambiguous auto-approve copy:\n%s", view)
-	}
-}
-
-func TestPermissionsProjectTrustConfirmCopy(t *testing.T) {
-	m := newModel(nil, "", "", "")
-
-	view := m.renderPermissionsProjectTrustConfirm()
-	for _, want := range []string{
-		"Trust this project?",
-		"Auto-approve write, patch, shell, and MCP tools by default in this workspace.",
-		"This affects your future sessions in this workspace.",
-		"Config: ./.whale/config.local.toml",
-		"Trust this project",
-		"Cancel",
-	} {
-		if !strings.Contains(view, want) {
-			t.Fatalf("expected trust confirmation to contain %q:\n%s", want, view)
-		}
-	}
-	if strings.Contains(view, "Whale will") {
-		t.Fatalf("trust confirmation should state facts without product-name narration:\n%s", view)
-	}
-}
-
-func TestPermissionsProjectClearConfirmCopy(t *testing.T) {
-	m := newModel(nil, "", "", "")
-
-	view := m.renderPermissionsProjectClearConfirm()
-	for _, want := range []string{
-		"Clear project default?",
-		"Remove permissions.mode from ./.whale/config.local.toml.",
-		"Future sessions will fall back to shared project, global, or default approval settings.",
-		"Clear project default",
-		"Cancel",
-	} {
-		if !strings.Contains(view, want) {
-			t.Fatalf("expected clear confirmation to contain %q:\n%s", want, view)
-		}
-	}
-	if strings.Contains(view, "will use the global/default approval setting") {
-		t.Fatalf("clear confirmation should not skip shared project fallback:\n%s", view)
-	}
-}
-
-func TestPermissionsPickerTrustProjectDispatchesProjectApprovalIntent(t *testing.T) {
+func TestPermissionsMenuRendersStateAndDispatchesExplicitMode(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
-	m.mode = modePermissionsPicker
-	m.permissionsPicker.choices = []string{
-		service.ApprovalChoiceAskFirst,
-		service.ApprovalChoiceAutoApproveSession,
-		service.ApprovalChoiceTrustProject,
-		service.ApprovalChoiceClearProject,
-	}
-	m.permissionsPicker.index = 2
-
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventPermissionsMenu, AutoAccept: false}))
 	m = next.(model)
-	if m.mode != modePermissionsProjectTrustConfirm {
-		t.Fatalf("expected trust confirmation mode, got %v", m.mode)
+	if m.mode != modePermissionsMenu {
+		t.Fatalf("expected permissions menu mode, got %v", m.mode)
 	}
-	if len(*intents) != 0 {
-		t.Fatalf("expected no intent before confirmation, got %+v", *intents)
+	rendered := m.renderPermissionsMenu()
+	if !strings.Contains(rendered, "Session auto-accept: off") || !strings.Contains(rendered, "Enable session auto-accept") {
+		t.Fatalf("unexpected permissions menu:\n%s", rendered)
 	}
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(model)
-	if len(*intents) != 1 {
-		t.Fatalf("expected one intent after confirmation, got %+v", *intents)
-	}
-	if got := (*intents)[0]; got.Kind != service.IntentSetProjectApproval || got.ApprovalMode != "never-ask" {
-		t.Fatalf("unexpected project approval intent: %+v", got)
-	}
 	if m.mode != modeChat {
-		t.Fatalf("expected mode chat after confirmation, got %v", m.mode)
+		t.Fatalf("expected chat mode after selection, got %v", m.mode)
 	}
-}
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentSetApprovalMode || (*intents)[0].ApprovalMode != "auto_accept" {
+		t.Fatalf("unexpected dispatched intent: %+v", *intents)
+	}
 
-func TestPermissionsPickerAutoApproveDispatchesNeverAsk(t *testing.T) {
-	m, intents := newModelWithDispatchSpy()
-	m.mode = modePermissionsPicker
-	m.permissionsPicker.choices = []string{service.ApprovalChoiceAskFirst, service.ApprovalChoiceAutoApproveSession}
-	m.permissionsPicker.index = 1
-
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, intents = newModelWithDispatchSpy()
+	next, _ = m.Update(svcMsg(service.Event{Kind: service.EventPermissionsMenu, AutoAccept: true}))
 	m = next.(model)
+	rendered = m.renderPermissionsMenu()
+	if !strings.Contains(rendered, "Session auto-accept: on") || !strings.Contains(rendered, "Disable session auto-accept") {
+		t.Fatalf("unexpected enabled permissions menu:\n%s", rendered)
+	}
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentSetApprovalMode || (*intents)[0].ApprovalMode != "ask" {
+		t.Fatalf("unexpected dispatched intent: %+v", *intents)
+	}
 
-	if len(*intents) != 1 {
-		t.Fatalf("expected one intent, got %+v", *intents)
-	}
-	if got := (*intents)[0]; got.Kind != service.IntentSetApprovalMode || got.ApprovalMode != "never-ask" {
-		t.Fatalf("unexpected approval intent: %+v", got)
-	}
-	if m.mode != modeChat {
-		t.Fatalf("expected permissions picker to close, got mode %v", m.mode)
+	m, intents = newModelWithDispatchSpy()
+	next, _ = m.Update(svcMsg(service.Event{Kind: service.EventPermissionsMenu, AutoAccept: false}))
+	m = next.(model)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = next.(model)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	if len(*intents) != 0 || m.mode != modeChat {
+		t.Fatalf("cancel should not dispatch and should return to chat, intents=%+v mode=%v", *intents, m.mode)
 	}
 }
 
@@ -3862,12 +3782,11 @@ func TestPickerAndModalViewsHideComposer(t *testing.T) {
 			want: "sessions",
 		},
 		{
-			name: "permissions picker",
+			name: "permissions menu",
 			setup: func(m *model) {
-				m.mode = modePermissionsPicker
-				m.permissionsPicker.choices = []string{service.ApprovalChoiceAskFirst}
+				m.mode = modePermissionsMenu
 			},
-			want: "Permissions",
+			want: "Session auto-accept:",
 		},
 		{
 			name: "plan implementation picker",
@@ -5317,6 +5236,32 @@ func TestChatFooterShowsWindowsDirectoryTail(t *testing.T) {
 	view := m.View()
 	assertFooterLastLine(t, view, `goranka`)
 	assertFooterLastLineNotContains(t, view, ` ~`)
+}
+
+func TestChatFooterShowsAutoAcceptOnlyWhenEnabled(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-pro", "high", "on")
+	m.width = 100
+	m.height = 24
+	m.cwd = "~/Engineer/ai/dsk/whale"
+
+	view := m.View()
+	assertFooterLastLineNotContains(t, view, "auto-accept on")
+
+	m.autoAccept = true
+	view = m.View()
+	assertFooterLastLine(t, view, "auto-accept on")
+}
+
+func TestSessionHydratedUpdatesAutoAcceptFooterState(t *testing.T) {
+	m := newModel(nil, "deepseek-v4-pro", "high", "on")
+	m.width = 100
+	m.height = 24
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventSessionHydrated, AutoAccept: true, AutoAcceptKnown: true}))
+	m = next.(model)
+	if !m.autoAccept {
+		t.Fatal("expected hydrated auto-accept state")
+	}
+	assertFooterLastLine(t, m.View(), "auto-accept on")
 }
 
 func TestChatFooterShowsGitBranchInsteadOfScrollHint(t *testing.T) {

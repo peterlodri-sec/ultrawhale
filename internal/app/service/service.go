@@ -15,27 +15,25 @@ import (
 type IntentKind string
 
 const (
-	IntentSubmit               IntentKind = "submit"
-	IntentSubmitLocal          IntentKind = "submit_local"
-	IntentAllowTool            IntentKind = "allow_tool"
-	IntentAllowToolForSession  IntentKind = "allow_tool_for_session"
-	IntentDenyTool             IntentKind = "deny_tool"
-	IntentCancelToolApproval   IntentKind = "cancel_tool_approval"
-	IntentSubmitUserInput      IntentKind = "submit_user_input"
-	IntentCancelUserInput      IntentKind = "cancel_user_input"
-	IntentSelectSession        IntentKind = "select_session"
-	IntentRequestSessions      IntentKind = "request_sessions"
-	IntentShutdown             IntentKind = "shutdown"
-	IntentSetModelAndEffort    IntentKind = "set_model_and_effort"
-	IntentSetApprovalMode      IntentKind = "set_approval_mode"
-	IntentSetProjectApproval   IntentKind = "set_project_approval"
-	IntentClearProjectApproval IntentKind = "clear_project_approval"
-	IntentSetViewMode          IntentKind = "set_view_mode"
-	IntentToggleMode           IntentKind = "toggle_mode"
-	IntentImplementPlan        IntentKind = "implement_plan"
-	IntentRequestSkillsManage  IntentKind = "request_skills_manage"
-	IntentSetSkillEnabled      IntentKind = "set_skill_enabled"
-	IntentSetPluginEnabled     IntentKind = "set_plugin_enabled"
+	IntentSubmit              IntentKind = "submit"
+	IntentSubmitLocal         IntentKind = "submit_local"
+	IntentAllowTool           IntentKind = "allow_tool"
+	IntentAllowToolForSession IntentKind = "allow_tool_for_session"
+	IntentDenyTool            IntentKind = "deny_tool"
+	IntentCancelToolApproval  IntentKind = "cancel_tool_approval"
+	IntentSubmitUserInput     IntentKind = "submit_user_input"
+	IntentCancelUserInput     IntentKind = "cancel_user_input"
+	IntentSelectSession       IntentKind = "select_session"
+	IntentRequestSessions     IntentKind = "request_sessions"
+	IntentShutdown            IntentKind = "shutdown"
+	IntentSetModelAndEffort   IntentKind = "set_model_and_effort"
+	IntentSetApprovalMode     IntentKind = "set_approval_mode"
+	IntentSetViewMode         IntentKind = "set_view_mode"
+	IntentToggleMode          IntentKind = "toggle_mode"
+	IntentImplementPlan       IntentKind = "implement_plan"
+	IntentRequestSkillsManage IntentKind = "request_skills_manage"
+	IntentSetSkillEnabled     IntentKind = "set_skill_enabled"
+	IntentSetPluginEnabled    IntentKind = "set_plugin_enabled"
 )
 
 type Intent struct {
@@ -92,7 +90,7 @@ const (
 	EventBtwError          EventKind = "btw_error"
 	EventTurnDone          EventKind = "turn_done"
 	EventModelPicker       EventKind = "model_picker"
-	EventPermissionsPicker EventKind = "permissions_picker"
+	EventPermissionsMenu   EventKind = "permissions_menu"
 	EventSkillsMenu        EventKind = "skills_menu"
 	EventSkillsManager     EventKind = "skills_manager"
 	EventPluginsManager    EventKind = "plugins_manager"
@@ -123,8 +121,8 @@ type Event struct {
 	CurrentEffort   string
 	ThinkingChoices []string
 	CurrentThinking string
-	ApprovalChoices []string
-	CurrentApproval string
+	AutoAccept      bool
+	AutoAcceptKnown bool
 	ViewMode        string
 	Skills          []skills.SkillView
 	Plugins         []plugins.PluginStatus
