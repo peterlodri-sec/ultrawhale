@@ -84,6 +84,9 @@ func TestBuildWorktreeExitSummaryCountsIgnoredFiles(t *testing.T) {
 
 func TestRemoveCurrentWorktreeRemovesFromOriginalWorkspace(t *testing.T) {
 	repo := newAppGitRepo(t)
+	// RemoveCurrentWorktree chdir's the process out of the worktree; pin and
+	// restore the working directory so the change does not leak to other tests.
+	t.Chdir(repo)
 	sess, err := whaleworktree.Start(repo, "exit-remove")
 	if err != nil {
 		t.Fatalf("Start worktree: %v", err)
@@ -106,6 +109,91 @@ func TestRemoveCurrentWorktreeRemovesFromOriginalWorkspace(t *testing.T) {
 	}
 	if _, err := os.Stat(sess.Path); !os.IsNotExist(err) {
 		t.Fatalf("worktree should be removed, stat err=%v", err)
+	}
+}
+
+func TestRemoveCurrentWorktreeChdirsOutOfWorktree(t *testing.T) {
+	repo := newAppGitRepo(t)
+	sess, err := whaleworktree.Start(repo, "exit-chdir")
+	if err != nil {
+		t.Fatalf("Start worktree: %v", err)
+	}
+	// Simulate an interactive --worktree session, which has chdir'd into the
+	// managed worktree. Windows cannot remove a process's current directory, so
+	// removal must move the cwd out first. t.Chdir restores cwd after the test.
+	t.Chdir(sess.Path)
+	app := &App{worktree: WorktreeSession{
+		Name:               sess.Name,
+		Path:               sess.Path,
+		Branch:             sess.Branch,
+		OriginalWorkspace:  sess.OriginalWorkspace,
+		OriginalBranch:     sess.OriginalBranch,
+		OriginalHeadCommit: sess.OriginalHeadCommit,
+	}}
+
+	res, err := app.RemoveCurrentWorktree(false)
+	if err != nil {
+		t.Fatalf("RemoveCurrentWorktree: %v", err)
+	}
+	if res.Action != "remove" {
+		t.Fatalf("unexpected action: %+v", res)
+	}
+	if _, err := os.Stat(sess.Path); !os.IsNotExist(err) {
+		t.Fatalf("worktree should be removed, stat err=%v", err)
+	}
+	got, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd after removal: %v", err)
+	}
+	if resolved, err := filepath.EvalSymlinks(got); err == nil {
+		got = resolved
+	}
+	if got != sess.OriginalWorkspace {
+		t.Fatalf("process cwd after removal = %q, want original workspace %q", got, sess.OriginalWorkspace)
+	}
+}
+
+func TestRemoveCurrentWorktreeRestoresCwdWhenRemovalFails(t *testing.T) {
+	repo := newAppGitRepo(t)
+	sess, err := whaleworktree.Start(repo, "exit-remove-fail")
+	if err != nil {
+		t.Fatalf("Start worktree: %v", err)
+	}
+	// The worktree turned dirty after the exit summary, so a non-forced
+	// auto-remove will fail.
+	if err := os.WriteFile(filepath.Join(sess.Path, "scratch.txt"), []byte("dirty\n"), 0o600); err != nil {
+		t.Fatalf("write dirty file: %v", err)
+	}
+	// Simulate the interactive session still running inside the worktree.
+	t.Chdir(sess.Path)
+	app := &App{worktree: WorktreeSession{
+		Name:               sess.Name,
+		Path:               sess.Path,
+		Branch:             sess.Branch,
+		OriginalWorkspace:  sess.OriginalWorkspace,
+		OriginalBranch:     sess.OriginalBranch,
+		OriginalHeadCommit: sess.OriginalHeadCommit,
+	}}
+
+	if _, err := app.RemoveCurrentWorktree(false); err == nil {
+		t.Fatal("expected RemoveCurrentWorktree to fail for a dirty worktree")
+	}
+	if _, err := os.Stat(sess.Path); err != nil {
+		t.Fatalf("worktree should still exist after failed removal: %v", err)
+	}
+	got, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd after failed removal: %v", err)
+	}
+	if resolved, err := filepath.EvalSymlinks(got); err == nil {
+		got = resolved
+	}
+	wantCwd := sess.Path
+	if resolved, err := filepath.EvalSymlinks(wantCwd); err == nil {
+		wantCwd = resolved
+	}
+	if got != wantCwd {
+		t.Fatalf("process cwd after failed removal = %q, want worktree %q", got, wantCwd)
 	}
 }
 

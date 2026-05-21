@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/usewhale/whale/internal/session"
@@ -69,9 +70,30 @@ func (a *App) RemoveCurrentWorktree(force bool) (WorktreeExitResult, error) {
 		}
 		cwd = root
 	}
+	// An interactive --worktree session has os.Chdir'd into the managed
+	// worktree. Windows refuses to remove a directory that is a process's
+	// current working directory, so move the process cwd back to the original
+	// workspace (falling back to the repo root) before git removes it.
+	previousCwd, _ := os.Getwd()
+	if err := os.Chdir(cwd); err != nil {
+		root, rootErr := whaleworktree.CanonicalRepoRoot(a.worktree.Path)
+		if rootErr != nil {
+			return WorktreeExitResult{}, fmt.Errorf("leave worktree before removal: %w", err)
+		}
+		if rootChErr := os.Chdir(root); rootChErr != nil {
+			return WorktreeExitResult{}, fmt.Errorf("leave worktree before removal: %w", rootChErr)
+		}
+		cwd = root
+	}
 	name := a.worktree.Name
 	res, err := whaleworktree.Remove(cwd, name, force)
 	if err != nil {
+		// Removal failed, so the worktree still exists and the session keeps
+		// running. Move the process back to where it was so later commands do
+		// not execute in the wrong directory.
+		if previousCwd != "" {
+			_ = os.Chdir(previousCwd)
+		}
 		return WorktreeExitResult{}, err
 	}
 	if err := a.markWorktreeExited(); err != nil {
