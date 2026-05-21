@@ -3782,12 +3782,11 @@ func TestPickerAndModalViewsHideComposer(t *testing.T) {
 			want: "sessions",
 		},
 		{
-			name: "permissions picker",
+			name: "permissions menu",
 			setup: func(m *model) {
-				m.mode = modePermissionsPicker
-				m.permissionsPicker.choices = []string{service.ApprovalChoiceAskFirst}
+				m.mode = modePermissionsMenu
 			},
-			want: "Permissions",
+			want: "Session auto-accept:",
 		},
 		{
 			name: "plan implementation picker",
