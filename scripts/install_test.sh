@@ -11,6 +11,26 @@ SHADOW_DIR="$TMPDIR/shadow"
 INSTALL_DIR="$TMPDIR/install"
 mkdir -p "$STUB_DIR" "$SHADOW_DIR" "$INSTALL_DIR"
 
+case "$(uname -s)" in
+  Darwin) OS_NAME="darwin" ;;
+  Linux) OS_NAME="linux" ;;
+  *)
+    printf 'unsupported test OS: %s\n' "$(uname -s)" >&2
+    exit 1
+    ;;
+esac
+
+case "$(uname -m)" in
+  x86_64|amd64) ARCH_NAME="amd64" ;;
+  arm64|aarch64) ARCH_NAME="arm64" ;;
+  *)
+    printf 'unsupported test architecture: %s\n' "$(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+ASSET_NAME="whale-$OS_NAME-$ARCH_NAME"
+
 cat >"$SHADOW_DIR/whale" <<'EOF'
 #!/bin/sh
 printf '%s\n' 'v0.0.1'
@@ -46,9 +66,9 @@ esac
 
 case "$url" in
   */checksums.txt)
-    printf '%s  whale-darwin-arm64\n' "$WHALE_TEST_ASSET_SHA" >"$dst"
+    printf '%s  %s\n' "$WHALE_TEST_ASSET_SHA" "$WHALE_TEST_ASSET_NAME" >"$dst"
     ;;
-  */whale-darwin-arm64)
+  */"$WHALE_TEST_ASSET_NAME")
     cp "$WHALE_TEST_ASSET" "$dst"
     ;;
   *)
@@ -59,19 +79,24 @@ esac
 EOF
 chmod 0755 "$STUB_DIR/curl"
 
-cat >"$TMPDIR/whale-darwin-arm64" <<'EOF'
+cat >"$TMPDIR/$ASSET_NAME" <<'EOF'
 #!/bin/sh
 printf '%s\n' 'v9.9.9'
 EOF
-chmod 0755 "$TMPDIR/whale-darwin-arm64"
+chmod 0755 "$TMPDIR/$ASSET_NAME"
 
-ASSET_SHA="$(shasum -a 256 "$TMPDIR/whale-darwin-arm64" | awk '{print $1}')"
+if command -v sha256sum >/dev/null 2>&1; then
+  ASSET_SHA="$(sha256sum "$TMPDIR/$ASSET_NAME" | awk '{print $1}')"
+else
+  ASSET_SHA="$(shasum -a 256 "$TMPDIR/$ASSET_NAME" | awk '{print $1}')"
+fi
 
 OUTPUT="$(
   PATH="$SHADOW_DIR:$STUB_DIR:/usr/bin:/bin" \
   VERSION="v9.9.9" \
   BIN_DIR="$INSTALL_DIR" \
-  WHALE_TEST_ASSET="$TMPDIR/whale-darwin-arm64" \
+  WHALE_TEST_ASSET="$TMPDIR/$ASSET_NAME" \
+  WHALE_TEST_ASSET_NAME="$ASSET_NAME" \
   WHALE_TEST_ASSET_SHA="$ASSET_SHA" \
   "$ROOT_DIR/scripts/install.sh"
 )"
