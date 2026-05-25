@@ -47,6 +47,30 @@ func BenchmarkChatListSetMessagesRepeated(b *testing.B) {
 	}
 }
 
+func BenchmarkChatTailMessagesForView(b *testing.B) {
+	cases := []struct {
+		name   string
+		turns  int
+		bytes  int
+		height int
+	}{
+		{"small_20turns_2k", 20, 2 * 1024, 30},
+		{"medium_60turns_4k", 60, 4 * 1024, 30},
+		{"large_200turns_4k", 200, 4 * 1024, 30},
+	}
+	for _, tc := range cases {
+		messages := benchmarkChatListMessages(tc.turns, tc.bytes)
+		renderWidth := 100
+		b.Run(tc.name, func(b *testing.B) {
+			var m model
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_ = m.chatTailMessagesForView(messages, renderWidth, tc.height)
+			}
+		})
+	}
+}
+
 func BenchmarkChatListSetMessagesStreamingTail(b *testing.B) {
 	base := benchmarkChatListMessages(20, 2*1024)
 	var l chatList

@@ -26,6 +26,7 @@ tmp/
 .whale/sessions/
 .whale/usage.jsonl
 .omx/
+.antigravitycli/
 session.json
 .env
 .env.*

@@ -6646,6 +6646,24 @@ func TestChatViewportIdleFollowTailUsesTailRenderWindow(t *testing.T) {
 	}
 }
 
+func TestChatViewportTailRenderBoundedWithAlternatingToolAndAssistant(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 80
+	m.height = 10
+	m.transcript = nil
+	for i := 0; i < 200; i++ {
+		m.appendTranscript("tool", tuirender.KindToolCall, fmt.Sprintf("tool-call-%03d", i))
+		m.appendTranscript("tool", tuirender.KindToolResult, fmt.Sprintf("tool-result-%03d", i))
+		m.appendTranscript("assistant", tuirender.KindText, fmt.Sprintf("assistant-reply-%03d", i))
+	}
+	m.refreshViewportContentFollow(false)
+
+	lineLimit := max(chatTailRenderLineFloor, m.viewportBodyHeight(m.width)*4)
+	if lines := m.viewport.TotalLineCount(); lines > lineLimit {
+		t.Fatalf("alternating tool/assistant tail render should stay within %d lines (work separators included), got %d", lineLimit, lines)
+	}
+}
+
 func TestChatViewportBusyFollowTailKeepsSingleLargeLiveMessageScrollable(t *testing.T) {
 	for _, height := range []int{8, 10, 20} {
 		t.Run(fmt.Sprintf("height_%d", height), func(t *testing.T) {

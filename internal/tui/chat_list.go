@@ -78,6 +78,22 @@ func (l *chatList) SetMessages(messages []tuirender.UIMessage, renderWidth int) 
 	l.clampOffset()
 }
 
+// measureLines returns the rendered line count for msg at renderWidth,
+// reusing renderCache so a subsequent SetMessages call for the same
+// (msg, renderWidth) skips re-rendering.
+func (l *chatList) measureLines(msg tuirender.UIMessage, renderWidth int) int {
+	key := chatItemRenderKey{msg: msg, renderWidth: renderWidth}
+	if lines, ok := l.renderCache[key]; ok {
+		return len(lines)
+	}
+	lines := renderChatItemLines(msg, renderWidth)
+	if l.renderCache == nil {
+		l.renderCache = make(map[chatItemRenderKey][]string)
+	}
+	l.renderCache[key] = lines
+	return len(lines)
+}
+
 func renderChatItemLines(msg tuirender.UIMessage, width int) []string {
 	lines := tuirender.ChatLines([]tuirender.UIMessage{msg}, max(20, width))
 	for len(lines) > 0 && isPlainBlankLine(lines[len(lines)-1]) {
