@@ -354,7 +354,7 @@ func (c Composer) hiddenLine(n int) string {
 func (c Composer) hintLine(n int) string {
 	return lipgloss.NewStyle().
 		Foreground(tuitheme.Default.Muted).
-		Render(fmt.Sprintf("  [%d lines · PgUp/PgDn jump · Ctrl+U clear · Ctrl+W del word]", n))
+		Render(fmt.Sprintf("  [%d lines · Ctrl+A/E/K line · Ctrl+W/Alt+B,F word · Ctrl+U clear · PgUp/PgDn]", n))
 }
 
 func splitComposerLines(value string) []string {

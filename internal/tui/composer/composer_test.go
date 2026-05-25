@@ -74,6 +74,67 @@ func TestComposerCtrlAAndCtrlEMoveWithinCurrentLine(t *testing.T) {
 	}
 }
 
+func TestComposerCtrlKKillsToEndOfLine(t *testing.T) {
+	c := New()
+	c.SetValue("hello world\nsecond")
+	// Cursor starts at end of "second"; move to the start of that line so
+	// Ctrl+K has something to kill but must stop at the next newline.
+	c.Update(tea.KeyMsg{Type: tea.KeyCtrlA})
+	c.Update(tea.KeyMsg{Type: tea.KeyCtrlK})
+	if got := c.Value(); got != "hello world\n" {
+		t.Fatalf("expected ctrl+k to kill to end of current line, got %q", got)
+	}
+}
+
+func TestComposerCtrlBCtrlFMoveByCharacter(t *testing.T) {
+	c := New()
+	c.SetValue("ab")
+	c.Update(tea.KeyMsg{Type: tea.KeyCtrlB})
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	if got := c.Value(); got != "aXb" {
+		t.Fatalf("expected ctrl+b to move one char back, got %q", got)
+	}
+	c.Update(tea.KeyMsg{Type: tea.KeyCtrlF})
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("Y")})
+	if got := c.Value(); got != "aXbY" {
+		t.Fatalf("expected ctrl+f to move one char forward, got %q", got)
+	}
+}
+
+func TestComposerAltBAltFMoveByWord(t *testing.T) {
+	c := New()
+	c.SetValue("hello world")
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b"), Alt: true})
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	if got := c.Value(); got != "hello Xworld" {
+		t.Fatalf("expected alt+b to jump to start of current word, got %q", got)
+	}
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f"), Alt: true})
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("Y")})
+	if got := c.Value(); got != "hello XworldY" {
+		t.Fatalf("expected alt+f to jump past current word, got %q", got)
+	}
+}
+
+func TestComposerAltDDeletesWordForward(t *testing.T) {
+	c := New()
+	c.SetValue("hello world")
+	c.Update(tea.KeyMsg{Type: tea.KeyCtrlA}) // line start
+	c.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d"), Alt: true})
+	if got := c.Value(); got != " world" {
+		t.Fatalf("expected alt+d to delete word forward, got %q", got)
+	}
+}
+
+func TestComposerAltBackspaceDeletesWordBackward(t *testing.T) {
+	c := New()
+	c.SetValue("hello world")
+	c.Update(tea.KeyMsg{Type: tea.KeyBackspace, Alt: true})
+	if got := c.Value(); got != "hello " {
+		t.Fatalf("expected alt+backspace to delete previous word, got %q", got)
+	}
+}
+
 func TestComposerPgUpPgDownJumpBuffer(t *testing.T) {
 	c := New()
 	c.SetValue("first\nsecond\nthird")

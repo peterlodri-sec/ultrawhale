@@ -58,3 +58,6 @@ promo/
 
 # --- Logs ---
 *.log
+
+# --- Tool Artifacts ---
+.omx/
