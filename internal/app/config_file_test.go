@@ -486,6 +486,26 @@ func TestConfigExplicitUpdateCheckDisableOverridesFileConfig(t *testing.T) {
 	}
 }
 
+func TestConfigExplicitRetryZeroOverridesDefault(t *testing.T) {
+	dir := t.TempDir()
+	workspace := t.TempDir()
+
+	cfg := DefaultConfig()
+	cfg.DataDir = dir
+	cfg.RetryMaxAttempts = 0
+	cfg.RetryMaxAttemptsExplicit = true
+	loaded, err := LoadAndApplyConfig(cfg, workspace)
+	if err != nil {
+		t.Fatalf("LoadAndApplyConfig: %v", err)
+	}
+	if loaded.RetryMaxAttempts != 0 {
+		t.Fatalf("RetryMaxAttempts = %d, want explicit zero", loaded.RetryMaxAttempts)
+	}
+	if !loaded.RetryMaxAttemptsExplicit {
+		t.Fatal("RetryMaxAttemptsExplicit was not preserved")
+	}
+}
+
 func TestSetModelAndThinkingPersistToConfig(t *testing.T) {
 	dir := t.TempDir()
 	cfg := DefaultConfig()
