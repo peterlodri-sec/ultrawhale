@@ -5795,13 +5795,12 @@ func TestLocalCommandResultCommitsIdleAssemblerBeforeNextPrompt(t *testing.T) {
 	m.height = 14
 
 	next, _ := m.Update(svcMsg(service.Event{
-		Kind:   service.EventMCPStatus,
-		Status: "failed",
-		Text:   "MCP startup failed: fs. Run /mcp for details.",
+		Kind: service.EventInfo,
+		Text: "Startup notice",
 	}))
 	m = next.(model)
 	if got := len(m.assembler.Snapshot()); got == 0 {
-		t.Fatal("expected idle MCP status to leave live assembler content")
+		t.Fatal("expected idle info event to leave live assembler content")
 	}
 
 	m.input.SetValue("/status")
@@ -5829,10 +5828,10 @@ func TestLocalCommandResultCommitsIdleAssemblerBeforeNextPrompt(t *testing.T) {
 	m = next.(model)
 
 	rendered := strings.Join(tuirender.ChatLines(m.chatMessages(), 80), "\n")
-	mcpIx := strings.Index(rendered, "MCP startup failed")
+	noticeIx := strings.Index(rendered, "Startup notice")
 	statusIx := strings.Index(rendered, "session: test-session")
 	promptIx := strings.Index(rendered, "next prompt")
-	if mcpIx < 0 || statusIx < 0 || promptIx < 0 || !(mcpIx < statusIx && statusIx < promptIx) {
+	if noticeIx < 0 || statusIx < 0 || promptIx < 0 || !(noticeIx < statusIx && statusIx < promptIx) {
 		t.Fatalf("expected idle live content and local result before next prompt:\n%s", rendered)
 	}
 }
@@ -8778,16 +8777,18 @@ func TestTaskActivityEventsUpdateStatusOnly(t *testing.T) {
 	}
 }
 
-func TestMCPStatusFailureAddsVisibleWarning(t *testing.T) {
+func TestMCPStatusFailureUpdatesStatusAndLogOnly(t *testing.T) {
 	m := model{assembler: tuirender.NewAssembler(), mode: modeChat}
 	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventMCPStatus, Status: "failed", Text: "MCP startup failed: fs. Run /mcp for details."}))
 	m = next.(model)
 	if m.status != "MCP startup failed: fs. Run /mcp for details." {
 		t.Fatalf("unexpected status: %q", m.status)
 	}
-	snap := m.assembler.Snapshot()
-	if len(snap) == 0 || !strings.Contains(snap[0].Text, "MCP startup failed: fs") {
-		t.Fatalf("expected visible warning, got: %+v", snap)
+	if snap := m.assembler.Snapshot(); len(snap) != 0 {
+		t.Fatalf("expected MCP failure to stay out of transcript, got: %+v", snap)
+	}
+	if len(m.logs) != 1 || m.logs[0].Kind != "mcp_status" || !strings.Contains(m.logs[0].Summary, "MCP startup failed: fs") {
+		t.Fatalf("expected MCP failure log entry, got: %+v", m.logs)
 	}
 }
 
