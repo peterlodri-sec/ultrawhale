@@ -15,7 +15,7 @@ import (
 func (s *Service) Dispatch(in Intent) {
 	switch in.Kind {
 	case IntentSubmit:
-		go s.handleSubmit(in.Input, in.HiddenInput, in.SkillBinding)
+		s.goTracked(func() { s.handleSubmit(in.Input, in.HiddenInput, in.SkillBinding) })
 	case IntentSubmitLocal:
 		s.enqueueLocalSubmit(in.Input)
 	case IntentAllowTool:
@@ -96,7 +96,7 @@ func (s *Service) Dispatch(in Intent) {
 			return
 		}
 		s.emit(Event{Kind: EventInfo, Text: out})
-		go s.runInjectedTurn("Implement the plan.", buildImplementPlanPrompt(in.Input))
+		s.goTracked(func() { s.runInjectedTurn("Implement the plan.", buildImplementPlanPrompt(in.Input)) })
 	case IntentRequestSkillsManage:
 		s.emit(Event{Kind: EventSkillsManager, Skills: s.SkillsForManager()})
 	case IntentSetSkillEnabled:
@@ -185,7 +185,7 @@ Before editing, initialize and maintain an update_plan checklist for the impleme
 
 func (s *Service) enqueueLocalSubmit(line string) {
 	if s.localSubmits == nil || s.ctx == nil {
-		go s.runLocalSubmitLine(line)
+		s.goTracked(func() { s.runLocalSubmitLine(line) })
 		return
 	}
 	select {
@@ -497,7 +497,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		}
 	}
 	if hiddenInput || skipSkillInjection {
-		go s.runTurnWithOptions(line, turnOptions)
+		s.goTracked(func() { s.runTurnWithOptions(line, turnOptions) })
 		return
 	}
 	skillMention, skillOut, skillSynthetic, err := s.app.BuildSkillMentionSyntheticPromptWithBinding(line, skillBinding)
@@ -510,10 +510,10 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		if skillOut != "" {
 			s.emit(Event{Kind: EventSkillLoaded, Text: skillOut})
 		}
-		go s.runInjectedTurn(line, skillSynthetic)
+		s.goTracked(func() { s.runInjectedTurn(line, skillSynthetic) })
 		return
 	}
-	go s.runTurn(line, hiddenInput)
+	s.goTracked(func() { s.runTurn(line, hiddenInput) })
 }
 
 func (s *Service) emitSessionHydrated() {

@@ -11,7 +11,8 @@ func (s *Service) startMCPStartup() {
 	if s == nil || s.app == nil {
 		return
 	}
-	go s.app.InitializeMCP(s.ctx, func(ev whalemcp.StartupEvent) {
+	s.goTracked(func() {
+		s.app.InitializeMCP(s.ctx, func(ev whalemcp.StartupEvent) {
 		states := s.app.MCPStates()
 		if ev.Complete {
 			if len(states) > 0 {
@@ -31,6 +32,7 @@ func (s *Service) startMCPStartup() {
 			"status": ev.State.Status,
 			"tools":  ev.State.Tools,
 		}})
+		})
 	})
 }
 
