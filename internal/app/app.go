@@ -32,30 +32,31 @@ const (
 )
 
 type Config struct {
-	DataDir                 string
-	ConfigLoaded            bool
-	PermissionDefault       policy.PermissionAction
-	PermissionRules         []policy.PermissionRule
-	AutoAcceptPermissions   bool
-	AutoCompact             bool
-	AutoCompactThreshold    float64
-	MemoryEnabled           bool
-	MemoryMaxChars          int
-	MemoryFileOrder         string
-	BudgetWarningUSD        float64
-	Model                   string
-	ModelExplicit           bool
-	ReasoningEffort         string
-	ThinkingEnabled         bool
-	CheckForUpdateOnStartup bool
-	ViewMode                string
-	RetryMaxAttempts        int
-	RetryStreamMaxAttempts  int
-	RetryMaxDelay           time.Duration
-	MCPConfigPath           string
-	APIBaseURL              string
-	SkillsDisabled          []string
-	PluginsDisabled         []string
+	DataDir                  string
+	ConfigLoaded             bool
+	PermissionDefault        policy.PermissionAction
+	PermissionRules          []policy.PermissionRule
+	AutoAcceptPermissions    bool
+	AutoCompact              bool
+	AutoCompactThreshold     float64
+	MemoryEnabled            bool
+	MemoryMaxChars           int
+	MemoryFileOrder          string
+	BudgetWarningUSD         float64
+	Model                    string
+	ModelExplicit            bool
+	ReasoningEffort          string
+	ThinkingEnabled          bool
+	CheckForUpdateOnStartup  bool
+	ViewMode                 string
+	RetryMaxAttempts         int
+	RetryMaxAttemptsExplicit bool
+	RetryStreamMaxAttempts   int
+	RetryMaxDelay            time.Duration
+	MCPConfigPath            string
+	APIBaseURL               string
+	SkillsDisabled           []string
+	PluginsDisabled          []string
 }
 
 type StartOptions struct {

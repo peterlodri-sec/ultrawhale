@@ -368,8 +368,9 @@ func overlayExplicitConfig(dst *Config, src Config) {
 	if strings.TrimSpace(src.ViewMode) != "" && src.ViewMode != def.ViewMode {
 		dst.ViewMode = src.ViewMode
 	}
-	if src.RetryMaxAttempts != 0 && src.RetryMaxAttempts != def.RetryMaxAttempts {
+	if src.RetryMaxAttemptsExplicit || (src.RetryMaxAttempts != 0 && src.RetryMaxAttempts != def.RetryMaxAttempts) {
 		dst.RetryMaxAttempts = src.RetryMaxAttempts
+		dst.RetryMaxAttemptsExplicit = src.RetryMaxAttemptsExplicit
 	}
 	if src.RetryStreamMaxAttempts != 0 && src.RetryStreamMaxAttempts != def.RetryStreamMaxAttempts {
 		dst.RetryStreamMaxAttempts = src.RetryStreamMaxAttempts

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -109,10 +110,12 @@ func TestTurnDeltaCoalescerDropNoticeIsReliable(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		deltas.add(EventAssistantDelta, strings.Repeat("x", 64))
 	}
-	if deltas.droppedFlushes == 0 {
+	deltas.mu.Lock()
+	dropped := deltas.droppedFlushes
+	deltas.mu.Unlock()
+	if dropped == 0 {
 		t.Fatalf("expected drops under backpressure, got 0")
 	}
-	dropped := deltas.droppedFlushes
 
 	done := make(chan struct{})
 	go func() {
@@ -140,6 +143,26 @@ func TestTurnDeltaCoalescerDropNoticeIsReliable(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("flushReliable did not return after notice was consumed")
 	}
+}
+
+func TestTurnDeltaCoalescerAddIsRaceSafe(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s := &Service{ctx: ctx, events: make(chan Event, 1024)}
+	deltas := newTurnDeltaCoalescers(s)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 200; j++ {
+				deltas.add(EventAssistantDelta, strings.Repeat("x", 8))
+			}
+		}()
+	}
+	wg.Wait()
+	deltas.flushReliable()
 }
 
 func TestRunTurnWithStreamResetClearsLastResponse(t *testing.T) {
