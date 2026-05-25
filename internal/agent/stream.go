@@ -610,18 +610,18 @@ func modeBlockedDetails(mode session.Mode) (code, message, summary string, data 
 	case session.ModeAsk:
 		return "ask_mode_blocked",
 			"tool unavailable in ask mode",
-			"Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode. To propose a reviewed approach first, switch to plan mode.",
+			"Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode with /agent or Shift+Tab. To propose a reviewed approach first, switch to plan mode with /plan or Shift+Tab.",
 			map[string]any{
 				"current_mode":    "ask",
-				"suggested_modes": []string{"agent", "plan"},
+				"suggested_modes": []string{"/agent", "/plan", "Shift+Tab"},
 			}
 	case session.ModePlan:
 		return "plan_mode_blocked",
 			"tool unavailable in plan mode",
-			"Current mode: plan. Plan mode is read-only until the plan is approved. Stay here to refine the plan, or switch to agent mode when it's time to implement.",
+			"Current mode: plan. Plan mode is read-only until the plan is approved. Stay here to refine the plan, or switch to agent mode with /agent or Shift+Tab when it's time to implement.",
 			map[string]any{
 				"current_mode":    "plan",
-				"suggested_modes": []string{"agent"},
+				"suggested_modes": []string{"/agent", "Shift+Tab"},
 			}
 	default:
 		return "mode_blocked",

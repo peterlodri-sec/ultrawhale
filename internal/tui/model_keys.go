@@ -190,7 +190,7 @@ func (m *model) cancelBlockingModalForInterrupt(dispatch bool) {
 		}
 		m.mode = modeChat
 	case modeUserInput:
-		if dispatch && m.userInput.toolCallID != "" {
+		if dispatch && !m.busy && m.userInput.toolCallID != "" {
 			m.dispatchIntent(service.Intent{Kind: service.IntentCancelUserInput, ToolCallID: m.userInput.toolCallID})
 		}
 		m.mode = modeChat
@@ -379,6 +379,9 @@ func (m *model) handleUserInputKey(msg tea.KeyMsg) tea.Cmd {
 	q := m.userInput.questions[m.userInput.index]
 	switch msg.String() {
 	case "esc":
+		if m.busy {
+			return m.interruptBusyTurn()
+		}
 		m.dispatchIntent(service.Intent{Kind: service.IntentCancelUserInput, ToolCallID: m.userInput.toolCallID})
 		m.mode = modeChat
 	case "up", "k":
@@ -480,7 +483,7 @@ func (m *model) handlePermissionsMenuKey(msg tea.KeyMsg) tea.Cmd {
 func (m *model) handlePlanImplementationKey(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
 	case "esc":
-		m.mode = modeChat
+		m.declinePlanImplementation()
 	case "up", "k", "left", "h":
 		if m.planImplementation.index > 0 {
 			m.planImplementation.index--
@@ -501,14 +504,25 @@ func (m *model) handlePlanImplementationKey(msg tea.KeyMsg) tea.Cmd {
 			m.startBusy()
 			m.status = "running"
 			m.chatMode = "agent"
-			m.dispatchIntent(service.Intent{Kind: service.IntentImplementPlan, Input: m.lastProposedPlan})
+			m.dispatchIntent(service.Intent{Kind: service.IntentImplementPlan})
 			m.mode = modeChat
 			m.refreshViewportContentFollow(true)
 			return tea.Sequence(m.flushNativeScrollbackCmd(), busyTickCmd())
 		}
-		m.mode = modeChat
+		m.declinePlanImplementation()
 	}
 	return nil
+}
+
+func (m *model) declinePlanImplementation() {
+	m.mode = modeChat
+	m.status = "plan not approved"
+	m.lastProposedPlan = ""
+	m.sawPlanThisTurn = false
+	m.deferredPlanPicker = false
+	m.planImplementation.index = 0
+	m.dispatchIntent(service.Intent{Kind: service.IntentDeclinePlan})
+	m.refreshViewportContent()
 }
 
 func (m *model) handleGlobalKey(msg tea.KeyMsg) (tea.Cmd, bool, bool) {

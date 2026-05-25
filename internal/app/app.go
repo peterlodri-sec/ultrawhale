@@ -435,11 +435,15 @@ func (a *App) SetMode(mode session.Mode) (string, error) {
 	if _, err := session.ParseMode(string(mode)); err != nil {
 		return "", err
 	}
+	previous := a.currentMode
 	if err := session.SaveModeState(a.sessionsDir, a.sessionID, mode); err != nil {
 		return "", err
 	}
 	a.currentMode = mode
 	a.a = nil
+	if previous != "" {
+		a.RecordModeChanged(string(previous), string(mode))
+	}
 	return fmt.Sprintf("%s mode enabled", modeTitle(mode)), nil
 }
 func (a *App) ToggleMode() (string, error) {

@@ -2397,7 +2397,7 @@ func TestTurnDoneReasoningOnlyCommitsFallback(t *testing.T) {
 	}
 }
 
-func TestPlanTurnDoneWithAssistantButNoProposedPlanShowsNotice(t *testing.T) {
+func TestPlanTurnDoneWithAssistantButNoProposedPlanDoesNotShowNotice(t *testing.T) {
 	m := model{
 		assembler: tuirender.NewAssembler(),
 		mode:      modeChat,
@@ -2421,8 +2421,8 @@ func TestPlanTurnDoneWithAssistantButNoProposedPlanShowsNotice(t *testing.T) {
 	if !strings.Contains(got, "Here is the test execution plan") {
 		t.Fatalf("expected assistant text to remain visible:\n%s", got)
 	}
-	if !strings.Contains(got, "No proposed plan was produced") || !strings.Contains(got, "<proposed_plan>") {
-		t.Fatalf("expected missing proposed plan notice in transcript:\n%s", got)
+	if strings.Contains(got, "No proposed plan was produced") || strings.Contains(got, "<proposed_plan>") {
+		t.Fatalf("did not expect missing proposed plan notice in transcript:\n%s", got)
 	}
 	if m.sawAssistantThisTurn || m.sawPlanThisTurn {
 		t.Fatal("expected turn tracking flags to reset")
@@ -2669,7 +2669,7 @@ func TestMarkNoFinalAnswerIfNeededSkippedWithAssistant(t *testing.T) {
 	}
 }
 
-func TestMarkMissingProposedPlanIfNeeded(t *testing.T) {
+func TestMarkMissingProposedPlanIfNeededLogsOnly(t *testing.T) {
 	m := model{
 		assembler:            tuirender.NewAssembler(),
 		chatMode:             "plan",
@@ -2679,14 +2679,8 @@ func TestMarkMissingProposedPlanIfNeeded(t *testing.T) {
 		t.Fatal("expected missing proposed plan to be marked")
 	}
 	snap := m.assembler.Snapshot()
-	if len(snap) != 1 {
-		t.Fatalf("expected one notice entry, got %+v", snap)
-	}
-	if snap[0].Kind != tuirender.KindNotice || snap[0].Role != "notice" {
-		t.Fatalf("expected notice entry, got %+v", snap[0])
-	}
-	if !strings.Contains(snap[0].Text, "No proposed plan was produced") {
-		t.Fatalf("expected missing proposed plan notice, got %q", snap[0].Text)
+	if len(snap) != 0 {
+		t.Fatalf("expected no user-visible notice entry, got %+v", snap)
 	}
 	if len(m.logs) != 1 || m.logs[0].Kind != "missing_proposed_plan" {
 		t.Fatalf("expected diagnostic log entry, got %+v", m.logs)
@@ -5043,11 +5037,37 @@ func TestCtrlCWhileBusyInterruptsBeforeUserInputMode(t *testing.T) {
 	if m.mode != modeChat {
 		t.Fatalf("expected interrupt to leave user-input mode, got %v", m.mode)
 	}
-	if len(*intents) != 2 ||
-		(*intents)[0].Kind != service.IntentCancelUserInput ||
-		(*intents)[0].ToolCallID != "tool-1" ||
-		(*intents)[1].Kind != service.IntentShutdown {
-		t.Fatalf("expected cancel input then shutdown intents, got %+v", *intents)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentShutdown {
+		t.Fatalf("expected user input interrupt to dispatch shutdown only, got %+v", *intents)
+	}
+}
+
+func TestEscWhileBusyUserInputInterruptsTurn(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.svc = &service.Service{}
+	m.width = 80
+	m.height = 24
+	m.busy = true
+	m.mode = modeUserInput
+	m.userInput.toolCallID = "tool-1"
+	m.userInput.questions = []core.UserInputQuestion{{
+		Header:   "Scope",
+		ID:       "scope",
+		Question: "Continue?",
+		Options:  []core.UserInputOption{{Label: "Yes", Description: "Proceed."}},
+	}}
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(model)
+
+	if !m.stopping {
+		t.Fatal("expected esc in busy user-input mode to interrupt the turn")
+	}
+	if m.mode != modeChat {
+		t.Fatalf("expected interrupt to leave user-input mode, got %v", m.mode)
+	}
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentShutdown {
+		t.Fatalf("expected esc user input interrupt to dispatch shutdown only, got %+v", *intents)
 	}
 }
 
@@ -5239,7 +5259,7 @@ func TestPlanCompletedReplacesPartialPlanAndTurnDoneShowsPicker(t *testing.T) {
 	}
 }
 
-func TestPlanImplementationIntentIncludesLastProposedPlan(t *testing.T) {
+func TestPlanImplementationIntentDoesNotEmbedLastProposedPlan(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.mode = modePlanImplementation
 	m.planImplementation.index = 0
@@ -5251,11 +5271,59 @@ func TestPlanImplementationIntentIncludesLastProposedPlan(t *testing.T) {
 	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentImplementPlan {
 		t.Fatalf("expected implement intent, got %+v", *intents)
 	}
-	if (*intents)[0].Input != "# Plan\n- Patch it" {
-		t.Fatalf("expected approved plan in intent input, got %q", (*intents)[0].Input)
+	if (*intents)[0].Input != "" {
+		t.Fatalf("expected implement intent to avoid embedding plan text, got %q", (*intents)[0].Input)
 	}
 	if m.chatMode != "agent" {
 		t.Fatalf("expected chat mode switched to agent, got %q", m.chatMode)
+	}
+}
+
+func TestPlanImplementationNoDeclinesAndClearsPendingPlan(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.mode = modePlanImplementation
+	m.chatMode = "plan"
+	m.planImplementation.index = 1
+	m.lastProposedPlan = "# Plan\n- Patch it"
+	m.sawPlanThisTurn = true
+	m.deferredPlanPicker = true
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentDeclinePlan {
+		t.Fatalf("expected decline intent, got %+v", *intents)
+	}
+	if m.mode != modeChat {
+		t.Fatalf("expected chat mode after decline popup, got %v", m.mode)
+	}
+	if m.chatMode != "plan" {
+		t.Fatalf("decline should stay in plan chat mode, got %q", m.chatMode)
+	}
+	if m.lastProposedPlan != "" || m.sawPlanThisTurn || m.deferredPlanPicker || m.planImplementation.index != 0 {
+		t.Fatalf("expected stale plan state cleared, last=%q saw=%v deferred=%v index=%d", m.lastProposedPlan, m.sawPlanThisTurn, m.deferredPlanPicker, m.planImplementation.index)
+	}
+}
+
+func TestPlanImplementationEscDeclinesAndStaysInPlanMode(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.mode = modePlanImplementation
+	m.chatMode = "plan"
+	m.lastProposedPlan = "# Plan\n- Patch it"
+	m.sawPlanThisTurn = true
+	m.deferredPlanPicker = true
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(model)
+
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentDeclinePlan {
+		t.Fatalf("expected decline intent, got %+v", *intents)
+	}
+	if m.mode != modeChat || m.chatMode != "plan" {
+		t.Fatalf("expected esc decline to close popup and stay in plan mode, mode=%v chatMode=%q", m.mode, m.chatMode)
+	}
+	if m.lastProposedPlan != "" || m.sawPlanThisTurn || m.deferredPlanPicker {
+		t.Fatalf("expected stale plan state cleared, last=%q saw=%v deferred=%v", m.lastProposedPlan, m.sawPlanThisTurn, m.deferredPlanPicker)
 	}
 }
 
@@ -8610,12 +8678,12 @@ func TestSummarizeToolResultForChat_Denied(t *testing.T) {
 }
 
 func TestSummarizeToolResultForChat_AskModeBlockedShowsProductCommands(t *testing.T) {
-	raw := `{"success":false,"code":"ask_mode_blocked","message":"tool unavailable in ask mode","summary":"Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode. To propose a reviewed approach first, switch to plan mode.","data":{"current_mode":"ask","suggested_modes":["agent","plan"]}}`
+	raw := `{"success":false,"code":"ask_mode_blocked","message":"tool unavailable in ask mode","summary":"Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode with /agent or Shift+Tab. To propose a reviewed approach first, switch to plan mode with /plan or Shift+Tab.","data":{"current_mode":"ask","suggested_modes":["/agent","/plan","Shift+Tab"]}}`
 	role, got := summarizeToolResultForChat("shell_run", raw)
 	if role != "result_failed" {
 		t.Fatalf("expected result_failed role, got %q", role)
 	}
-	want := "✗ · Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode. To propose a reviewed approach first, switch to plan mode."
+	want := "✗ · Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode with /agent or Shift+Tab. To propose a reviewed approach first, switch to plan mode with /plan or Shift+Tab."
 	if got != want {
 		t.Fatalf("unexpected ask-mode summary:\nwant: %q\ngot:  %q", want, got)
 	}
