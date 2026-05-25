@@ -97,6 +97,11 @@ func (s *Service) Dispatch(in Intent) {
 		}
 		s.emit(Event{Kind: EventInfo, Text: out})
 		s.goTracked(func() { s.runInjectedTurn("Implement the plan.", buildImplementPlanPrompt(in.Input)) })
+	case IntentDeclinePlan:
+		s.app.RecordPlanNotApproved()
+		const msg = "Plan not approved; staying in Plan mode"
+		s.emit(Event{Kind: EventInfo, Text: msg})
+		s.emit(Event{Kind: EventTurnDone, LastResponse: msg})
 	case IntentRequestSkillsManage:
 		s.emit(Event{Kind: EventSkillsManager, Skills: s.SkillsForManager()})
 	case IntentSetSkillEnabled:
@@ -169,16 +174,8 @@ func (s *Service) handleWorktreeExitChoice(action string) {
 	}
 }
 
-func buildImplementPlanPrompt(plan string) string {
-	plan = strings.TrimSpace(plan)
-	if plan == "" {
-		return strings.TrimSpace(`Implement the plan.
-
-Before editing, initialize and maintain an update_plan checklist for the implementation work. Keep exactly one item in_progress while working and mark items completed as soon as they are done.`)
-	}
-	return strings.TrimSpace(`Implement the following approved plan:
-
-` + plan + `
+func buildImplementPlanPrompt(_ string) string {
+	return strings.TrimSpace(`Implement the plan.
 
 Before editing, initialize and maintain an update_plan checklist for the implementation work. Keep exactly one item in_progress while working and mark items completed as soon as they are done.`)
 }

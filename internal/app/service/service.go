@@ -33,6 +33,7 @@ const (
 	IntentSetViewMode         IntentKind = "set_view_mode"
 	IntentToggleMode          IntentKind = "toggle_mode"
 	IntentImplementPlan       IntentKind = "implement_plan"
+	IntentDeclinePlan         IntentKind = "decline_plan"
 	IntentRequestSkillsManage IntentKind = "request_skills_manage"
 	IntentSetSkillEnabled     IntentKind = "set_skill_enabled"
 	IntentSetPluginEnabled    IntentKind = "set_plugin_enabled"
