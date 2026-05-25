@@ -3,10 +3,18 @@ package app
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/usewhale/whale/internal/session"
 	whaleworktree "github.com/usewhale/whale/internal/worktree"
+)
+
+// Indirection points so tests can simulate Windows behaviour and chdir
+// failures regardless of the host OS. Production code uses the defaults.
+var (
+	worktreeRemoveNeedsProcessChdir = runtime.GOOS == "windows"
+	worktreeChdirFn                 = os.Chdir
 )
 
 func (a *App) CurrentWorktree() WorktreeSession {
@@ -70,29 +78,38 @@ func (a *App) RemoveCurrentWorktree(force bool) (WorktreeExitResult, error) {
 		}
 		cwd = root
 	}
-	// An interactive --worktree session has os.Chdir'd into the managed
-	// worktree. Windows refuses to remove a directory that is a process's
-	// current working directory, so move the process cwd back to the original
-	// workspace (falling back to the repo root) before git removes it.
-	previousCwd, _ := os.Getwd()
-	if err := os.Chdir(cwd); err != nil {
-		root, rootErr := whaleworktree.CanonicalRepoRoot(a.worktree.Path)
-		if rootErr != nil {
-			return WorktreeExitResult{}, fmt.Errorf("leave worktree before removal: %w", err)
+	// Windows refuses to remove a directory that is any process's current
+	// working directory, so an interactive --worktree session that has chdir'd
+	// into the managed worktree must move the process cwd out before git
+	// removes it. On other platforms `git worktree remove` works fine even when
+	// cwd is inside the removed tree, and a process-wide chdir would race with
+	// concurrent goroutines that resolve relative paths — so we skip it.
+	var previousCwd string
+	if worktreeRemoveNeedsProcessChdir {
+		previousCwd, _ = os.Getwd()
+		if err := worktreeChdirFn(cwd); err != nil {
+			root, rootErr := whaleworktree.CanonicalRepoRoot(a.worktree.Path)
+			if rootErr != nil {
+				return WorktreeExitResult{}, fmt.Errorf("leave worktree before removal: %w", err)
+			}
+			if rootChErr := worktreeChdirFn(root); rootChErr != nil {
+				return WorktreeExitResult{}, fmt.Errorf("leave worktree before removal: %w", rootChErr)
+			}
+			cwd = root
 		}
-		if rootChErr := os.Chdir(root); rootChErr != nil {
-			return WorktreeExitResult{}, fmt.Errorf("leave worktree before removal: %w", rootChErr)
-		}
-		cwd = root
 	}
 	name := a.worktree.Name
 	res, err := whaleworktree.Remove(cwd, name, force)
 	if err != nil {
 		// Removal failed, so the worktree still exists and the session keeps
 		// running. Move the process back to where it was so later commands do
-		// not execute in the wrong directory.
-		if previousCwd != "" {
-			_ = os.Chdir(previousCwd)
+		// not execute in the wrong directory. If the restore itself fails the
+		// process is stuck in the wrong cwd; surface that loudly rather than
+		// swallowing the second error.
+		if worktreeRemoveNeedsProcessChdir && previousCwd != "" {
+			if rerr := worktreeChdirFn(previousCwd); rerr != nil {
+				return WorktreeExitResult{}, fmt.Errorf("%w (also failed to restore cwd to %s: %v)", err, previousCwd, rerr)
+			}
 		}
 		return WorktreeExitResult{}, err
 	}
