@@ -113,13 +113,7 @@ func TestRemoveCurrentWorktreeRemovesFromOriginalWorkspace(t *testing.T) {
 	}
 }
 
-func TestRemoveCurrentWorktreeChdirsOutOfWorktreeWhenRequired(t *testing.T) {
-	// Force the Windows-style process chdir path so we can exercise it on any
-	// host. Production code only takes this branch on Windows.
-	prev := worktreeRemoveNeedsProcessChdir
-	worktreeRemoveNeedsProcessChdir = true
-	t.Cleanup(func() { worktreeRemoveNeedsProcessChdir = prev })
-
+func TestRemoveCurrentWorktreeChdirsOutOfWorktree(t *testing.T) {
 	repo := newAppGitRepo(t)
 	sess, err := whaleworktree.Start(repo, "exit-chdir")
 	if err != nil {
@@ -159,13 +153,7 @@ func TestRemoveCurrentWorktreeChdirsOutOfWorktreeWhenRequired(t *testing.T) {
 	}
 }
 
-// Outside Windows the removal path must not touch the process-wide cwd, since
-// that races with any concurrent goroutine using relative paths.
-func TestRemoveCurrentWorktreeDoesNotChdirOnNonWindows(t *testing.T) {
-	prev := worktreeRemoveNeedsProcessChdir
-	worktreeRemoveNeedsProcessChdir = false
-	t.Cleanup(func() { worktreeRemoveNeedsProcessChdir = prev })
-
+func TestRemoveCurrentWorktreeDoesNotChdirWhenCwdOutsideWorktree(t *testing.T) {
 	repo := newAppGitRepo(t)
 	sess, err := whaleworktree.Start(repo, "exit-no-chdir")
 	if err != nil {
@@ -203,11 +191,8 @@ func TestRemoveCurrentWorktreeDoesNotChdirOnNonWindows(t *testing.T) {
 // be surfaced to the caller instead of being silently swallowed (which would
 // leave the process stuck in the wrong working directory with no signal).
 func TestRemoveCurrentWorktreeSurfacesCwdRestoreError(t *testing.T) {
-	prev := worktreeRemoveNeedsProcessChdir
 	prevFn := worktreeChdirFn
-	worktreeRemoveNeedsProcessChdir = true
 	t.Cleanup(func() {
-		worktreeRemoveNeedsProcessChdir = prev
 		worktreeChdirFn = prevFn
 	})
 
