@@ -248,16 +248,50 @@ func (m model) chatTailContent(width, height int) string {
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
-func (m model) chatTailMessagesForView(messages []tuirender.UIMessage, renderWidth, height int) []tuirender.UIMessage {
+func (m *model) chatTailMessagesForView(messages []tuirender.UIMessage, renderWidth, height int) []tuirender.UIMessage {
 	if len(messages) > chatTailRenderMessageLimit {
 		messages = messages[len(messages)-chatTailRenderMessageLimit:]
 	}
-	lineLimit := max(chatTailRenderLineFloor, max(1, height)*4)
-	for len(messages) > 1 {
-		if len(tuirender.ChatLines(messages, renderWidth)) <= lineLimit {
-			return messages
-		}
-		messages = messages[1:]
+	if len(messages) <= 1 {
+		return messages
 	}
-	return messages
+	lineLimit := max(chatTailRenderLineFloor, max(1, height)*4)
+	// Per-message rendered line counts, served from chatList.renderCache so a
+	// later SetMessages with the same renderWidth hits the cache for free.
+	counts := make([]int, len(messages))
+	for i, msg := range messages {
+		counts[i] = m.chat.measureLines(msg, renderWidth)
+	}
+	// windowLines mirrors SetMessages' line accounting for messages[start:]
+	// exactly: per-message base lines, chatListGap between items, plus two
+	// extra lines (WorkSeparator + blank) at every boundary where the same
+	// pendingWorkSeparator state machine fires. Walk start forward until the
+	// window fits lineLimit, keeping at least the last message.
+	windowLines := func(start int) int {
+		total := 0
+		pendingSep := false
+		for i := start; i < len(messages); i++ {
+			n := counts[i]
+			if pendingSep && tuirender.NeedsWorkSeparatorBefore(messages[i]) {
+				n += 2
+			}
+			if i > start {
+				n += chatListGap
+			}
+			total += n
+			switch {
+			case tuirender.IsWorkEvent(messages[i]):
+				pendingSep = true
+			case messages[i].Role == "you" || tuirender.NeedsWorkSeparatorBefore(messages[i]):
+				pendingSep = false
+			}
+		}
+		return total
+	}
+	for start := 0; start < len(messages)-1; start++ {
+		if windowLines(start) <= lineLimit {
+			return messages[start:]
+		}
+	}
+	return messages[len(messages)-1:]
 }
