@@ -71,15 +71,28 @@ func ResolveOpenPath(workspaceRoot, raw string) (string, error) {
 	if base == "" {
 		base = "."
 	}
+	baseAbs, err := filepath.Abs(filepath.Clean(base))
+	if err != nil {
+		return "", err
+	}
+	baseReal, err := filepath.EvalSymlinks(baseAbs)
+	if err != nil {
+		return "", err
+	}
+	baseReal = filepath.Clean(baseReal)
 	target := strings.TrimSpace(raw)
+	relativeTarget := target != "" && !filepath.IsAbs(target)
 	if target == "" {
-		target = base
-	} else if !filepath.IsAbs(target) {
-		target = filepath.Join(base, target)
+		target = baseAbs
+	} else if relativeTarget {
+		target = filepath.Join(baseAbs, target)
 	}
 	abs, err := filepath.Abs(filepath.Clean(target))
 	if err != nil {
 		return "", err
+	}
+	if relativeTarget && !openPathInsideWorkspace(baseAbs, abs) {
+		return "", openPathOutsideWorkspaceError(baseAbs, abs)
 	}
 	if _, err := os.Stat(abs); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -87,7 +100,26 @@ func ResolveOpenPath(workspaceRoot, raw string) (string, error) {
 		}
 		return "", err
 	}
+	real, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", err
+	}
+	if !openPathInsideWorkspace(baseReal, filepath.Clean(real)) {
+		return "", openPathOutsideWorkspaceError(baseAbs, abs)
+	}
 	return abs, nil
+}
+
+func openPathOutsideWorkspaceError(workspaceRoot, target string) error {
+	return fmt.Errorf("Cannot open files outside the current workspace.\n\nCurrent workspace:\n  %s\n\nRequested file:\n  %s\n\nUse /open with a path inside the workspace, or run your editor directly for external files.", workspaceRoot, target)
+}
+
+func openPathInsideWorkspace(workspaceRoot, target string) bool {
+	rel, err := filepath.Rel(workspaceRoot, target)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && !filepath.IsAbs(rel)
 }
 
 func ResolveEditorCommand(lookupEnv func(string) (string, bool), goos string) ([]string, error) {
