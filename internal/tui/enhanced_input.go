@@ -11,7 +11,17 @@ import (
 )
 
 const (
-	keyboardEnhancementEnable  = "\x1b[>4;2m"
+	// xterm modifyOtherKeys level 1: only keys without a traditional
+	// encoding (e.g. Shift+Enter, Ctrl+J disambiguation) get reported as
+	// CSI 27 / CSI u sequences. Keys with a traditional form keep it —
+	// crucially Alt+letter stays as `\x1b<letter>` so bubbletea decodes
+	// it as KeyMsg{Alt: true, ...}. Level 2 would re-encode Alt+letter
+	// as `\x1b[27;3;<code>~`, which bubbletea does not parse, causing
+	// Alt+B / Alt+F / Alt+D / Alt+Backspace to silently fail in
+	// modifyOtherKeys-aware terminals such as Ghostty (issue #118).
+	// tmux sidesteps the problem by intercepting the enable sequence,
+	// which is why those keys "work in tmux" but not in raw Ghostty.
+	keyboardEnhancementEnable  = "\x1b[>4;1m"
 	keyboardEnhancementDisable = "\x1b[>4m"
 	shiftEnterPartialTimeout   = 100 * time.Millisecond
 )

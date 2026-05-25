@@ -13,7 +13,9 @@ func TestKeyboardEnhancementModeDoesNotEnableKittyProtocol(t *testing.T) {
 	if strings.Contains(keyboardEnhancementDisable, "\x1b[<u") {
 		t.Fatalf("keyboard enhancement disable sequence should not pop kitty CSI-u: %q", keyboardEnhancementDisable)
 	}
-	if keyboardEnhancementEnable != "\x1b[>4;2m" {
+	// Pin xterm modifyOtherKeys level 1 — see issue #118 / enhanced_input.go:
+	// level 2 would re-encode Alt+letter as CSI 27 which bubbletea cannot decode.
+	if keyboardEnhancementEnable != "\x1b[>4;1m" {
 		t.Fatalf("unexpected keyboard enhancement enable sequence: %q", keyboardEnhancementEnable)
 	}
 	if keyboardEnhancementDisable != "\x1b[>4m" {
