@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/usewhale/whale/internal/core"
 )
@@ -348,72 +349,96 @@ func grepFile(filePath string, re *regexp.Regexp, displayPath func(string) strin
 	return matches, nil
 }
 
-func normalizeGrepLimit(limit int) int {
-	if limit <= 0 {
-		return defaultGrepLimit
+func truncateGrepLine(line string) (string, bool) {
+	if len([]rune(line)) <= maxGrepLineChars {
+		return line, false
 	}
-	return min(limit, maxGrepLimit)
+	end := runeIndexToByteOffset(line, maxGrepLineChars)
+	return line[:end] + "...", true
 }
 
-func truncateGrepMatchRow(row matchRow) (matchRow, bool) {
-	line := row.Line
-	r := []rune(line)
-	if len(r) <= maxGrepLineChars {
-		return row, false
+func truncateGrepLineAroundMatches(line string, submatches []submatch) (string, []submatch, bool) {
+	lineRunes := len([]rune(line))
+	if lineRunes <= maxGrepLineChars {
+		return line, submatches, false
+	}
+	if len(submatches) == 0 {
+		truncated, _ := truncateGrepLine(line)
+		return truncated, nil, true
 	}
 
-	startRune, endRune := grepSnippetWindow(line, row.Submatches)
-	snippetStartByte := runeIndexToByteOffset(line, startRune)
-	snippetEndByte := runeIndexToByteOffset(line, endRune)
+	first := submatches[0]
+	if first.Start < 0 {
+		first.Start = 0
+	}
+	if first.End < first.Start {
+		first.End = first.Start
+	}
+	if first.Start > len(line) {
+		first.Start = len(line)
+	}
+	if first.End > len(line) {
+		first.End = len(line)
+	}
+	first.Start = utf8BoundaryBeforeOrAt(line, first.Start)
+	first.End = utf8BoundaryAfterOrAt(line, first.End)
+
+	matchStartRune := byteOffsetToRuneIndex(line, first.Start)
+	matchEndRune := byteOffsetToRuneIndex(line, first.End)
+	matchLen := max(matchEndRune-matchStartRune, 0)
+	windowLen := maxGrepLineChars
+	startRune := matchStartRune
+	if matchLen < windowLen {
+		startRune = matchStartRune - (windowLen-matchLen)/2
+	}
+	if startRune < 0 {
+		startRune = 0
+	}
+	endRune := startRune + windowLen
+	if endRune > lineRunes {
+		endRune = lineRunes
+		startRune = max(0, endRune-windowLen)
+	}
+	start := runeIndexToByteOffset(line, startRune)
+	end := runeIndexToByteOffset(line, endRune)
 
 	prefix := ""
 	if startRune > 0 {
 		prefix = "..."
 	}
 	suffix := ""
-	if endRune < len(r) {
+	if endRune < lineRunes {
 		suffix = "..."
 	}
-
-	row.Line = prefix + line[snippetStartByte:snippetEndByte] + suffix
-	prefixBytes := len(prefix)
-	adjusted := make([]submatch, 0, len(row.Submatches))
-	for _, sm := range row.Submatches {
-		smStartRune := byteOffsetToRuneIndex(line, sm.Start)
-		smEndRune := byteOffsetToRuneIndex(line, sm.End)
-		if smStartRune < startRune || smEndRune > endRune {
+	snippet := prefix + line[start:end] + suffix
+	offset := len(prefix) - start
+	adjusted := make([]submatch, 0, len(submatches))
+	for _, sm := range submatches {
+		if sm.Start < start || sm.End > end || sm.Start > sm.End {
 			continue
 		}
-		sm.Start = sm.Start - snippetStartByte + prefixBytes
-		sm.End = sm.End - snippetStartByte + prefixBytes
-		adjusted = append(adjusted, sm)
+		next := sm
+		next.Start = sm.Start + offset
+		next.End = sm.End + offset
+		if next.Start < 0 || next.End > len(snippet) || next.Start > next.End {
+			continue
+		}
+		adjusted = append(adjusted, next)
 	}
-	row.Submatches = adjusted
-	return row, true
+	return snippet, adjusted, true
 }
 
-func grepSnippetWindow(line string, submatches []submatch) (int, int) {
-	lineRunes := len([]rune(line))
-	if len(submatches) == 0 {
-		return 0, min(maxGrepLineChars, lineRunes)
+func utf8BoundaryBeforeOrAt(s string, index int) int {
+	if index <= 0 {
+		return 0
 	}
-
-	matchStart := byteOffsetToRuneIndex(line, submatches[0].Start)
-	matchEnd := byteOffsetToRuneIndex(line, submatches[0].End)
-	matchLen := max(matchEnd-matchStart, 0)
-	if matchLen >= maxGrepLineChars {
-		end := min(matchStart+maxGrepLineChars, lineRunes)
-		return matchStart, end
+	if index >= len(s) {
+		return len(s)
 	}
-
-	before := (maxGrepLineChars - matchLen) / 2
-	start := max(matchStart-before, 0)
-	end := start + maxGrepLineChars
-	if end > lineRunes {
-		end = lineRunes
-		start = max(end-maxGrepLineChars, 0)
+	for index > 0 && !utf8.RuneStart(s[index]) {
+		index--
 	}
-	return start, end
+	return index
 }
 
 func byteOffsetToRuneIndex(s string, byteOffset int) int {
@@ -445,6 +470,36 @@ func runeIndexToByteOffset(s string, runeIndex int) int {
 		current++
 	}
 	return len(s)
+}
+
+func normalizeGrepLimit(limit int) int {
+	if limit <= 0 {
+		return defaultGrepLimit
+	}
+	return min(limit, maxGrepLimit)
+}
+
+func truncateGrepMatchRow(row matchRow) (matchRow, bool) {
+	line, submatches, truncated := truncateGrepLineAroundMatches(row.Line, row.Submatches)
+	if !truncated {
+		return row, false
+	}
+	row.Line = line
+	row.Submatches = submatches
+	return row, true
+}
+
+func utf8BoundaryAfterOrAt(s string, index int) int {
+	if index <= 0 {
+		return 0
+	}
+	if index >= len(s) {
+		return len(s)
+	}
+	for index < len(s) && !utf8.RuneStart(s[index]) {
+		index++
+	}
+	return index
 }
 
 // globToRegexp converts a simple glob pattern to a compiled regexp.

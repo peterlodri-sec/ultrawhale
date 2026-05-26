@@ -15,13 +15,15 @@ import (
 )
 
 type Toolset struct {
-	root          string
-	httpClient    *http.Client
-	ddgSearchURL  string
-	bingSearchURL string
-	tasks         *shellTaskRegistry
-	skillDisabled []string
-	extraSkills   []*skills.Skill
+	root              string
+	worktreeRoot      string
+	originalWorkspace string
+	httpClient        *http.Client
+	ddgSearchURL      string
+	bingSearchURL     string
+	tasks             *shellTaskRegistry
+	skillDisabled     []string
+	extraSkills       []*skills.Skill
 }
 
 func NewToolset(root string) (*Toolset, error) {
@@ -47,6 +49,22 @@ func (b *Toolset) SetSkillDisabled(names []string) {
 
 func (b *Toolset) SetExtraSkills(extra []*skills.Skill) {
 	b.extraSkills = append([]*skills.Skill(nil), extra...)
+}
+
+func (b *Toolset) SetWorktreeContext(worktreeRoot, originalWorkspace string) {
+	b.worktreeRoot = cleanOptionalAbsPath(worktreeRoot)
+	b.originalWorkspace = cleanOptionalAbsPath(originalWorkspace)
+}
+
+func cleanOptionalAbsPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		return filepath.Clean(abs)
+	}
+	return filepath.Clean(path)
 }
 
 func marshalToolResult(call core.ToolCall, data any) (core.ToolResult, error) {
