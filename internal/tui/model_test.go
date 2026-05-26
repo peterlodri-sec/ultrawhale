@@ -7091,6 +7091,7 @@ func TestChatViewportResizeKeepsTailWhenFollowing(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
 	m.height = 18
+	m.sizeMsgReceived = true
 	m.transcript = nil
 	for i := 0; i < 50; i++ {
 		m.appendTranscript("info", tuirender.KindText, fmt.Sprintf("entry-%02d", i))
@@ -7126,6 +7127,7 @@ func TestChatViewportResizePreservesUserScrollPosition(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
 	m.height = 18
+	m.sizeMsgReceived = true
 	m.transcript = nil
 	for i := 0; i < 50; i++ {
 		m.appendTranscript("info", tuirender.KindText, fmt.Sprintf("entry-%02d", i))
@@ -7136,8 +7138,19 @@ func TestChatViewportResizePreservesUserScrollPosition(t *testing.T) {
 	if m.followTail {
 		t.Fatal("expected Home to disable tail following")
 	}
-	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
+	next, cmd := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
 	m = next.(model)
+	// Even though followTail is false (scrolled up), the resize-wiped
+	// scrollback must be replayed with the entire transcript so the user
+	// does not lose history accessibility. flushNativeScrollbackCmd would
+	// short-circuit here; replayNativeScrollbackCmd is the right path.
+	if cmd == nil {
+		t.Fatal("expected resize while scrolled up to schedule a scrollback replay")
+	}
+	replay := fmt.Sprintf("%#v", cmd())
+	if !strings.Contains(replay, "entry-00") || !strings.Contains(replay, "entry-49") {
+		t.Fatalf("expected scrollback replay to include entire transcript, got %s", replay)
+	}
 	view := m.View()
 	if !strings.Contains(view, "entry-00") {
 		t.Fatalf("expected resized scrolled-up view to preserve top position at first transcript entry:\n%s", view)

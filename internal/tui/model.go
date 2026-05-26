@@ -61,6 +61,7 @@ type model struct {
 	sessionID            string
 	startupHeaderPrinted bool
 	startupHeaderOnce    *bool
+	sizeMsgReceived      bool
 	ephemeralMessages    []tuirender.UIMessage
 	logs                 []logEntry
 	diffs                []diffEntry
@@ -379,12 +380,22 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		sizeChanged := msg.Width != m.width || msg.Height != m.height
+		// "Real" resize means we have already received at least one
+		// WindowSizeMsg this session and the new size differs from it.
+		// newModel seeds m.width/m.height with defaults (80x24), so a
+		// dimension comparison alone would misclassify the very first size
+		// event as a resize whenever the real terminal isn't exactly 80x24
+		// — and that would wipe the user's existing terminal scrollback on
+		// launch. The explicit "have we ever seen a size message" flag is
+		// the only reliable signal.
+		isRealResize := m.sizeMsgReceived &&
+			(msg.Width != m.width || msg.Height != m.height)
+		m.sizeMsgReceived = true
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.SetWidth(max(20, m.width-4))
 		var scrollbackReplayCmd tea.Cmd
-		if sizeChanged && m.width > 0 && m.height > 0 {
+		if isRealResize && m.width > 0 && m.height > 0 {
 			// Bubble Tea's standard (inline) renderer positions the next frame
 			// using a stale lastLinesRendered counter that does not survive
 			// terminal-side reflow on resize, and during rapid resize / live
@@ -396,14 +407,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Fprint(os.Stdout, "\x1b[H\x1b[2J\x1b[3J")
 			// We just wiped the scrollback that held the startup banner and
 			// the previously-flushed transcript. Reset the print gates so
-			// startupHeaderPrintCmd / flushNativeScrollbackCmd will re-emit
-			// the whole history into the fresh scrollback.
+			// startupHeaderPrintCmd / replayNativeScrollbackCmd will re-emit
+			// the whole history into the fresh scrollback — even when the
+			// user is scrolled up or the viewport is frozen, because those
+			// states would otherwise short-circuit the normal flush path and
+			// leave history accessible only through PgUp.
 			if m.startupHeaderOnce != nil {
 				*m.startupHeaderOnce = false
 			}
 			m.startupHeaderPrinted = false
 			m.nativeScrollbackPrinted = 0
-			scrollbackReplayCmd = m.flushNativeScrollbackCmd()
+			scrollbackReplayCmd = m.replayNativeScrollbackCmd()
 		}
 		headerCmd := m.startupHeaderPrintCmd()
 		m.refreshViewportContent()
