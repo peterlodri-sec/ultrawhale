@@ -131,6 +131,16 @@ type model struct {
 		matches  []skillSuggestion
 		selected int
 	}
+	files struct {
+		active    bool
+		matches   []fileSuggestion
+		selected  int
+		query     string
+		root      string
+		token     int
+		searching bool
+		cancel    func()
+	}
 	skillBinding *app.SkillBinding
 	skillsMenu   struct {
 		selected int
@@ -455,6 +465,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case reviewPRsLoadedMsg:
 		m.handleReviewPRsLoaded(msg)
 		return m, m.sequenceCmds()
+	case fileSuggestionsLoadedMsg:
+		m.applyFileSuggestionsLoaded(msg)
+		m.refreshViewportContent()
+		return m, m.sequenceCmds()
 	case tea.KeyMsg:
 		if !msg.Paste && m.consumeMouseCSIFragment(msg) {
 			m.refreshViewportContent()
@@ -492,12 +506,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if inputChanged {
 		m.resetWindowsPasteFallbackIfInputEmpty()
 	}
-	m.updateSlashMatches()
+	suggestionCmd := m.updateSlashMatches()
 	if m.inHistoryNav && inputChanged {
 		m.resetHistoryNavigation()
 	}
 	m.refreshViewportContentIfBodyHeightChanged(prevMainWidth, prevBodyHeight)
-	return m, m.sequenceCmds(cmd)
+	return m, m.sequenceCmds(cmd, suggestionCmd)
 }
 
 func (m *model) sequenceCmds(cmds ...tea.Cmd) tea.Cmd {
