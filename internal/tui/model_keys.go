@@ -199,6 +199,10 @@ func (m *model) cancelBlockingModalForInterrupt(dispatch bool) {
 
 func (m *model) handleChatModeKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	switch msg.String() {
+	case "ctrl+o":
+		if m.toggleFocusView() {
+			return m.redrawTranscriptForFocusToggleCmd(), true
+		}
 	case "shift+tab", "backtab":
 		if m.localSubmitPending > 0 {
 			m.status = "wait for command to finish"
