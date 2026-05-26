@@ -1612,8 +1612,27 @@ func TestGrepTruncatesLongLines(t *testing.T) {
 		t.Fatalf("match is not an object: %#v", matches[0])
 	}
 	line, _ := match["line"].(string)
-	if len([]rune(line)) != maxGrepLineChars+3 || !strings.HasSuffix(line, "...") {
-		t.Fatalf("line was not truncated correctly: len=%d suffix=%q", len([]rune(line)), line)
+	if len([]rune(line)) != maxGrepLineChars+3 || !strings.HasPrefix(line, "...") {
+		t.Fatalf("line was not truncated correctly: len=%d line=%q", len([]rune(line)), line)
+	}
+	if !strings.Contains(line, "needle") {
+		t.Fatalf("truncated line must preserve matched text: %q", line)
+	}
+	submatches, ok := match["submatches"].([]any)
+	if !ok || len(submatches) != 1 {
+		t.Fatalf("missing submatches: %#v", match["submatches"])
+	}
+	submatch, ok := submatches[0].(map[string]any)
+	if !ok {
+		t.Fatalf("submatch is not an object: %#v", submatches[0])
+	}
+	start, _ := submatch["start"].(float64)
+	end, _ := submatch["end"].(float64)
+	if int(start) < 0 || int(end) > len(line) || int(start) >= int(end) {
+		t.Fatalf("submatch offsets out of range: start=%v end=%v line_len=%d", start, end, len(line))
+	}
+	if got := line[int(start):int(end)]; got != "needle" {
+		t.Fatalf("submatch offsets select %q, want needle in %q", got, line)
 	}
 }
 

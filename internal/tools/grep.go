@@ -184,14 +184,10 @@ func searchWithRipgrep(pattern, path, include string, literal bool, limit int, d
 		if displayPath != nil {
 			rel = displayPath(rawPath)
 		}
-		lineText, lineTruncated := truncateGrepLine(rawLine)
-		if lineTruncated {
-			meta.LinesTruncated = true
-		}
 		row := matchRow{
 			File:       rel,
 			LineNumber: int(num),
-			Line:       strings.TrimRight(lineText, "\n"),
+			Line:       strings.TrimRight(rawLine, "\n"),
 		}
 		if sms, ok := data["submatches"].([]any); ok {
 			for _, one := range sms {
@@ -202,6 +198,10 @@ func searchWithRipgrep(pattern, path, include string, literal bool, limit int, d
 				ev, _ := obj["end"].(float64)
 				row.Submatches = append(row.Submatches, submatch{Match: mv, Start: int(sv), End: int(ev)})
 			}
+		}
+		if truncated, ok := truncateGrepMatchRow(row); ok {
+			row = truncated
+			meta.LinesTruncated = true
 		}
 		matches = append(matches, row)
 		byFile[row.File]++
@@ -286,8 +286,8 @@ func searchWithGo(pattern, path, include string, literal bool, limit int, displa
 			return nil
 		}
 		for _, m := range fileMatches {
-			if line, ok := truncateGrepLine(m.Line); ok {
-				m.Line = line
+			if truncated, ok := truncateGrepMatchRow(m); ok {
+				m = truncated
 				meta.LinesTruncated = true
 			}
 			matches = append(matches, m)
@@ -352,12 +352,96 @@ func normalizeGrepLimit(limit int) int {
 	return min(limit, maxGrepLimit)
 }
 
-func truncateGrepLine(line string) (string, bool) {
+func truncateGrepMatchRow(row matchRow) (matchRow, bool) {
+	line := row.Line
 	r := []rune(line)
 	if len(r) <= maxGrepLineChars {
-		return line, false
+		return row, false
 	}
-	return string(r[:maxGrepLineChars]) + "...", true
+
+	startRune, endRune := grepSnippetWindow(line, row.Submatches)
+	snippetStartByte := runeIndexToByteOffset(line, startRune)
+	snippetEndByte := runeIndexToByteOffset(line, endRune)
+
+	prefix := ""
+	if startRune > 0 {
+		prefix = "..."
+	}
+	suffix := ""
+	if endRune < len(r) {
+		suffix = "..."
+	}
+
+	row.Line = prefix + line[snippetStartByte:snippetEndByte] + suffix
+	prefixBytes := len(prefix)
+	adjusted := make([]submatch, 0, len(row.Submatches))
+	for _, sm := range row.Submatches {
+		smStartRune := byteOffsetToRuneIndex(line, sm.Start)
+		smEndRune := byteOffsetToRuneIndex(line, sm.End)
+		if smStartRune < startRune || smEndRune > endRune {
+			continue
+		}
+		sm.Start = sm.Start - snippetStartByte + prefixBytes
+		sm.End = sm.End - snippetStartByte + prefixBytes
+		adjusted = append(adjusted, sm)
+	}
+	row.Submatches = adjusted
+	return row, true
+}
+
+func grepSnippetWindow(line string, submatches []submatch) (int, int) {
+	lineRunes := len([]rune(line))
+	if len(submatches) == 0 {
+		return 0, min(maxGrepLineChars, lineRunes)
+	}
+
+	matchStart := byteOffsetToRuneIndex(line, submatches[0].Start)
+	matchEnd := byteOffsetToRuneIndex(line, submatches[0].End)
+	matchLen := max(matchEnd-matchStart, 0)
+	if matchLen >= maxGrepLineChars {
+		end := min(matchStart+maxGrepLineChars, lineRunes)
+		return matchStart, end
+	}
+
+	before := (maxGrepLineChars - matchLen) / 2
+	start := max(matchStart-before, 0)
+	end := start + maxGrepLineChars
+	if end > lineRunes {
+		end = lineRunes
+		start = max(end-maxGrepLineChars, 0)
+	}
+	return start, end
+}
+
+func byteOffsetToRuneIndex(s string, byteOffset int) int {
+	if byteOffset <= 0 {
+		return 0
+	}
+	if byteOffset >= len(s) {
+		return len([]rune(s))
+	}
+	runeIndex := 0
+	for i := range s {
+		if i >= byteOffset {
+			return runeIndex
+		}
+		runeIndex++
+	}
+	return runeIndex
+}
+
+func runeIndexToByteOffset(s string, runeIndex int) int {
+	if runeIndex <= 0 {
+		return 0
+	}
+	current := 0
+	for i := range s {
+		if current == runeIndex {
+			return i
+		}
+		current++
+	}
+	return len(s)
 }
 
 // globToRegexp converts a simple glob pattern to a compiled regexp.
