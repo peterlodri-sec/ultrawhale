@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/skills"
@@ -1276,6 +1277,264 @@ func TestGoSearchFallbackMatchesRealEmptyLine(t *testing.T) {
 	}
 	if matches[0].LineNumber != 2 || matches[0].Line != "" {
 		t.Fatalf("unexpected empty-line match: %+v", matches[0])
+	}
+}
+
+func TestGrepTruncatesLongLinesAroundMatch(t *testing.T) {
+	dir := t.TempDir()
+	longLine := strings.Repeat("a", maxGrepLineChars+50) + "needle" + strings.Repeat("b", maxGrepLineChars+50)
+	if err := os.WriteFile(filepath.Join(dir, "long.txt"), []byte(longLine), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+
+	res, err := ts.searchContent(context.Background(), tc("grep", map[string]any{
+		"pattern":      "needle",
+		"literal_text": true,
+	}))
+	if err != nil || res.IsError {
+		t.Fatalf("grep failed: err=%v res=%+v", err, res)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok {
+		t.Fatalf("parse envelope: %s", res.Content)
+	}
+	payload := env.Data["payload"].(map[string]any)
+	matches := payload["matches"].([]any)
+	if len(matches) != 1 {
+		t.Fatalf("expected one match, got %#v", matches)
+	}
+	match := matches[0].(map[string]any)
+	line := match["line"].(string)
+	if !strings.Contains(line, "needle") || !strings.HasPrefix(line, "...") {
+		t.Fatalf("line truncation did not preserve match context: %q", line)
+	}
+	submatches := match["submatches"].([]any)
+	if len(submatches) != 1 {
+		t.Fatalf("expected one visible submatch, got %#v", submatches)
+	}
+	submatch := submatches[0].(map[string]any)
+	start := int(submatch["start"].(float64))
+	end := int(submatch["end"].(float64))
+	if start < 0 || end > len(line) || start >= end {
+		t.Fatalf("submatch offsets outside returned line: start=%d end=%d len=%d line=%q", start, end, len(line), line)
+	}
+	if got := line[start:end]; got != "needle" {
+		t.Fatalf("submatch offset points to %q, want needle in line %q", got, line)
+	}
+}
+
+func TestGrepTruncatesUnicodeLongLinesAroundByteOffset(t *testing.T) {
+	dir := t.TempDir()
+	prefix := strings.Repeat("你", maxGrepLineChars)
+	longLine := prefix + "needle" + strings.Repeat("界", maxGrepLineChars)
+	if err := os.WriteFile(filepath.Join(dir, "unicode.txt"), []byte(longLine), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+
+	res, err := ts.searchContent(context.Background(), tc("grep", map[string]any{
+		"pattern":      "needle",
+		"literal_text": true,
+	}))
+	if err != nil || res.IsError {
+		t.Fatalf("grep failed: err=%v res=%+v", err, res)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok {
+		t.Fatalf("parse envelope: %s", res.Content)
+	}
+	payload := env.Data["payload"].(map[string]any)
+	matches := payload["matches"].([]any)
+	if len(matches) != 1 {
+		t.Fatalf("expected one match, got %#v", matches)
+	}
+	match := matches[0].(map[string]any)
+	line := match["line"].(string)
+	if !strings.Contains(line, "needle") {
+		t.Fatalf("unicode line truncation dropped match: %q", line)
+	}
+	submatches := match["submatches"].([]any)
+	if len(submatches) != 1 {
+		t.Fatalf("expected one visible submatch, got %#v", submatches)
+	}
+	submatch := submatches[0].(map[string]any)
+	start := int(submatch["start"].(float64))
+	end := int(submatch["end"].(float64))
+	if start < 0 || end > len(line) || start >= end {
+		t.Fatalf("submatch offsets outside returned line: start=%d end=%d len=%d line=%q", start, end, len(line), line)
+	}
+	if got := line[start:end]; got != "needle" {
+		t.Fatalf("submatch byte offsets point to %q, want needle in line %q", got, line)
+	}
+}
+
+func TestTruncateGrepLineAroundMatchesDropsOutsideSubmatches(t *testing.T) {
+	line := strings.Repeat("a", maxGrepLineChars+20) + "needle" + strings.Repeat("b", maxGrepLineChars+20)
+	matches := []submatch{
+		{Match: "needle", Start: maxGrepLineChars + 20, End: maxGrepLineChars + 26},
+		{Match: "late", Start: len([]rune(line)) - 10, End: len([]rune(line)) - 6},
+	}
+
+	got, submatches, truncated := truncateGrepLineAroundMatches(line, matches)
+	if !truncated {
+		t.Fatal("expected truncation")
+	}
+	if !strings.Contains(got, "needle") {
+		t.Fatalf("snippet does not contain matched text: %q", got)
+	}
+	if len(submatches) != 1 || submatches[0].Match != "needle" {
+		t.Fatalf("expected only visible submatch to remain, got %#v", submatches)
+	}
+	sm := submatches[0]
+	if sm.Start < 0 || sm.End > len(got) || got[sm.Start:sm.End] != "needle" {
+		t.Fatalf("adjusted submatch invalid: %#v in %q", sm, got)
+	}
+}
+
+func TestTruncateGrepLineAroundMatchesUsesByteOffsetsForUnicode(t *testing.T) {
+	line := strings.Repeat("你", maxGrepLineChars) + "needle" + strings.Repeat("界", maxGrepLineChars)
+	start := len(strings.Repeat("你", maxGrepLineChars))
+	got, submatches, truncated := truncateGrepLineAroundMatches(line, []submatch{
+		{Match: "needle", Start: start, End: start + len("needle")},
+	})
+	if !truncated {
+		t.Fatal("expected truncation")
+	}
+	if !strings.Contains(got, "needle") {
+		t.Fatalf("snippet does not contain matched text: %q", got)
+	}
+	if len(submatches) != 1 {
+		t.Fatalf("expected visible submatch, got %#v", submatches)
+	}
+	sm := submatches[0]
+	if sm.Start < 0 || sm.End > len(got) || got[sm.Start:sm.End] != "needle" {
+		t.Fatalf("adjusted byte offset invalid: %#v in %q", sm, got)
+	}
+}
+
+func TestTruncateGrepLineAroundMatchesCapsOversizedMatch(t *testing.T) {
+	line := strings.Repeat("a", maxGrepLineChars*4)
+	got, submatches, truncated := truncateGrepLineAroundMatches(line, []submatch{
+		{Match: line, Start: 0, End: len(line)},
+	})
+	if !truncated {
+		t.Fatal("expected truncation")
+	}
+	if len(got) > maxGrepLineChars+len("...")+utf8.UTFMax {
+		t.Fatalf("snippet is not capped: got %d bytes", len(got))
+	}
+	if !strings.HasSuffix(got, "...") {
+		t.Fatalf("oversized match snippet should indicate omitted tail: %q", got)
+	}
+	if len(submatches) != 0 {
+		t.Fatalf("oversized submatch should be omitted when not fully visible, got %#v", submatches)
+	}
+}
+
+func TestGoSearchCapsOversizedMatchLine(t *testing.T) {
+	dir := t.TempDir()
+	longLine := strings.Repeat("a", maxGrepLineChars*4)
+	if err := os.WriteFile(filepath.Join(dir, "long.txt"), []byte(longLine), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	matches, _, err := searchWithGo(".+", dir, "", false, nil)
+	if err != nil {
+		t.Fatalf("searchWithGo failed: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected one match, got %d", len(matches))
+	}
+	m := matches[0]
+	if len(m.Line) > maxGrepLineChars+len("...")+utf8.UTFMax {
+		t.Fatalf("line is not capped: got %d bytes", len(m.Line))
+	}
+	if !strings.HasSuffix(m.Line, "...") {
+		t.Fatalf("truncated oversized match should show suffix: %q", m.Line)
+	}
+	if len(m.Submatches) != 0 {
+		t.Fatalf("oversized submatch should be omitted when not fully visible, got %#v", m.Submatches)
+	}
+}
+
+func TestGoSearchTruncatesLongLinesAroundMatch(t *testing.T) {
+	dir := t.TempDir()
+	longLine := strings.Repeat("a", maxGrepLineChars+50) + "needle" + strings.Repeat("b", maxGrepLineChars+50)
+	if err := os.WriteFile(filepath.Join(dir, "long.txt"), []byte(longLine), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	matches, _, err := searchWithGo("needle", dir, "", true, nil)
+	if err != nil {
+		t.Fatalf("searchWithGo failed: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected one match, got %d", len(matches))
+	}
+	m := matches[0]
+	if !strings.Contains(m.Line, "needle") {
+		t.Fatalf("truncated line does not contain needle: %q", m.Line)
+	}
+	if !strings.HasPrefix(m.Line, "...") {
+		t.Fatalf("truncated line should start with ...: %q", m.Line)
+	}
+	if len(m.Submatches) != 1 {
+		t.Fatalf("expected one submatch, got %d", len(m.Submatches))
+	}
+	sm := m.Submatches[0]
+	if sm.Start < 0 || sm.End > len(m.Line) || sm.Start >= sm.End {
+		t.Fatalf("submatch offsets outside line: start=%d end=%d len=%d", sm.Start, sm.End, len(m.Line))
+	}
+	if got := m.Line[sm.Start:sm.End]; got != "needle" {
+		t.Fatalf("submatch offset points to %q, want needle in line %q", got, m.Line)
+	}
+}
+
+func TestGoSearchTruncatesLongLinesBothEnds(t *testing.T) {
+	dir := t.TempDir()
+	// Match is in the middle far from both edges, so both ... prefix and suffix appear
+	longLine := strings.Repeat("a", maxGrepLineChars+20) + "ZmiddleZ" + strings.Repeat("c", maxGrepLineChars+20)
+	if err := os.WriteFile(filepath.Join(dir, "long.txt"), []byte(longLine), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	matches, _, err := searchWithGo("ZmiddleZ", dir, "", true, nil)
+	if err != nil {
+		t.Fatalf("searchWithGo failed: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected one match, got %d", len(matches))
+	}
+	m := matches[0]
+	if !strings.Contains(m.Line, "ZmiddleZ") {
+		t.Fatalf("truncated line does not contain match: %q", m.Line)
+	}
+	if !strings.HasPrefix(m.Line, "...") {
+		t.Fatalf("truncated line should start with ...: %q", m.Line)
+	}
+	if !strings.HasSuffix(m.Line, "...") {
+		t.Fatalf("truncated line should end with ...: %q", m.Line)
+	}
+	if len(m.Submatches) != 1 {
+		t.Fatalf("expected one submatch, got %d", len(m.Submatches))
+	}
+	sm := m.Submatches[0]
+	if sm.Start < 0 || sm.End > len(m.Line) || sm.Start >= sm.End {
+		t.Fatalf("submatch offsets outside line: start=%d end=%d len=%d", sm.Start, sm.End, len(m.Line))
+	}
+	if got := m.Line[sm.Start:sm.End]; got != "ZmiddleZ" {
+		t.Fatalf("submatch offset points to %q, want ZmiddleZ", got)
+	}
+	// Verify total line length is reasonable
+	if len(m.Line) > maxGrepLineChars+len("......")+utf8.UTFMax {
+		t.Fatalf("final line too long: %d bytes", len(m.Line))
 	}
 }
 
