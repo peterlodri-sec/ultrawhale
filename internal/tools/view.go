@@ -27,12 +27,12 @@ func (b *Toolset) readFile(_ context.Context, call core.ToolCall) (core.ToolResu
 	}
 	abs, err := b.safeReadPath(in.FilePath)
 	if err != nil {
-		return marshalToolError(call, "permission_denied", err.Error()), nil
+		return b.marshalReadPathError(call, in.FilePath, err), nil
 	}
 	info, err := os.Stat(abs)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return marshalToolError(call, "not_found", err.Error()), nil
+			return b.marshalPathNotFound(call, in.FilePath, abs, err.Error()), nil
 		}
 		return marshalToolError(call, "read_failed", err.Error()), nil
 	}
@@ -42,7 +42,7 @@ func (b *Toolset) readFile(_ context.Context, call core.ToolCall) (core.ToolResu
 	data, err := os.ReadFile(abs)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return marshalToolError(call, "not_found", err.Error()), nil
+			return b.marshalPathNotFound(call, in.FilePath, abs, err.Error()), nil
 		}
 		return marshalToolError(call, "read_failed", err.Error()), nil
 	}

@@ -90,7 +90,7 @@ func renderRuntimeBlock(workspaceRoot string, rt shell.RuntimeDescription) strin
 	b.WriteString("- Shell: ")
 	b.WriteString(rt.ShellSummary())
 	b.WriteString("\n")
-	b.WriteString("Shell commands run from the current Whale workspace by default. Do not assume a synthetic path such as /workspace; use relative paths or the shell_run cwd parameter for subdirectories.")
+	b.WriteString("Shell commands run from the current Whale workspace by default. Do not assume a synthetic path such as /workspace; use relative paths or the shell_run cwd parameter for subdirectories. Filesystem tools also resolve relative paths inside the current workspace: path:\"codex\" means a codex entry under this workspace, not a sibling project in the parent directory. If the user asks about a sibling project outside the workspace, use shell_run with paths such as ../codex or git -C ../codex, or tell the user to restart Whale from the parent workspace.")
 	if guidance := rt.CommandGuidance(); strings.TrimSpace(guidance) != "" {
 		b.WriteString("\n")
 		b.WriteString(strings.TrimSpace(guidance))

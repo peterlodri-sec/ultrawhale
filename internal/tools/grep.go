@@ -39,7 +39,7 @@ func (b *Toolset) searchContent(_ context.Context, call core.ToolCall) (core.Too
 	}
 	abs, err := b.safeReadPath(in.Path)
 	if err != nil {
-		return marshalToolError(call, "permission_denied", err.Error()), nil
+		return b.marshalReadPathError(call, in.Path, err), nil
 	}
 
 	limit := normalizeGrepLimit(in.Limit)

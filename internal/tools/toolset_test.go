@@ -1082,6 +1082,95 @@ func TestPathEscapeDenied(t *testing.T) {
 	}
 }
 
+func TestReadOnlyPathErrorsExplainWorkspaceAndSiblingRecovery(t *testing.T) {
+	parent := t.TempDir()
+	workspace := filepath.Join(parent, "workspace")
+	sibling := filepath.Join(parent, "codex")
+	if err := os.MkdirAll(workspace, 0o755); err != nil {
+		t.Fatalf("mkdir workspace: %v", err)
+	}
+	if err := os.MkdirAll(sibling, 0o755); err != nil {
+		t.Fatalf("mkdir sibling: %v", err)
+	}
+	ts, err := NewToolset(workspace)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+
+	res, err := ts.listDir(context.Background(), tc("list_dir", map[string]any{"path": "codex"}))
+	if err != nil {
+		t.Fatalf("list_dir err: %v", err)
+	}
+	msg := toolErrorMessage(t, res)
+	for _, want := range []string{
+		"Current workspace root: " + workspace,
+		"Requested path: codex",
+		"Resolved path: " + filepath.Join(workspace, "codex"),
+		"not a sibling project",
+		"`ls ../codex`",
+		"`git -C ../codex ...`",
+	} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("expected list_dir diagnostic to contain %q:\n%s", want, msg)
+		}
+	}
+}
+
+func TestReadOnlyPathEscapeErrorsExplainWorkspaceAndSiblingRecovery(t *testing.T) {
+	workspace := t.TempDir()
+	ts, err := NewToolset(workspace)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	cases := []struct {
+		name string
+		call core.ToolCall
+		run  func(context.Context, core.ToolCall) (core.ToolResult, error)
+	}{
+		{
+			name: "read_file",
+			call: tc("read_file", map[string]any{"file_path": "../codex/README.md"}),
+			run:  ts.readFile,
+		},
+		{
+			name: "list_dir",
+			call: tc("list_dir", map[string]any{"path": "../codex"}),
+			run:  ts.listDir,
+		},
+		{
+			name: "grep",
+			call: tc("grep", map[string]any{"path": "../codex", "pattern": "hook"}),
+			run:  ts.searchContent,
+		},
+		{
+			name: "search_files",
+			call: tc("search_files", map[string]any{"path": "../codex", "pattern": "hook"}),
+			run:  ts.searchFiles,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := tc.run(context.Background(), tc.call)
+			if err != nil {
+				t.Fatalf("%s err: %v", tc.name, err)
+			}
+			msg := toolErrorMessage(t, res)
+			for _, want := range []string{
+				"path escapes workspace",
+				"Current workspace root: " + workspace,
+				"Requested path: ../codex",
+				"not a sibling project",
+				"`ls ../codex`",
+			} {
+				if !strings.Contains(msg, want) {
+					t.Fatalf("expected %s diagnostic to contain %q:\n%s", tc.name, want, msg)
+				}
+			}
+		})
+	}
+}
+
 func TestReadOnlyToolsCanReadDiscoveredGlobalSkillReferences(t *testing.T) {
 	workspace := t.TempDir()
 	home := t.TempDir()
@@ -1746,6 +1835,21 @@ func TestShellRunCWDStaysInsideWorkspace(t *testing.T) {
 	if !escaped.IsError || !strings.Contains(escaped.Content, "path escapes workspace") {
 		t.Fatalf("expected escaped cwd to be rejected: %+v", escaped)
 	}
+}
+
+func toolErrorMessage(t *testing.T, res core.ToolResult) string {
+	t.Helper()
+	if !res.IsError {
+		t.Fatalf("expected tool error, got %+v", res)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok {
+		t.Fatalf("parse tool envelope: %s", res.Content)
+	}
+	if env.Message == "" {
+		t.Fatalf("expected error message in envelope: %+v", env)
+	}
+	return env.Message
 }
 
 func readFileData(t *testing.T, res core.ToolResult) map[string]any {
