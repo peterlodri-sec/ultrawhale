@@ -13,6 +13,7 @@ import (
 type CommandExecution struct {
 	Handled     bool
 	Text        string
+	LocalResult *LocalResult
 	Turn        *plugins.CommandTurn
 	ShouldExit  bool
 	ClearScreen bool
@@ -39,7 +40,8 @@ func (a *App) ExecuteSlash(line string) (CommandExecution, error) {
 		return CommandExecution{Handled: true, ClearScreen: true}, nil
 	}
 	if cmdResult.ShowStatus {
-		return CommandExecution{Handled: true, Text: a.buildStatus()}, nil
+		status := a.buildStatusLocalResult()
+		return CommandExecution{Handled: true, Text: status.PlainText, LocalResult: status}, nil
 	}
 	if cmdResult.InitMemory {
 		line, err := a.initMemory()
@@ -153,7 +155,8 @@ func (a *App) ExecuteLocalCommand(line string) (CommandExecution, error) {
 		return CommandExecution{Handled: true, Text: msg}, err
 	}
 	if trimmed == "/mcp" {
-		return CommandExecution{Handled: true, Text: a.buildMCPStatus()}, nil
+		mcp := a.buildMCPLocalResult()
+		return CommandExecution{Handled: true, Text: mcp.PlainText, LocalResult: mcp}, nil
 	}
 	if trimmed == "/help" {
 		return CommandExecution{Handled: true, Text: BuildHelpText()}, nil

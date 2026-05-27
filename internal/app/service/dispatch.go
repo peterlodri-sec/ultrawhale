@@ -299,7 +299,9 @@ func (s *Service) handleLocalSubmit(line string) {
 			s.emitSessionHydrated()
 		}
 		if cmd.Text != "" {
-			s.emit(localSubmitResultEvent("info", cmd.Text))
+			ev := localSubmitResultEvent("info", cmd.Text)
+			ev.LocalResult = cmd.LocalResult
+			s.emit(ev)
 		}
 		return
 	}
@@ -310,7 +312,9 @@ func (s *Service) handleLocalSubmit(line string) {
 	}
 	if cmd.Handled {
 		if cmd.Text != "" {
-			s.emit(localSubmitResultEvent("info", cmd.Text))
+			ev := localSubmitResultEvent("info", cmd.Text)
+			ev.LocalResult = cmd.LocalResult
+			s.emit(ev)
 		}
 		if cmd.Turn != nil {
 			s.emit(localSubmitResultEvent("error", "command starts an agent turn and cannot run as a local submit"))

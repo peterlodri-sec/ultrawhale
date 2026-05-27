@@ -142,7 +142,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		}
 		if !isEnvironmentInventoryBlock(ev.Text) {
 			m.appendLocalCommandEcho(m.popLocalSubmitCommand())
-			m.appendLocalSubmitResult(role, ev.Text)
+			m.appendLocalSubmitResult(role, ev.Text, ev.LocalResult)
 		} else {
 			m.addLog(logEntry{
 				Kind:    "env_summary",
@@ -564,8 +564,12 @@ func (m *model) openPlanImplementationPicker() {
 	m.planImplementation.index = 0
 }
 
-func (m *model) appendLocalSubmitResult(role, text string) {
+func (m *model) appendLocalSubmitResult(role, text string, localResult *app.LocalResult) {
 	if m.busy {
+		if localResult != nil {
+			m.appendLiveLocalResult(localResult)
+			return
+		}
 		m.append(role, text)
 		return
 	}
@@ -574,6 +578,10 @@ func (m *model) appendLocalSubmitResult(role, text string) {
 	}
 	if isSessionNotice(text) {
 		m.appendTranscript("notice", tuirender.KindNotice, text)
+		return
+	}
+	if localResult != nil {
+		m.appendLocalResult(localResult)
 		return
 	}
 	m.appendTranscript(role, tuirender.KindText, text)

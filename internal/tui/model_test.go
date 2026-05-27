@@ -6231,6 +6231,169 @@ func TestNewSessionLocalResultRendersAsNotice(t *testing.T) {
 	}
 }
 
+func TestStatusLocalResultRendersAsStructuredTranscriptEntry(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 80
+	m.height = 14
+
+	m.input.SetValue("/status")
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:   service.EventLocalSubmitResult,
+		Status: "info",
+		Text:   "Status\n\n- session: test-session",
+		LocalResult: &app.LocalResult{
+			Kind:      "status",
+			Title:     "Status",
+			PlainText: "Status\n\n- session: test-session",
+			Fields: []app.LocalResultField{
+				{Label: "Session", Value: "test-session"},
+				{Label: "Mode", Value: "agent", Tone: "info"},
+			},
+		},
+	}))
+	m = next.(model)
+
+	if len(m.transcript) < 2 {
+		t.Fatalf("expected command echo and status result, got %+v", m.transcript)
+	}
+	got := m.transcript[len(m.transcript)-1]
+	if got.Kind != tuirender.KindLocalStatus || got.Role != "local_status" || got.Local == nil {
+		t.Fatalf("expected local status transcript entry, got role=%q kind=%q local=%+v", got.Role, got.Kind, got.Local)
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	for _, want := range []string{"/status", "Status", "Session", "test-session", "Mode", "agent"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected rendered status transcript to contain %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestBusyStatusLocalResultRendersAsStructuredLiveEntry(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 80
+	m.height = 14
+	m.busy = true
+
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventAssistantDelta, Text: "working"}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:   service.EventLocalSubmitResult,
+		Status: "info",
+		Text:   "Status\n\n- session: test-session\n- mode: agent",
+		LocalResult: &app.LocalResult{
+			Kind:      "status",
+			Title:     "Status",
+			PlainText: "Status\n\n- session: test-session\n- mode: agent",
+			Fields: []app.LocalResultField{
+				{Label: "Session", Value: "test-session"},
+				{Label: "Mode", Value: "agent", Tone: "info"},
+			},
+		},
+	}))
+	m = next.(model)
+
+	snap := m.assembler.Snapshot()
+	if len(snap) != 2 {
+		t.Fatalf("expected assistant and local status in live assembler, got %+v", snap)
+	}
+	if got := snap[1]; got.Kind != tuirender.KindLocalStatus || got.Role != "local_status" || got.Local == nil {
+		t.Fatalf("expected structured local status live entry, got role=%q kind=%q local=%+v", got.Role, got.Kind, got.Local)
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.chatMessages(), 80), "\n")
+	workingIx := strings.Index(rendered, "working")
+	statusIx := strings.Index(rendered, "test-session")
+	if workingIx < 0 || statusIx < 0 || workingIx > statusIx {
+		t.Fatalf("expected live assistant output before structured status card:\n%s", rendered)
+	}
+}
+
+func TestMCPLocalResultRendersAsStructuredTranscriptEntry(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 80
+	m.height = 14
+
+	m.input.SetValue("/mcp")
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(model)
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:   service.EventLocalSubmitResult,
+		Status: "info",
+		Text:   "MCP\n\nconfig: /tmp/mcp.json\nservers: 1",
+		LocalResult: &app.LocalResult{
+			Kind:      "mcp",
+			Title:     "MCP",
+			PlainText: "MCP\n\nconfig: /tmp/mcp.json\nservers: 1",
+			Fields: []app.LocalResultField{
+				{Label: "Config", Value: "/tmp/mcp.json"},
+				{Label: "Servers", Value: "1", Tone: "info"},
+			},
+			Sections: []app.LocalResultSection{{
+				Title: "fs",
+				Fields: []app.LocalResultField{
+					{Label: "Status", Value: "failed", Tone: "error"},
+					{Label: "Error", Value: "timeout", Tone: "error"},
+				},
+			}},
+		},
+	}))
+	m = next.(model)
+
+	if len(m.transcript) < 2 {
+		t.Fatalf("expected command echo and mcp result, got %+v", m.transcript)
+	}
+	got := m.transcript[len(m.transcript)-1]
+	if got.Kind != tuirender.KindLocalMCP || got.Role != "local_mcp" || got.Local == nil {
+		t.Fatalf("expected local mcp transcript entry, got role=%q kind=%q local=%+v", got.Role, got.Kind, got.Local)
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	for _, want := range []string{"/mcp", "MCP", "Config", "/tmp/mcp.json", "fs", "failed", "timeout"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected rendered mcp transcript to contain %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestBusyMCPLocalResultRendersAsStructuredLiveEntry(t *testing.T) {
+	m, _ := newModelWithDispatchSpy()
+	m.width = 80
+	m.height = 14
+	m.busy = true
+
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventAssistantDelta, Text: "working"}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:   service.EventLocalSubmitResult,
+		Status: "info",
+		Text:   "MCP\n\nconfig: /tmp/mcp.json\nservers: 1",
+		LocalResult: &app.LocalResult{
+			Kind:      "mcp",
+			Title:     "MCP",
+			PlainText: "MCP\n\nconfig: /tmp/mcp.json\nservers: 1",
+			Fields: []app.LocalResultField{
+				{Label: "Config", Value: "/tmp/mcp.json"},
+				{Label: "Servers", Value: "1", Tone: "info"},
+			},
+		},
+	}))
+	m = next.(model)
+
+	snap := m.assembler.Snapshot()
+	if len(snap) != 2 {
+		t.Fatalf("expected assistant and local mcp in live assembler, got %+v", snap)
+	}
+	if got := snap[1]; got.Kind != tuirender.KindLocalMCP || got.Role != "local_mcp" || got.Local == nil {
+		t.Fatalf("expected structured local mcp live entry, got role=%q kind=%q local=%+v", got.Role, got.Kind, got.Local)
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.chatMessages(), 80), "\n")
+	workingIx := strings.Index(rendered, "working")
+	mcpIx := strings.Index(rendered, "/tmp/mcp.json")
+	if workingIx < 0 || mcpIx < 0 || workingIx > mcpIx {
+		t.Fatalf("expected live assistant output before structured mcp card:\n%s", rendered)
+	}
+}
+
 func TestLocalCommandResultCommitsIdleAssemblerBeforeNextPrompt(t *testing.T) {
 	m, _ := newModelWithDispatchSpy()
 	m.width = 80

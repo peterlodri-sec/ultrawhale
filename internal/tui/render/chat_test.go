@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
+	"github.com/usewhale/whale/internal/app"
 )
 
 func assertVisibleWidthAtMost(t *testing.T, lines []string, maxWidth int) {
@@ -225,6 +226,91 @@ func TestChatLines_StatusRendersAsDistinctCard(t *testing.T) {
 		t.Fatalf("expected status to render as a bordered card, got: %q", joined)
 	}
 	assertBlankLineBetween(t, lines, "Reasoning only", "visible answer")
+}
+
+func TestChatLines_LocalStatusRendersStructuredCard(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{{
+		Role: "local_status",
+		Kind: KindLocalStatus,
+		Text: "Status\n\n- session: sess-1",
+		Local: &app.LocalResult{
+			Kind:  "status",
+			Title: "Status",
+			Fields: []app.LocalResultField{
+				{Label: "Session", Value: "sess-1"},
+				{Label: "Mode", Value: "agent", Tone: "info"},
+				{Label: "Model", Value: "deepseek-v4-pro", Tone: "info"},
+			},
+		},
+	}}
+	lines := ChatLines(entries, 80)
+	joined := joinedPlain(lines)
+	for _, want := range []string{"Status", "Session", "sess-1", "Mode", "agent", "Model", "deepseek-v4-pro"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("expected local status card to contain %q, got:\n%s", want, joined)
+		}
+	}
+	raw := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "┃") {
+		t.Fatalf("expected local status to render as a bordered card, got:\n%s", joined)
+	}
+	if strings.Contains(raw, "\x1b[38;5;78m") {
+		t.Fatalf("local status should not use success green, got %q", raw)
+	}
+	assertVisibleWidthAtMost(t, lines, 80)
+}
+
+func TestChatLines_LocalMCPRendersStructuredSections(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{{
+		Role: "local_mcp",
+		Kind: KindLocalMCP,
+		Text: "MCP\n\nconfig: /tmp/mcp.json\nservers: 2",
+		Local: &app.LocalResult{
+			Kind:  "mcp",
+			Title: "MCP",
+			Fields: []app.LocalResultField{
+				{Label: "Config", Value: "/tmp/mcp.json"},
+				{Label: "Servers", Value: "2", Tone: "info"},
+			},
+			Sections: []app.LocalResultSection{
+				{
+					Title: "context7",
+					Fields: []app.LocalResultField{
+						{Label: "Status", Value: "connected", Tone: "info"},
+						{Label: "Tools", Value: "3"},
+					},
+				},
+				{
+					Title: "fs",
+					Fields: []app.LocalResultField{
+						{Label: "Status", Value: "failed", Tone: "error"},
+						{Label: "Tools", Value: "0"},
+						{Label: "Error", Value: "timeout", Tone: "error"},
+					},
+				},
+			},
+		},
+	}}
+	lines := ChatLines(entries, 80)
+	joined := joinedPlain(lines)
+	for _, want := range []string{"MCP", "Config", "/tmp/mcp.json", "Servers", "context7", "connected", "fs", "failed", "timeout"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("expected local mcp card to contain %q, got:\n%s", want, joined)
+		}
+	}
+	raw := strings.Join(lines, "\n")
+	if strings.Contains(raw, "\x1b[38;5;78m") {
+		t.Fatalf("local mcp should not use success green, got %q", raw)
+	}
+	assertVisibleWidthAtMost(t, lines, 80)
 }
 
 func TestChatLines_ContinuationIndent(t *testing.T) {
