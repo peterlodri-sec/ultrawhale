@@ -3,7 +3,9 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/policy"
@@ -237,5 +239,99 @@ func TestSpawnSubagentModeBlockDoesNotSkipFollowingSerialCall(t *testing.T) {
 	}
 	if counter.calls != 1 {
 		t.Fatalf("expected following read-only call to execute serially, got %d", counter.calls)
+	}
+}
+
+type parallelSpawnProvider struct {
+	calls int
+}
+
+func (p *parallelSpawnProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	p.calls++
+	if p.calls > 1 {
+		return eventStream(endTurnEvent("done"))
+	}
+	return eventStream(toolUseEvent(
+		toolCall("tc-subagent-1", "spawn_subagent", `{"role":"explore","task":"read a"}`),
+		toolCall("tc-subagent-2", "spawn_subagent", `{"role":"review","task":"read b"}`),
+		toolCall("tc-subagent-3", "spawn_subagent", `{"role":"audit","task":"read c"}`),
+	))
+}
+
+type delayedSpawnSubagentTool struct {
+	delay   time.Duration
+	calls   atomic.Int32
+	running atomic.Int32
+	max     atomic.Int32
+}
+
+func (t *delayedSpawnSubagentTool) Name() string { return "spawn_subagent" }
+func (t *delayedSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+	t.calls.Add(1)
+	running := t.running.Add(1)
+	for {
+		max := t.max.Load()
+		if running <= max || t.max.CompareAndSwap(max, running) {
+			break
+		}
+	}
+	defer t.running.Add(-1)
+
+	timer := time.NewTimer(t.delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ToolResult{}, ctx.Err()
+	case <-timer.C:
+	}
+	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok:" + call.ID}, nil
+}
+
+func TestReadySpawnSubagentGroupRunsConcurrently(t *testing.T) {
+	store := NewInMemoryStore()
+	spawn := &delayedSpawnSubagentTool{delay: 300 * time.Millisecond}
+	a := NewAgentWithRegistry(
+		&parallelSpawnProvider{},
+		store,
+		NewToolRegistry([]Tool{spawn}),
+	)
+
+	start := time.Now()
+	events, err := a.RunStream(context.Background(), "s-parallel-subagents", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+	}
+	elapsed := time.Since(start)
+
+	if got := spawn.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 spawn_subagent calls, got %d", got)
+	}
+	if got := spawn.max.Load(); got < 2 {
+		t.Fatalf("expected overlapping spawn_subagent calls, max concurrency was %d", got)
+	}
+	if elapsed >= 650*time.Millisecond {
+		t.Fatalf("expected concurrent wall-clock under 650ms for three 300ms calls, got %s", elapsed)
+	}
+
+	msgs, err := store.List(context.Background(), "s-parallel-subagents")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if len(msgs) < 3 {
+		t.Fatalf("expected at least user, assistant, and tool messages, got %d", len(msgs))
+	}
+	toolMsg := msgs[2]
+	if len(toolMsg.ToolResults) != 3 {
+		t.Fatalf("expected 3 tool results, got %d", len(toolMsg.ToolResults))
+	}
+	for i, wantID := range []string{"tc-subagent-1", "tc-subagent-2", "tc-subagent-3"} {
+		if toolMsg.ToolResults[i].ToolCallID != wantID {
+			t.Fatalf("tool result %d id = %q, want %q", i, toolMsg.ToolResults[i].ToolCallID, wantID)
+		}
 	}
 }
