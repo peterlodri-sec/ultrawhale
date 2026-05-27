@@ -201,6 +201,10 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 	if len(dispatchCalls) == 0 {
 		return assistant, nil, lastUsage, lastModel, false, nil
 	}
+	// Identify only the safe spawn_subagent batches here. Execution remains on
+	// the existing serial path until the parallel dispatcher is implemented.
+	parallelSubagentGroups := eligibleParallelSubagentGroups(dispatchCalls)
+	_ = parallelSubagentGroups
 	results := make([]core.ToolResult, 0, len(assistant.ToolCalls))
 	for _, blockedRes := range blocked {
 		br := blockedRes
