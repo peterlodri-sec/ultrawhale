@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -76,6 +77,7 @@ func RunDoctor(ctx context.Context, cfg Config, workspaceRoot string) (DoctorRep
 	configCheck := doctorCheckConfig(loadedConfig, configErr)
 	legacyCheck := doctorCheckLegacyConfig(dataDir, workspaceRoot, len(ConfigSources(loadedConfig)) > 0)
 	dataDirCheck := doctorCheckDataDir(dataDir)
+	dataDirOverrideCheck := doctorCheckDataDirOverride(runtime.GOOS, os.Getenv, dataDir)
 	apiReachCheck := doctorCheckAPIReach(ctx, key)
 	memoryCheck := doctorCheckMemory(workspaceRoot, order, cfg.MemoryMaxChars)
 	hooksCheck := doctorCheckHooks(dataDir, workspaceRoot)
@@ -89,9 +91,11 @@ func RunDoctor(ctx context.Context, cfg Config, workspaceRoot string) (DoctorRep
 		configCheck,
 		legacyCheck,
 		dataDirCheck,
-		apiReachCheck,
-		memoryCheck,
 	}
+	if dataDirOverrideCheck.Level != "" {
+		checks = append(checks, dataDirOverrideCheck)
+	}
+	checks = append(checks, apiReachCheck, memoryCheck)
 	if hooksCheck.Level != "" {
 		checks = append(checks, hooksCheck)
 	}
@@ -249,6 +253,29 @@ func doctorCheckDataDir(dataDir string) DoctorCheck {
 		Level:  DoctorOK,
 		Detail: fmt.Sprintf("%s writable · sessions %s", dataDir, sessionsDir),
 	}
+}
+
+func doctorCheckDataDirOverride(goos string, getenv func(string) string, dataDir string) DoctorCheck {
+	whaleHome := strings.TrimSpace(getenv(store.DataDirEnv))
+	if whaleHome != "" {
+		detail := fmt.Sprintf("using %s=%s", store.DataDirEnv, whaleHome)
+		if strings.TrimSpace(dataDir) != "" && filepath.Clean(whaleHome) != filepath.Clean(dataDir) {
+			detail = fmt.Sprintf("%s is set; current data dir is %s", store.DataDirEnv, dataDir)
+		}
+		return DoctorCheck{
+			Label:  "data dir override",
+			Level:  DoctorOK,
+			Detail: detail,
+		}
+	}
+	if goos == "windows" {
+		return DoctorCheck{
+			Label:  "data dir override",
+			Level:  DoctorOK,
+			Detail: fmt.Sprintf("set %s to use a custom Whale data directory", store.DataDirEnv),
+		}
+	}
+	return DoctorCheck{}
 }
 
 func doctorCheckAPIReach(ctx context.Context, key string) DoctorCheck {

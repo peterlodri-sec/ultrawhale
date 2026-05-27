@@ -27,7 +27,10 @@ type approvalsFile struct {
 	Approvals []string `json:"approvals"`
 }
 
-const toolInputEventsSuffix = ".tool_input_events.jsonl"
+const (
+	DataDirEnv            = "WHALE_HOME"
+	toolInputEventsSuffix = ".tool_input_events.jsonl"
+)
 
 func NewJSONLStore(sessionsDir string) (*JSONLStore, error) {
 	if sessionsDir == "" {
@@ -47,6 +50,9 @@ func DefaultDataDir() string {
 }
 
 func defaultDataDir(goos string, getenv func(string) string, userHomeDir func() (string, error)) string {
+	if dataDir := strings.TrimSpace(getenv(DataDirEnv)); dataDir != "" {
+		return dataDir
+	}
 	if goos == "windows" {
 		home, err := userHomeDir()
 		if err != nil || strings.TrimSpace(home) == "" {
