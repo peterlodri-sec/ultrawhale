@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -649,6 +650,124 @@ func TestProfileSessionHiddenTaskDoesNotPreviewGreeting(t *testing.T) {
 	}
 	if got.FirstUserText != "(hidden user task)" {
 		t.Fatalf("hidden work task should not preview greeting, got %q", got.FirstUserText)
+	}
+}
+
+func TestProfileStatsIncludesSubagentUsage(t *testing.T) {
+	dir := t.TempDir()
+	sessionsDir := filepath.Join(dir, "sessions")
+	usagePath := filepath.Join(dir, "usage.jsonl")
+	parentID := "parent"
+	namedChildID := parentID + "--subagent-call_00"
+	metaChildID := "metadata-child"
+
+	writeSessionMessages(t, sessionsDir, parentID, []core.Message{
+		{ID: "m-1", SessionID: parentID, Role: core.RoleUser, Text: "inspect the repository"},
+		{ID: "m-2", SessionID: parentID, Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{ID: "c1", Name: "spawn_subagent"}}},
+	})
+	writeSessionMessages(t, sessionsDir, namedChildID, []core.Message{
+		{ID: "m-1", SessionID: namedChildID, Role: core.RoleUser, Text: "child by name"},
+	})
+	writeSessionMessages(t, sessionsDir, metaChildID, []core.Message{
+		{ID: "m-1", SessionID: metaChildID, Role: core.RoleUser, Text: "child by metadata"},
+	})
+	if err := session.SaveSessionMeta(sessionsDir, metaChildID, session.SessionMeta{Kind: "subagent", ParentSessionID: parentID}); err != nil {
+		t.Fatalf("save child meta: %v", err)
+	}
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:          parentID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     1000,
+		CompletionTokens: 100,
+		PromptCacheHit:   800,
+		PromptCacheMiss:  200,
+		CostUSD:          0.0100,
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:          namedChildID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     4000,
+		CompletionTokens: 500,
+		PromptCacheHit:   3000,
+		PromptCacheMiss:  1000,
+		CostUSD:          0.0200,
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:          metaChildID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     1000,
+		CompletionTokens: 100,
+		PromptCacheHit:   900,
+		PromptCacheMiss:  100,
+		CostUSD:          0.0300,
+	})
+
+	stats := readProfileStats(sessionsDir, usagePath, 50)
+	if len(stats.Sessions) != 1 {
+		t.Fatalf("expected only parent main session, got %d sessions: %+v", len(stats.Sessions), stats.Sessions)
+	}
+	if stats.SubagentSessions != 2 || stats.SubagentPromptTokens != 5000 || stats.SubagentCompletionTokens != 600 || math.Abs(stats.SubagentCostUSD-0.05) > 0.000001 || stats.SubagentMaxPromptTokens != 4000 {
+		t.Fatalf("unexpected subagent totals: %+v", stats)
+	}
+	if stats.Sessions[0].SubagentSessions != 2 || stats.Sessions[0].SubagentPromptTokens != 5000 || stats.Sessions[0].SubagentCompletionTokens != 600 || math.Abs(stats.Sessions[0].SubagentCostUSD-0.05) > 0.000001 {
+		t.Fatalf("unexpected parent subagent totals: %+v", stats.Sessions[0])
+	}
+
+	out := strings.Join(formatProfileStats(stats), "\n")
+	for _, want := range []string{
+		"- tokens: 1.1K total · 1K input · 100 output",
+		"- subagents: 2 child sessions · 5.6K total · 5K input · 600 output · $0.0500 · max prompt 4K · 78.0% cache",
+		"- all-in tokens: 6.7K total · $0.0600",
+		"parent: $0.0100 · subagents 2 · +$0.0500 · +5.6K tokens",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected profile output to contain %q, got:\n%s", want, out)
+		}
+	}
+}
+
+func TestProfileStatsIncludesSubagentUsageFromDefaultLogForCustomDataDir(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", filepath.Join(dir, "home"))
+	sessionsDir := filepath.Join(dir, "custom", "sessions")
+	usagePath := filepath.Join(dir, "custom", "usage.jsonl")
+	parentID := "parent-" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	childID := parentID + "--subagent-call_00"
+
+	writeSessionMessages(t, sessionsDir, parentID, []core.Message{
+		{ID: "m-1", SessionID: parentID, Role: core.RoleUser, Text: "inspect the repository"},
+		{ID: "m-2", SessionID: parentID, Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{ID: "c1", Name: "spawn_subagent"}}},
+	})
+	writeSessionMessages(t, sessionsDir, childID, []core.Message{
+		{ID: "m-1", SessionID: childID, Role: core.RoleUser, Text: "child by name"},
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:          parentID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     100,
+		CompletionTokens: 10,
+		CostUSD:          0.0010,
+	})
+	writeUsageRecord(t, telemetry.DefaultUsageLogPath(), telemetry.UsageRecord{
+		Session:          childID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     200,
+		CompletionTokens: 20,
+		CostUSD:          0.0020,
+	})
+
+	stats := readProfileStats(sessionsDir, usagePath, 50)
+	if len(stats.Sessions) != 1 {
+		t.Fatalf("expected only parent main session, got %d sessions: %+v", len(stats.Sessions), stats.Sessions)
+	}
+	if stats.PromptTokens != 100 || stats.CompletionTokens != 10 || math.Abs(stats.CostUSD-0.0010) > 0.000001 {
+		t.Fatalf("unexpected parent usage totals: %+v", stats)
+	}
+	if stats.SubagentSessions != 1 || stats.SubagentPromptTokens != 200 || stats.SubagentCompletionTokens != 20 || math.Abs(stats.SubagentCostUSD-0.0020) > 0.000001 {
+		t.Fatalf("unexpected subagent totals from default log: %+v", stats)
+	}
+	if stats.Sessions[0].SubagentSessions != 1 || stats.Sessions[0].SubagentPromptTokens != 200 || stats.Sessions[0].SubagentCompletionTokens != 20 || math.Abs(stats.Sessions[0].SubagentCostUSD-0.0020) > 0.000001 {
+		t.Fatalf("unexpected parent subagent totals from default log: %+v", stats.Sessions[0])
 	}
 }
 

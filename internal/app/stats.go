@@ -66,49 +66,63 @@ type toolInputModelStats struct {
 }
 
 type profileStats struct {
-	Limit                int
-	Sessions             []profileSessionStats
-	MainWorkSessions     int
-	TrivialSessions      int
-	ToolHeavySessions    int
-	PromptTokens         int
-	CompletionTokens     int
-	CacheHit             int
-	CacheMiss            int
-	CostUSD              float64
-	MaxPromptTokens      int
-	PrefixFingerprints   map[string]bool
-	ToolCalls            int
-	ToolResultChars      int
-	ReasoningChars       int
-	VisibleTextChars     int
-	ByTool               map[string]*profileToolStats
-	TopSessions          []profileSessionStats
-	UsageMatchedSessions int
+	Limit                    int
+	Sessions                 []profileSessionStats
+	MainWorkSessions         int
+	TrivialSessions          int
+	ToolHeavySessions        int
+	SubagentSessions         int
+	PromptTokens             int
+	CompletionTokens         int
+	CacheHit                 int
+	CacheMiss                int
+	CostUSD                  float64
+	MaxPromptTokens          int
+	SubagentPromptTokens     int
+	SubagentCompletionTokens int
+	SubagentCacheHit         int
+	SubagentCacheMiss        int
+	SubagentCostUSD          float64
+	SubagentMaxPromptTokens  int
+	PrefixFingerprints       map[string]bool
+	ToolCalls                int
+	ToolResultChars          int
+	ReasoningChars           int
+	VisibleTextChars         int
+	ByTool                   map[string]*profileToolStats
+	TopSessions              []profileSessionStats
+	UsageMatchedSessions     int
 }
 
 type profileSessionStats struct {
-	ID                 string
-	ModTime            time.Time
-	Messages           int
-	UserMessages       int
-	AssistantMessages  int
-	ToolMessages       int
-	ToolCalls          int
-	ToolResultChars    int
-	ReasoningChars     int
-	VisibleTextChars   int
-	FirstUserText      string
-	HasHiddenUserTask  bool
-	Trivial            bool
-	PromptTokens       int
-	CompletionTokens   int
-	CacheHit           int
-	CacheMiss          int
-	CostUSD            float64
-	MaxPromptTokens    int
-	PrefixFingerprints map[string]bool
-	ByTool             map[string]*profileToolStats
+	ID                       string
+	ModTime                  time.Time
+	Messages                 int
+	UserMessages             int
+	AssistantMessages        int
+	ToolMessages             int
+	ToolCalls                int
+	ToolResultChars          int
+	ReasoningChars           int
+	VisibleTextChars         int
+	FirstUserText            string
+	HasHiddenUserTask        bool
+	Trivial                  bool
+	PromptTokens             int
+	CompletionTokens         int
+	CacheHit                 int
+	CacheMiss                int
+	CostUSD                  float64
+	MaxPromptTokens          int
+	SubagentSessions         int
+	SubagentPromptTokens     int
+	SubagentCompletionTokens int
+	SubagentCacheHit         int
+	SubagentCacheMiss        int
+	SubagentCostUSD          float64
+	SubagentMaxPromptTokens  int
+	PrefixFingerprints       map[string]bool
+	ByTool                   map[string]*profileToolStats
 }
 
 type profileToolStats struct {
@@ -244,7 +258,15 @@ func readProfileStats(sessionsDir, usagePath string, limit int) profileStats {
 		}
 	}
 
-	readProfileUsage(usagePath, sessionIndex, &stats)
+	childSessionIndex := profileChildSessionIndex(sessionsDir, sessionIndex)
+	for _, parentIdx := range childSessionIndex {
+		stats.Sessions[parentIdx].SubagentSessions++
+		stats.SubagentSessions++
+	}
+
+	for _, path := range profileUsagePaths(usagePath) {
+		readProfileUsage(path, sessionIndex, childSessionIndex, &stats)
+	}
 	for _, sp := range stats.Sessions {
 		for fp := range sp.PrefixFingerprints {
 			stats.PrefixFingerprints[fp] = true
@@ -260,6 +282,14 @@ func readProfileStats(sessionsDir, usagePath string, limit int) profileStats {
 		if sp.PromptTokens > 0 || sp.CompletionTokens > 0 || sp.CostUSD > 0 {
 			stats.UsageMatchedSessions++
 		}
+		if sp.SubagentMaxPromptTokens > stats.SubagentMaxPromptTokens {
+			stats.SubagentMaxPromptTokens = sp.SubagentMaxPromptTokens
+		}
+		stats.SubagentPromptTokens += sp.SubagentPromptTokens
+		stats.SubagentCompletionTokens += sp.SubagentCompletionTokens
+		stats.SubagentCacheHit += sp.SubagentCacheHit
+		stats.SubagentCacheMiss += sp.SubagentCacheMiss
+		stats.SubagentCostUSD += sp.SubagentCostUSD
 	}
 	stats.MainWorkSessions = len(stats.Sessions) - stats.TrivialSessions
 	stats.TopSessions = topProfileSessions(stats.Sessions, statsRecentLimit, false)
@@ -316,6 +346,39 @@ func isProfileSessionJSONL(name string) bool {
 func isSubagentSession(sessionsDir, id string) bool {
 	meta, err := session.LoadSessionMeta(sessionsDir, id)
 	return err == nil && strings.EqualFold(strings.TrimSpace(meta.Kind), "subagent")
+}
+
+func profileChildSessionIndex(sessionsDir string, parentIndex map[string]int) map[string]int {
+	out := map[string]int{}
+	if len(parentIndex) == 0 {
+		return out
+	}
+	entries, err := os.ReadDir(strings.TrimSpace(sessionsDir))
+	if err != nil {
+		return out
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") || strings.HasSuffix(entry.Name(), telemetry.ToolInputEventsSuffix) {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), ".jsonl")
+		parentID := ""
+		if meta, err := session.LoadSessionMeta(sessionsDir, id); err == nil && strings.EqualFold(strings.TrimSpace(meta.Kind), "subagent") {
+			parentID = strings.TrimSpace(meta.ParentSessionID)
+		}
+		if parentID == "" {
+			if before, _, ok := strings.Cut(id, "--subagent-"); ok {
+				parentID = before
+			}
+		}
+		if parentID == "" || parentID == id {
+			continue
+		}
+		if idx, ok := parentIndex[parentID]; ok {
+			out[id] = idx
+		}
+	}
+	return out
 }
 
 func readProfileSessionFile(path, id string, modTime time.Time) profileSessionStats {
@@ -375,7 +438,7 @@ func readProfileSessionFile(path, id string, modTime time.Time) profileSessionSt
 	return stats
 }
 
-func readProfileUsage(path string, sessionIndex map[string]int, stats *profileStats) {
+func readProfileUsage(path string, sessionIndex map[string]int, childSessionIndex map[string]int, stats *profileStats) {
 	f, err := os.Open(path)
 	if err != nil {
 		return
@@ -387,23 +450,51 @@ func readProfileUsage(path string, sessionIndex map[string]int, stats *profileSt
 		if err := json.Unmarshal(scanner.Bytes(), &rec); err != nil {
 			continue
 		}
-		idx, ok := sessionIndex[rec.Session]
-		if !ok {
+		if idx, ok := sessionIndex[rec.Session]; ok {
+			sp := &stats.Sessions[idx]
+			sp.PromptTokens += rec.PromptTokens
+			sp.CompletionTokens += rec.CompletionTokens
+			sp.CacheHit += rec.PromptCacheHit
+			sp.CacheMiss += rec.PromptCacheMiss
+			sp.CostUSD += rec.CostUSD
+			if rec.PromptTokens > sp.MaxPromptTokens {
+				sp.MaxPromptTokens = rec.PromptTokens
+			}
+			if fp := strings.TrimSpace(rec.PrefixFingerprint); fp != "" {
+				sp.PrefixFingerprints[fp] = true
+			}
 			continue
 		}
-		sp := &stats.Sessions[idx]
-		sp.PromptTokens += rec.PromptTokens
-		sp.CompletionTokens += rec.CompletionTokens
-		sp.CacheHit += rec.PromptCacheHit
-		sp.CacheMiss += rec.PromptCacheMiss
-		sp.CostUSD += rec.CostUSD
-		if rec.PromptTokens > sp.MaxPromptTokens {
-			sp.MaxPromptTokens = rec.PromptTokens
-		}
-		if fp := strings.TrimSpace(rec.PrefixFingerprint); fp != "" {
-			sp.PrefixFingerprints[fp] = true
+		if idx, ok := childSessionIndex[rec.Session]; ok {
+			sp := &stats.Sessions[idx]
+			sp.SubagentPromptTokens += rec.PromptTokens
+			sp.SubagentCompletionTokens += rec.CompletionTokens
+			sp.SubagentCacheHit += rec.PromptCacheHit
+			sp.SubagentCacheMiss += rec.PromptCacheMiss
+			sp.SubagentCostUSD += rec.CostUSD
+			if rec.PromptTokens > sp.SubagentMaxPromptTokens {
+				sp.SubagentMaxPromptTokens = rec.PromptTokens
+			}
 		}
 	}
+}
+
+func profileUsagePaths(primary string) []string {
+	paths := make([]string, 0, 2)
+	seen := map[string]bool{}
+	for _, path := range []string{primary, telemetry.DefaultUsageLogPath()} {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+		key := filepath.Clean(path)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		paths = append(paths, path)
+	}
+	return paths
 }
 
 func isTrivialProfileSession(messages []core.Message) bool {
@@ -570,6 +661,8 @@ func formatUsageStats(stats usageStats) []string {
 
 func formatProfileStats(stats profileStats) []string {
 	totalTokens := stats.PromptTokens + stats.CompletionTokens
+	subagentTokens := stats.SubagentPromptTokens + stats.SubagentCompletionTokens
+	allInTokens := totalTokens + subagentTokens
 	lines := []string{
 		fmt.Sprintf("- scanned sessions: %d latest main sessions (limit %d)", len(stats.Sessions), stats.Limit),
 		fmt.Sprintf("- main work sessions: %d", stats.MainWorkSessions),
@@ -580,6 +673,8 @@ func formatProfileStats(stats profileStats) []string {
 		fmt.Sprintf("- cache: %s hit · %s miss · %.1f%%", formatCount(stats.CacheHit), formatCount(stats.CacheMiss), ratioPercent(stats.CacheHit, stats.CacheHit+stats.CacheMiss)),
 		fmt.Sprintf("- estimated cost: $%.4f", stats.CostUSD),
 		fmt.Sprintf("- max prompt: %s", formatCount(stats.MaxPromptTokens)),
+		fmt.Sprintf("- subagents: %d child sessions · %s total · %s input · %s output · $%.4f · max prompt %s · %.1f%% cache", stats.SubagentSessions, formatCount(subagentTokens), formatCount(stats.SubagentPromptTokens), formatCount(stats.SubagentCompletionTokens), stats.SubagentCostUSD, formatCount(stats.SubagentMaxPromptTokens), ratioPercent(stats.SubagentCacheHit, stats.SubagentCacheHit+stats.SubagentCacheMiss)),
+		fmt.Sprintf("- all-in tokens: %s total · $%.4f", formatCount(allInTokens), stats.CostUSD+stats.SubagentCostUSD),
 		fmt.Sprintf("- prefix fingerprints: %d", len(stats.PrefixFingerprints)),
 		fmt.Sprintf("- tools: %d calls · %s result chars", stats.ToolCalls, formatCount(stats.ToolResultChars)),
 		fmt.Sprintf("- reasoning/text: %s reasoning chars · %s visible text chars", formatCount(stats.ReasoningChars), formatCount(stats.VisibleTextChars)),
@@ -593,10 +688,15 @@ func formatProfileStats(stats profileStats) []string {
 	if len(stats.TopSessions) > 0 {
 		lines = append(lines, "", "Top work sessions")
 		for _, sp := range stats.TopSessions {
+			childDetail := ""
+			if sp.SubagentSessions > 0 || sp.SubagentCostUSD > 0 || sp.SubagentPromptTokens+sp.SubagentCompletionTokens > 0 {
+				childDetail = fmt.Sprintf(" · subagents %d · +$%.4f · +%s tokens", sp.SubagentSessions, sp.SubagentCostUSD, formatCount(sp.SubagentPromptTokens+sp.SubagentCompletionTokens))
+			}
 			lines = append(lines, fmt.Sprintf(
-				"- %s: $%.4f · max prompt %s · tools %s chars · %.1f%% cache · %s",
+				"- %s: $%.4f%s · max prompt %s · tools %s chars · %.1f%% cache · %s",
 				sp.ID,
 				sp.CostUSD,
+				childDetail,
 				formatCount(sp.MaxPromptTokens),
 				formatCount(sp.ToolResultChars),
 				ratioPercent(sp.CacheHit, sp.CacheHit+sp.CacheMiss),

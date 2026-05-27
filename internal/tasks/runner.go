@@ -35,6 +35,7 @@ type RunnerConfig struct {
 	DefaultMaxTokens     int
 	DefaultMaxToolIters  int
 	SummaryMaxChars      int
+	UsageLogPath         string
 }
 
 type Runner struct {
@@ -54,6 +55,7 @@ type Runner struct {
 	defaultMaxTokens     int
 	defaultMaxToolIters  int
 	summaryMaxChars      int
+	usageLogPath         string
 }
 
 func NewRunner(cfg RunnerConfig) *Runner {
@@ -90,5 +92,6 @@ func NewRunner(cfg RunnerConfig) *Runner {
 		defaultMaxTokens:     maxTokens,
 		defaultMaxToolIters:  maxToolIters,
 		summaryMaxChars:      summaryMaxChars,
+		usageLogPath:         strings.TrimSpace(cfg.UsageLogPath),
 	}
 }

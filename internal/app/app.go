@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -305,6 +306,7 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 		DefaultMaxTokens:     tasks.DefaultMaxTokens,
 		DefaultMaxToolIters:  tasks.DefaultMaxToolIters,
 		SummaryMaxChars:      tasks.DefaultSummaryMaxChar,
+		UsageLogPath:         filepath.Join(cfg.DataDir, "usage.jsonl"),
 	})
 	taskTools := tasks.NewTools(taskRunner)
 	registeredTools := append([]core.Tool{}, baseTools...)
