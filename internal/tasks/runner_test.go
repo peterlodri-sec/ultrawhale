@@ -153,6 +153,41 @@ func TestSpawnSubagentSummaryTruncation(t *testing.T) {
 	}
 }
 
+func TestSpawnSubagentCompletionProgressUsesFinalSummary(t *testing.T) {
+	factory := func(_ string, _ int) (llm.Provider, error) {
+		return providerFunc(func(_ context.Context, _ []core.Message, _ []core.Tool) <-chan llm.ProviderEvent {
+			out := make(chan llm.ProviderEvent, 1)
+			go func() {
+				defer close(out)
+				out <- llm.ProviderEvent{Type: llm.EventComplete, Response: &llm.ProviderResponse{Content: "  " + strings.Repeat("x", 20) + "  "}}
+			}()
+			return out
+		}), nil
+	}
+	parent := core.NewToolRegistry([]core.Tool{testTool{name: "read_file", readOnly: true}})
+	r := NewRunner(RunnerConfig{ProviderFactory: factory, ParentTools: parent, SummaryMaxChars: 8})
+	var progress []core.ToolProgress
+	res, err := r.SpawnSubagentWithProgress(context.Background(), SpawnSubagentRequest{Task: "inspect"}, func(p core.ToolProgress) {
+		progress = append(progress, p)
+	})
+	if err != nil {
+		t.Fatalf("SpawnSubagentWithProgress: %v", err)
+	}
+	wantSummary := strings.Repeat("x", 8)
+	if res.Summary != wantSummary || !res.Truncated {
+		t.Fatalf("summary/truncated = %q %v", res.Summary, res.Truncated)
+	}
+	if len(progress) != 1 {
+		t.Fatalf("expected completion progress, got %+v", progress)
+	}
+	if progress[0].Status != "completed" || progress[0].Summary != wantSummary {
+		t.Fatalf("unexpected completion progress: %+v", progress[0])
+	}
+	if progress[0].Metadata["truncated"] != true {
+		t.Fatalf("expected truncated metadata, got %+v", progress[0].Metadata)
+	}
+}
+
 func TestSpawnSubagentReportsChildToolProgress(t *testing.T) {
 	calls := 0
 	factory := func(_ string, _ int) (llm.Provider, error) {
