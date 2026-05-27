@@ -576,7 +576,7 @@ func TestStatusLocalSubmitEmitsStructuredLocalResult(t *testing.T) {
 	}
 }
 
-func TestStatsLocalSubmitDoesNotEmitStructuredLocalResult(t *testing.T) {
+func TestStatsLocalSubmitEmitsStructuredLocalResult(t *testing.T) {
 	cfg := app.DefaultConfig()
 	cfg.DataDir = t.TempDir()
 	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
@@ -592,8 +592,11 @@ func TestStatsLocalSubmitDoesNotEmitStructuredLocalResult(t *testing.T) {
 		if ev.Kind != EventLocalSubmitResult {
 			continue
 		}
-		if ev.LocalResult != nil {
-			t.Fatalf("expected /stats to stay text-only in this phase, got %+v", ev.LocalResult)
+		if ev.LocalResult == nil || ev.LocalResult.Kind != "stats" {
+			t.Fatalf("expected structured stats local result, got %+v", ev)
+		}
+		if ev.Text == "" || ev.Text != ev.LocalResult.PlainText {
+			t.Fatalf("expected text fallback to match local result, text=%q local=%q", ev.Text, ev.LocalResult.PlainText)
 		}
 		return
 	}

@@ -438,7 +438,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 		// Emit Info after session hydration so the text isn't
 		// wiped by the hydration's assembler reset.
 		if cmd.Text != "" {
-			s.emit(Event{Kind: EventInfo, Text: cmd.Text})
+			s.emit(Event{Kind: EventInfo, Text: cmd.Text, LocalResult: cmd.LocalResult})
 		}
 		if cmd.Turn == nil {
 			s.emit(Event{Kind: EventTurnDone, LastResponse: cmd.Text})
@@ -462,7 +462,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 	}
 	if cmd.Handled {
 		if cmd.Text != "" {
-			s.emit(Event{Kind: EventInfo, Text: cmd.Text})
+			s.emit(Event{Kind: EventInfo, Text: cmd.Text, LocalResult: cmd.LocalResult})
 		}
 		if cmd.Turn == nil {
 			s.emit(Event{Kind: EventTurnDone, LastResponse: cmd.Text})

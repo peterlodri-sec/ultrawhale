@@ -112,7 +112,9 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	case service.EventInfo:
 		m.clearProviderRetryStatus()
 		if !isEnvironmentInventoryBlock(ev.Text) {
-			if isSessionNotice(ev.Text) {
+			if ev.LocalResult != nil {
+				m.appendLocalResult(ev.LocalResult)
+			} else if isSessionNotice(ev.Text) {
 				m.appendTranscript("notice", tuirender.KindNotice, ev.Text)
 			} else {
 				m.append("info", ev.Text)
