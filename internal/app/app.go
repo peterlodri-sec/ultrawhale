@@ -210,7 +210,6 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 		return nil, fmt.Errorf("load mcp config: %w", err)
 	}
 	mcpManager := whalemcp.NewManager(mcpConfig)
-	mcpManager.SetWorkspaceRoot(workspaceRoot)
 	pluginManager := plugins.NewManager(plugins.Context{DataDir: cfg.DataDir, WorkspaceRoot: workspaceRoot}, cfg.PluginsDisabled)
 	pluginTools := pluginManager.Tools()
 	toolset.SetExtraSkills(pluginManager.Skills())
