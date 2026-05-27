@@ -55,6 +55,11 @@ func assertBlankLineBetween(t *testing.T, lines []string, before, after string) 
 	t.Fatalf("expected blank line between %q and %q, got: %q", before, after, strings.Join(lines, "\n"))
 }
 
+func containsANSIColor(text, color string) bool {
+	return strings.Contains(text, "\x1b[38;5;"+color+"m") ||
+		strings.Contains(text, "\x1b[1;38;5;"+color+"m")
+}
+
 func TestChatLines_MarkdownBoldAndList(t *testing.T) {
 	entries := []UIMessage{
 		{Role: "assistant", Kind: KindText, Text: "Hello **world**\n- one\n- two"},
@@ -69,6 +74,120 @@ func TestChatLines_MarkdownBoldAndList(t *testing.T) {
 	}
 	if !strings.Contains(joined, "one") || !strings.Contains(joined, "two") {
 		t.Fatalf("expected list items rendered, got: %q", joined)
+	}
+}
+
+func TestChatLines_FocusSummaryUsesStructuredStyles(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{{
+		Role: "tool_summary",
+		Kind: KindToolSummary,
+		Text: "Searched for 1 pattern, Read 1 file, Ran shell: git status --short (ctrl+o to expand)",
+		FocusSummary: &FocusSummary{
+			Hint: "(ctrl+o to expand)",
+			Parts: []FocusSummaryPart{
+				{Kind: "search", Action: "Searched for 1 pattern"},
+				{Kind: "read", Action: "Read 1 file"},
+				{Kind: "shell", Action: "Ran shell", Detail: "git status --short"},
+			},
+		},
+	}}
+
+	lines := ChatLines(entries, 80)
+	plain := joinedPlain(lines)
+	for _, want := range []string{"Searched for 1 pattern", "Read 1 file", "Ran shell: git status --short", "ctrl+o", "expand"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected focus summary text %q, got:\n%s", want, plain)
+		}
+	}
+	raw := strings.Join(lines, "\n")
+	for _, color := range []string{"212", "111", "220", "245"} {
+		if !containsANSIColor(raw, color) {
+			t.Fatalf("expected focus summary color %s in %q", color, raw)
+		}
+	}
+	if strings.Contains(raw, "\x1b[38;5;78m") {
+		t.Fatalf("focus summary should not use success green for completed work, got %q", raw)
+	}
+	assertVisibleWidthAtMost(t, lines, 80)
+}
+
+func TestChatLines_FocusSummaryStaysWithinNarrowWidth(t *testing.T) {
+	entries := []UIMessage{{
+		Role: "tool_summary",
+		Kind: KindToolSummary,
+		Text: "Ran shell: git log --oneline --no-decorate v0.1.20..HEAD, 1 file/search read (ctrl+o to expand)",
+		FocusSummary: &FocusSummary{
+			Hint: "(ctrl+o to expand)",
+			Parts: []FocusSummaryPart{
+				{Kind: "shell", Action: "Ran shell", Detail: "git log --oneline --no-decorate v0.1.20..HEAD"},
+				{Kind: "read", Action: "Read 1 file"},
+				{Kind: "search", Action: "Searched for 1 pattern"},
+			},
+		},
+	}}
+
+	lines := ChatLines(entries, 24)
+	plain := joinedPlain(lines)
+	if !strings.Contains(plain, "Ran shell") || !strings.Contains(plain, "ctrl+o") {
+		t.Fatalf("expected narrow focus summary to remain readable, got:\n%s", plain)
+	}
+	assertVisibleWidthAtMost(t, lines, 24)
+}
+
+func TestChatLines_FocusSummaryStylesFromState(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{{
+		Role: "tool_summary",
+		Kind: KindToolSummary,
+		Text: "Denied 1 shell command, Failed shell: go test ./..., Reading 1 file: internal/tui/focus_view.go, Searched for 1 pattern",
+		FocusSummary: &FocusSummary{
+			Parts: []FocusSummaryPart{
+				{Kind: "shell", State: "denied", Count: 1, Action: "Denied 1 shell command"},
+				{Kind: "shell", State: "failed", Count: 1, Action: "Failed shell", Detail: "go test ./..."},
+				{Kind: "read", State: "running", Count: 1, Action: "Reading 1 file", Detail: "internal/tui/focus_view.go"},
+				{Kind: "search", State: "done", Count: 1, Action: "Searched for 1 pattern"},
+			},
+		},
+	}}
+
+	raw := strings.Join(ChatLines(entries, 100), "\n")
+	for _, color := range []string{"214", "203", "117", "212"} {
+		if !containsANSIColor(raw, color) {
+			t.Fatalf("expected state-driven focus summary color %s in %q", color, raw)
+		}
+	}
+}
+
+func TestChatLines_FocusSummaryFallsBackToStatusStyle(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{{
+		Role: "tool_summary",
+		Kind: KindToolSummary,
+		Text: "Legacy denied (1 denied/canceled), Legacy failed (1 failed), Legacy running (1 running)",
+		FocusSummary: &FocusSummary{
+			Parts: []FocusSummaryPart{
+				{Kind: "shell", Action: "Legacy denied", Status: "(1 denied/canceled)"},
+				{Kind: "shell", Action: "Legacy failed", Status: "(1 failed)"},
+				{Kind: "read", Action: "Legacy running", Status: "(1 running)"},
+			},
+		},
+	}}
+
+	raw := strings.Join(ChatLines(entries, 100), "\n")
+	for _, color := range []string{"214", "203", "117"} {
+		if !containsANSIColor(raw, color) {
+			t.Fatalf("expected status fallback focus summary color %s in %q", color, raw)
+		}
 	}
 }
 
@@ -233,6 +352,65 @@ func TestChatLines_NoticeRendersAsPlainHint(t *testing.T) {
 	if strings.Contains(joined, "┃") || strings.Contains(joined, "│") {
 		t.Fatalf("notice should not render as a bordered card: %q", joined)
 	}
+}
+
+func TestChatLines_SystemNoticeUsesStructuredStyles(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{{
+		Role: "notice",
+		Kind: KindNotice,
+		Text: "Approved to run uptime · this time",
+		Notice: &SystemNotice{
+			Kind:    "approval_allowed",
+			Tone:    "success",
+			Action:  "Approved",
+			Detail:  "to run",
+			Command: "uptime",
+			Scope:   "this time",
+		},
+	}}
+	lines := ChatLines(entries, 80)
+	joined := strings.Join(lines, "\n")
+	plain := joinedPlain(lines)
+	for _, want := range []string{"Approved to run uptime", "this time"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected structured notice to contain %q, got: %q", want, plain)
+		}
+	}
+	if !containsANSIColor(joined, "78") {
+		t.Fatalf("expected success color for approval state, got: %q", joined)
+	}
+	if !containsANSIColor(joined, "220") {
+		t.Fatalf("expected command color for approval command, got: %q", joined)
+	}
+	if strings.Contains(joined, "┃") || strings.Contains(joined, "│") {
+		t.Fatalf("notice should not render as a bordered card: %q", joined)
+	}
+}
+
+func TestChatLines_SystemNoticeWrapsWithinNarrowWidth(t *testing.T) {
+	entries := []UIMessage{{
+		Role: "notice",
+		Kind: KindNotice,
+		Text: "Approved to run git log --oneline --decorate --graph --all · for this session",
+		Notice: &SystemNotice{
+			Kind:    "approval_allowed_session",
+			Tone:    "success",
+			Action:  "Approved",
+			Detail:  "to run",
+			Command: "git log --oneline --decorate --graph --all",
+			Scope:   "for this session",
+		},
+	}}
+	lines := ChatLines(entries, 32)
+	plain := joinedPlain(lines)
+	if !strings.Contains(plain, "for this session") {
+		t.Fatalf("expected wrapped notice to keep scope, got: %q", plain)
+	}
+	assertVisibleWidthAtMost(t, lines, 32)
 }
 
 func TestChatLines_StatusRendersAsDistinctCard(t *testing.T) {
