@@ -499,6 +499,13 @@ func RenderCommandLike(text string) string {
 	if text == "" {
 		return ""
 	}
+	if rendered, ok := highlightShellCommand(text); ok {
+		return rendered
+	}
+	return renderCommandLikeFallback(text)
+}
+
+func renderCommandLikeFallback(text string) string {
 	var out strings.Builder
 	tokenIndex := 0
 	commandPosition := true
@@ -580,7 +587,7 @@ func styleCommandToken(token string, index int, commandPosition bool) string {
 	case strings.HasPrefix(token, "-"):
 		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Warn)
 	case strings.HasPrefix(token, "\"") || strings.HasPrefix(token, "'"):
-		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Success)
+		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Result)
 	case index == 0 || commandPosition:
 		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Info)
 	}

@@ -354,6 +354,46 @@ func TestRenderCommandLikeStylesCommandAfterOperator(t *testing.T) {
 	}
 }
 
+func TestRenderCommandLikeHighlightsBashSyntax(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	cmd := `for f in *.go; do echo "$f"; done # comment`
+	rendered := RenderCommandLike(cmd)
+	if got := xansi.Strip(rendered); got != cmd {
+		t.Fatalf("command rendering changed text:\nwant %q\n got %q", cmd, got)
+	}
+	for _, want := range []string{
+		"\x1b[38;5;212mfor",
+		"\x1b[38;5;212m;",
+		"\x1b[38;5;81m\"",
+		"\x1b[38;5;245m# comment",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected bash syntax style %q, got %q", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "\x1b[38;5;78m") {
+		t.Fatalf("command rendering should not use success green, got %q", rendered)
+	}
+}
+
+func TestRenderCommandLikeFallbackPreservesHugeCommandText(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	cmd := strings.Repeat("x", maxShellHighlightBytes+1)
+	rendered := RenderCommandLike(cmd)
+	if got := xansi.Strip(rendered); got != cmd {
+		t.Fatalf("fallback command rendering changed text:\nwant len %d\n got len %d", len(cmd), len(got))
+	}
+	if !strings.Contains(rendered, "\x1b[") {
+		t.Fatalf("expected fallback command styling, got %q", rendered[:80])
+	}
+}
+
 func TestChatLines_ToolEventPreservesIndentedOutputRows(t *testing.T) {
 	entries := []UIMessage{
 		{
