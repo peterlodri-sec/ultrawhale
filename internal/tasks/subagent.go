@@ -131,7 +131,7 @@ func (r *Runner) SpawnSubagentWithProgress(ctx context.Context, req SpawnSubagen
 		agent.WithSessionsDir(r.sessionsDir),
 		agent.WithAutoCompact(r.autoCompact, r.autoCompactThreshold, r.contextWindowForModel(model)),
 		agent.WithProjectMemory(r.memoryEnabled, r.memoryMaxChars, r.memoryFileOrder, r.workspaceRoot),
-		agent.WithUsageLogPath(""),
+		agent.WithUsageLogPath(r.usageLogPath),
 		agent.WithMaxToolIters(maxToolIters),
 		agent.WithExtraSystemBlocks(subagentSystemBlock(role)),
 	)

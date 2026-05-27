@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -416,26 +417,42 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		t.Fatalf("mkdir sessions: %v", err)
 	}
 	writeUsageRecord(t, filepath.Join(dir, "usage.jsonl"), telemetry.UsageRecord{
-		TS:                time.Date(2026, 5, 12, 10, 0, 0, 0, time.Local).UnixMilli(),
-		Session:           "s1",
-		Model:             "deepseek-v4-flash",
-		PrefixFingerprint: "fp-1",
-		PromptTokens:      1000,
-		CompletionTokens:  200,
-		PromptCacheHit:    800,
-		PromptCacheMiss:   200,
-		CostUSD:           0.0123,
+		TS:                     time.Date(2026, 5, 12, 10, 0, 0, 0, time.Local).UnixMilli(),
+		Session:                "s1",
+		Model:                  "deepseek-v4-flash",
+		PrefixFingerprint:      "fp-1",
+		PromptTokens:           1000,
+		CompletionTokens:       200,
+		PromptCacheHit:         800,
+		PromptCacheMiss:        200,
+		ReasoningReplayTok:     250,
+		ToolResultRawChars:     13000,
+		ToolResultReplayChars:  4000,
+		ToolResultRawTokens:    3250,
+		ToolResultReplayTokens: 1000,
+		ToolResultTokensSaved:  2250,
+		ToolResultsCompacted:   1,
+		CostUSD:                0.0123,
 	})
 	writeUsageRecord(t, filepath.Join(dir, "usage.jsonl"), telemetry.UsageRecord{
-		TS:                time.Date(2026, 5, 12, 10, 3, 0, 0, time.Local).UnixMilli(),
-		Session:           "s2",
-		Model:             "deepseek-v4-flash",
-		PrefixFingerprint: "fp-2",
-		PromptTokens:      2000,
-		CompletionTokens:  300,
-		PromptCacheHit:    1000,
-		PromptCacheMiss:   1000,
-		CostUSD:           0.0456,
+		TS:                 time.Date(2026, 5, 12, 10, 3, 0, 0, time.Local).UnixMilli(),
+		Session:            "s2",
+		Model:              "deepseek-v4-flash",
+		PrefixFingerprint:  "fp-2",
+		PromptTokens:       2000,
+		CompletionTokens:   300,
+		PromptCacheHit:     1000,
+		PromptCacheMiss:    1000,
+		ReasoningReplayTok: 100,
+		CostUSD:            0.0456,
+	})
+	writeUsageRecord(t, filepath.Join(dir, "usage.jsonl"), telemetry.UsageRecord{
+		TS:               time.Date(2026, 5, 12, 10, 4, 0, 0, time.Local).UnixMilli(),
+		Session:          "legacy-chat",
+		Model:            "deepseek-chat",
+		PromptTokens:     100_000,
+		CompletionTokens: 10_000,
+		CostUSD:          99,
 	})
 	writeSessionMessages(t, sessionsDir, "s1", []core.Message{
 		{ID: "m-1", SessionID: "s1", Role: core.RoleUser, Text: "please inspect the workspace"},
@@ -496,7 +513,8 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		"Usage",
 		"- turns: 2",
 		"- tokens: 3.5K total",
-		"- estimated cost: $0.0579 total",
+		"- reasoning replay: 350 tokens",
+		"- estimated cost: $0.0003 total",
 		"- top model: deepseek-v4-flash · 2 turns",
 		"Tool input",
 		"- repaired: 1",
@@ -514,6 +532,8 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		"Recent tool-input events",
 		"Invalid codes",
 		"Top tools",
+		"deepseek-chat",
+		"legacy-chat",
 	} {
 		if strings.Contains(out, dontWant) {
 			t.Fatalf("expected overview stats to omit %q, got:\n%s", dontWant, out)
@@ -529,7 +549,9 @@ func TestHandleLocalCommandStats(t *testing.T) {
 	}
 	for _, want := range []string{
 		"- sessions: 2",
+		"- reasoning replay: 350 tokens · 11.7% of input",
 		"deepseek-v4-flash: 2 turns",
+		"350 reasoning replay",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("expected usage stats to contain %q, got:\n%s", want, out)
@@ -551,13 +573,19 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		"- tool-heavy sessions: 1",
 		"- usage matched sessions: 2",
 		"- max prompt: 2K",
+		"- reasoning replay: 350 main · 0 subagent · 350 all-in",
+		"- tool replay: 1K sent · 3.2K raw · 2.2K saved · 1 compacted",
 		"- prefix fingerprints: 2",
 		"- tools: 1 calls · 13K result chars",
 		"- reasoning/text: 8 reasoning chars",
 		"Top tools",
 		"read_file: 1 calls · 13K result chars",
+		"Top tool replay sessions",
+		"s1: 1K sent · 3.2K raw · 2.2K saved · 1 compacted",
+		"Top reasoning replay sessions",
+		"s1: 250 tokens",
 		"Top work sessions",
-		"s1: $0.0123",
+		"s1: $0.0001",
 		"please inspect the workspace",
 	} {
 		if !strings.Contains(out, want) {
@@ -652,6 +680,201 @@ func TestProfileSessionHiddenTaskDoesNotPreviewGreeting(t *testing.T) {
 	}
 	if got.FirstUserText != "(hidden user task)" {
 		t.Fatalf("hidden work task should not preview greeting, got %q", got.FirstUserText)
+	}
+}
+
+func TestProfileStatsIncludesSubagentUsage(t *testing.T) {
+	dir := t.TempDir()
+	sessionsDir := filepath.Join(dir, "sessions")
+	usagePath := filepath.Join(dir, "usage.jsonl")
+	parentID := "parent"
+	namedChildID := parentID + "--subagent-call_00"
+	metaChildID := "metadata-child"
+
+	writeSessionMessages(t, sessionsDir, parentID, []core.Message{
+		{ID: "m-1", SessionID: parentID, Role: core.RoleUser, Text: "inspect the repository"},
+		{ID: "m-2", SessionID: parentID, Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{ID: "c1", Name: "spawn_subagent"}}},
+	})
+	writeSessionMessages(t, sessionsDir, namedChildID, []core.Message{
+		{ID: "m-1", SessionID: namedChildID, Role: core.RoleUser, Text: "child by name"},
+	})
+	writeSessionMessages(t, sessionsDir, metaChildID, []core.Message{
+		{ID: "m-1", SessionID: metaChildID, Role: core.RoleUser, Text: "child by metadata"},
+	})
+	if err := session.SaveSessionMeta(sessionsDir, metaChildID, session.SessionMeta{Kind: "subagent", ParentSessionID: parentID}); err != nil {
+		t.Fatalf("save child meta: %v", err)
+	}
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:                parentID,
+		Model:                  "deepseek-v4-flash",
+		PromptTokens:           1000,
+		CompletionTokens:       100,
+		PromptCacheHit:         800,
+		PromptCacheMiss:        200,
+		ReasoningReplayTok:     120,
+		ToolResultRawChars:     1000,
+		ToolResultReplayChars:  600,
+		ToolResultRawTokens:    250,
+		ToolResultReplayTokens: 150,
+		ToolResultTokensSaved:  100,
+		CostUSD:                0.0100,
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:                namedChildID,
+		Model:                  "deepseek-v4-flash",
+		PromptTokens:           4000,
+		CompletionTokens:       500,
+		PromptCacheHit:         3000,
+		PromptCacheMiss:        1000,
+		ReasoningReplayTok:     300,
+		ToolResultRawChars:     8000,
+		ToolResultReplayChars:  2000,
+		ToolResultRawTokens:    2000,
+		ToolResultReplayTokens: 500,
+		ToolResultTokensSaved:  1500,
+		ToolResultsCompacted:   1,
+		CostUSD:                0.0200,
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:                metaChildID,
+		Model:                  "deepseek-v4-flash",
+		PromptTokens:           1000,
+		CompletionTokens:       100,
+		PromptCacheHit:         900,
+		PromptCacheMiss:        100,
+		ReasoningReplayTok:     200,
+		ToolResultRawChars:     4000,
+		ToolResultReplayChars:  1000,
+		ToolResultRawTokens:    1000,
+		ToolResultReplayTokens: 250,
+		ToolResultTokensSaved:  750,
+		ToolResultsCompacted:   1,
+		CostUSD:                0.0300,
+	})
+
+	stats := readProfileStats(sessionsDir, usagePath, 50)
+	if len(stats.Sessions) != 1 {
+		t.Fatalf("expected only parent main session, got %d sessions: %+v", len(stats.Sessions), stats.Sessions)
+	}
+	if stats.SubagentSessions != 2 || stats.SubagentPromptTokens != 5000 || stats.SubagentCompletionTokens != 600 || math.Abs(stats.SubagentCostUSD-0.00033292) > 0.000001 || stats.SubagentMaxPromptTokens != 4000 {
+		t.Fatalf("unexpected subagent totals: %+v", stats)
+	}
+	if stats.Sessions[0].SubagentSessions != 2 || stats.Sessions[0].SubagentPromptTokens != 5000 || stats.Sessions[0].SubagentCompletionTokens != 600 || math.Abs(stats.Sessions[0].SubagentCostUSD-0.00033292) > 0.000001 {
+		t.Fatalf("unexpected parent subagent totals: %+v", stats.Sessions[0])
+	}
+	if stats.ReasoningReplayTokens != 120 || stats.SubagentReasoningReplay != 500 || stats.Sessions[0].ReasoningReplayTokens != 120 || stats.Sessions[0].SubagentReasoningReplay != 500 {
+		t.Fatalf("unexpected reasoning replay totals: %+v", stats)
+	}
+	if stats.ToolResultReplayTokens != 150 || stats.SubagentToolResultReplayTokens != 750 || stats.ToolResultTokensSaved != 100 || stats.SubagentToolResultTokensSaved != 2250 || stats.Sessions[0].SubagentToolResultsCompacted != 2 {
+		t.Fatalf("unexpected tool replay totals: %+v", stats)
+	}
+
+	out := strings.Join(formatProfileStats(stats), "\n")
+	for _, want := range []string{
+		"- tokens: 1.1K total · 1K input · 100 output",
+		"- subagents: 2 child sessions · 5.6K total · 5K input · 600 output · $0.0003 · max prompt 4K · 78.0% cache",
+		"- all-in tokens: 6.7K total · $0.0004",
+		"- reasoning replay: 120 main · 500 subagent · 620 all-in",
+		"- tool replay: 900 sent · 3.2K raw · 2.4K saved · 2 compacted",
+		"Top tool replay sessions",
+		"parent: 900 sent · 3.2K raw · 2.4K saved · 2 compacted",
+		"Top reasoning replay sessions",
+		"parent: 620 tokens · +500 subagents · 10.3% of input",
+		"parent: $0.0001 · subagents 2 · +$0.0003 · +5.6K tokens",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected profile output to contain %q, got:\n%s", want, out)
+		}
+	}
+}
+
+func TestTopReasoningReplaySessionsIncludesSubagentOnlyReplay(t *testing.T) {
+	sessions := []profileSessionStats{
+		{ID: "main-500", ReasoningReplayTokens: 500, CostUSD: 0.50},
+		{ID: "main-400", ReasoningReplayTokens: 400, CostUSD: 0.40},
+		{ID: "main-300", ReasoningReplayTokens: 300, CostUSD: 0.30},
+		{ID: "main-200", ReasoningReplayTokens: 200, CostUSD: 0.20},
+		{ID: "main-100", ReasoningReplayTokens: 100, CostUSD: 0.10},
+		{ID: "subagent-only", SubagentReasoningReplay: 600, SubagentCostUSD: 0.01},
+		{ID: "trivial-subagent", Trivial: true, SubagentReasoningReplay: 700},
+	}
+
+	top := topReasoningReplaySessions(sessions, 5)
+	if len(top) != 5 {
+		t.Fatalf("expected 5 top sessions, got %d: %+v", len(top), top)
+	}
+	if top[0].ID != "subagent-only" {
+		t.Fatalf("expected subagent-only replay session to rank first, got %+v", top)
+	}
+	for _, sp := range top {
+		if sp.ID == "main-100" || sp.ID == "trivial-subagent" {
+			t.Fatalf("unexpected session in top replay list: %+v", top)
+		}
+	}
+}
+
+func TestFormatProfileStatsUsesAllInTopReasoningReplayRows(t *testing.T) {
+	stats := profileStats{
+		Limit:                   5,
+		Sessions:                []profileSessionStats{{ID: "subagent-only", SubagentPromptTokens: 2000, SubagentReasoningReplay: 600, FirstUserText: "delegate analysis"}},
+		SubagentPromptTokens:    2000,
+		SubagentReasoningReplay: 600,
+		PrefixFingerprints:      map[string]bool{},
+		ByTool:                  map[string]*profileToolStats{},
+	}
+
+	out := strings.Join(formatProfileStats(stats), "\n")
+	want := "subagent-only: 600 tokens · +600 subagents · 30.0% of input"
+	if !strings.Contains(out, want) {
+		t.Fatalf("expected top replay row to use all-in replay values %q, got:\n%s", want, out)
+	}
+	if strings.Contains(out, "subagent-only: 0 tokens") {
+		t.Fatalf("top replay row should not show parent-only replay tokens:\n%s", out)
+	}
+}
+
+func TestProfileStatsIncludesSubagentUsageFromDefaultLogForCustomDataDir(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", filepath.Join(dir, "home"))
+	sessionsDir := filepath.Join(dir, "custom", "sessions")
+	usagePath := filepath.Join(dir, "custom", "usage.jsonl")
+	parentID := "parent-" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	childID := parentID + "--subagent-call_00"
+
+	writeSessionMessages(t, sessionsDir, parentID, []core.Message{
+		{ID: "m-1", SessionID: parentID, Role: core.RoleUser, Text: "inspect the repository"},
+		{ID: "m-2", SessionID: parentID, Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{ID: "c1", Name: "spawn_subagent"}}},
+	})
+	writeSessionMessages(t, sessionsDir, childID, []core.Message{
+		{ID: "m-1", SessionID: childID, Role: core.RoleUser, Text: "child by name"},
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		Session:          parentID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     100,
+		CompletionTokens: 10,
+		CostUSD:          0.0010,
+	})
+	writeUsageRecord(t, telemetry.DefaultUsageLogPath(), telemetry.UsageRecord{
+		Session:          childID,
+		Model:            "deepseek-v4-flash",
+		PromptTokens:     200,
+		CompletionTokens: 20,
+		CostUSD:          0.0020,
+	})
+
+	stats := readProfileStats(sessionsDir, usagePath, 50)
+	if len(stats.Sessions) != 1 {
+		t.Fatalf("expected only parent main session, got %d sessions: %+v", len(stats.Sessions), stats.Sessions)
+	}
+	if stats.PromptTokens != 100 || stats.CompletionTokens != 10 || math.Abs(stats.CostUSD-0.0000168) > 0.000001 {
+		t.Fatalf("unexpected parent usage totals: %+v", stats)
+	}
+	if stats.SubagentSessions != 1 || stats.SubagentPromptTokens != 200 || stats.SubagentCompletionTokens != 20 || math.Abs(stats.SubagentCostUSD-0.0000336) > 0.000001 {
+		t.Fatalf("unexpected subagent totals from default log: %+v", stats)
+	}
+	if stats.Sessions[0].SubagentSessions != 1 || stats.Sessions[0].SubagentPromptTokens != 200 || stats.Sessions[0].SubagentCompletionTokens != 20 || math.Abs(stats.Sessions[0].SubagentCostUSD-0.0000336) > 0.000001 {
+		t.Fatalf("unexpected parent subagent totals from default log: %+v", stats.Sessions[0])
 	}
 }
 
@@ -1334,7 +1557,7 @@ func TestHandleSlashReviewBuildsHiddenPrompt(t *testing.T) {
 	if !handled || out != "" || shouldExit || clearScreen {
 		t.Fatalf("unexpected /review flags handled=%v out=%q shouldExit=%v clearScreen=%v", handled, out, shouldExit, clearScreen)
 	}
-	for _, want := range []string{"You are an expert code reviewer", "Target: local changes", "git diff --cached", "git diff", "inspect the contents of each relevant untracked file", "git symbolic-ref --short refs/remotes/origin/HEAD", "Avoid shell pipelines, redirects", "Do not prefix commands with cd", "Start with findings"} {
+	for _, want := range []string{"You are an expert code reviewer", "Target: local changes", "git diff --cached", "git diff", "inspect the contents of each relevant untracked file", "git symbolic-ref --short refs/remotes/origin/HEAD", "Avoid shell pipelines, redirects", "Do not prefix commands with cd", "If a local git diff output is truncated", "git diff --stat", "git diff --name-only", "Start with findings"} {
 		if !strings.Contains(synthetic, want) {
 			t.Fatalf("review prompt missing %q:\n%s", want, synthetic)
 		}
