@@ -1,6 +1,10 @@
 package render
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/usewhale/whale/internal/app"
+)
 
 type MessageKind string
 
@@ -11,6 +15,8 @@ const (
 	KindThinking    MessageKind = "thinking"
 	KindPlan        MessageKind = "plan"
 	KindPlanUpdate  MessageKind = "plan_update"
+	KindLocalStatus MessageKind = "local_status"
+	KindLocalMCP    MessageKind = "local_mcp"
 	KindToolCall    MessageKind = "tool_call"
 	KindToolResult  MessageKind = "tool_result"
 	KindToolSummary MessageKind = "tool_summary"
@@ -23,6 +29,7 @@ type UIMessage struct {
 	Kind     MessageKind
 	Text     string
 	ToolName string
+	Local    *app.LocalResult
 }
 
 type Assembler struct {
@@ -164,6 +171,35 @@ func (a *Assembler) AddStatus(text string) {
 		Role: "status",
 		Kind: KindStatus,
 		Text: t,
+	})
+}
+
+func (a *Assembler) AddLocalResult(result *app.LocalResult) {
+	if result == nil || strings.TrimSpace(result.Kind) == "" {
+		return
+	}
+	text := strings.TrimSpace(strings.TrimRight(result.PlainText, "\n"))
+	if text == "" {
+		text = strings.TrimSpace(strings.TrimRight(result.Title, "\n"))
+	}
+	if text == "" {
+		return
+	}
+	kind := KindText
+	role := "info"
+	switch result.Kind {
+	case "status":
+		kind = KindLocalStatus
+		role = "local_status"
+	case "mcp":
+		kind = KindLocalMCP
+		role = "local_mcp"
+	}
+	a.messages = append(a.messages, UIMessage{
+		Role:  role,
+		Kind:  kind,
+		Text:  text,
+		Local: result,
 	})
 }
 

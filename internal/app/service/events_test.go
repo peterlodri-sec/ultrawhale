@@ -550,6 +550,84 @@ func TestLocalSubmitDoesNotEmitTurnDone(t *testing.T) {
 	}
 }
 
+func TestStatusLocalSubmitEmitsStructuredLocalResult(t *testing.T) {
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	svc.Dispatch(Intent{Kind: IntentSubmitLocal, Input: "/status"})
+	for {
+		ev := nextServiceEvent(t, svc)
+		if ev.Kind != EventLocalSubmitResult {
+			continue
+		}
+		if ev.LocalResult == nil || ev.LocalResult.Kind != "status" {
+			t.Fatalf("expected structured status local result, got %+v", ev)
+		}
+		if ev.Text == "" || ev.Text != ev.LocalResult.PlainText {
+			t.Fatalf("expected text fallback to match local result, text=%q local=%q", ev.Text, ev.LocalResult.PlainText)
+		}
+		return
+	}
+}
+
+func TestStatsLocalSubmitEmitsStructuredLocalResult(t *testing.T) {
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	svc.Dispatch(Intent{Kind: IntentSubmitLocal, Input: "/stats"})
+	for {
+		ev := nextServiceEvent(t, svc)
+		if ev.Kind != EventLocalSubmitResult {
+			continue
+		}
+		if ev.LocalResult == nil || ev.LocalResult.Kind != "stats" {
+			t.Fatalf("expected structured stats local result, got %+v", ev)
+		}
+		if ev.Text == "" || ev.Text != ev.LocalResult.PlainText {
+			t.Fatalf("expected text fallback to match local result, text=%q local=%q", ev.Text, ev.LocalResult.PlainText)
+		}
+		return
+	}
+}
+
+func TestMCPLocalSubmitEmitsStructuredLocalResult(t *testing.T) {
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	svc.Dispatch(Intent{Kind: IntentSubmitLocal, Input: "/mcp"})
+	for {
+		ev := nextServiceEvent(t, svc)
+		if ev.Kind != EventLocalSubmitResult {
+			continue
+		}
+		if ev.LocalResult == nil || ev.LocalResult.Kind != "mcp" {
+			t.Fatalf("expected structured mcp local result, got %+v", ev)
+		}
+		if ev.Text == "" || ev.Text != ev.LocalResult.PlainText {
+			t.Fatalf("expected text fallback to match local result, text=%q local=%q", ev.Text, ev.LocalResult.PlainText)
+		}
+		return
+	}
+}
+
 func TestRequestExitClearsUnreadableWorktreeAndQuits(t *testing.T) {
 	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
 	oldwd, err := os.Getwd()

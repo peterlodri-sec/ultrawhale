@@ -15,8 +15,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/usewhale/whale/internal/agent"
 	appcommands "github.com/usewhale/whale/internal/app/commands"
 	"github.com/usewhale/whale/internal/core"
+	whalemcp "github.com/usewhale/whale/internal/mcp"
+	"github.com/usewhale/whale/internal/plugins/memoryplugin"
 	"github.com/usewhale/whale/internal/policy"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/store"
@@ -888,6 +891,284 @@ func TestBuildStatusIncludesContextAndBudget(t *testing.T) {
 	}
 }
 
+func TestBuildStatusLocalResultIncludesStructuredFields(t *testing.T) {
+	dir := t.TempDir()
+	sessionsDir := filepath.Join(dir, "sessions")
+	msgStore, err := store.NewJSONLStore(sessionsDir)
+	if err != nil {
+		t.Fatalf("store init: %v", err)
+	}
+	app := &App{
+		ctx:              context.Background(),
+		workspaceRoot:    dir,
+		sessionID:        "sess-1",
+		msgStore:         msgStore,
+		contextWindow:    1000,
+		currentMode:      "agent",
+		model:            "deepseek-v4-pro",
+		reasoningEffort:  "max",
+		thinkingEnabled:  false,
+		budgetWarningUSD: 0,
+		cfg:              DefaultConfig(),
+	}
+
+	result := app.buildStatusLocalResult()
+	if result == nil || result.Kind != "status" || result.Title != "Status" {
+		t.Fatalf("unexpected status local result: %+v", result)
+	}
+	for _, want := range []string{"Session", "Mode", "Permissions", "Model", "Effort", "Thinking", "Context window", "Budget limit"} {
+		if !localResultHasField(result, want) {
+			t.Fatalf("expected local result field %q, got %+v", want, result.Fields)
+		}
+	}
+	if !strings.Contains(result.PlainText, "- session: sess-1") {
+		t.Fatalf("expected plain text fallback, got:\n%s", result.PlainText)
+	}
+}
+
+func TestExecuteSlashStatusReturnsStructuredLocalResult(t *testing.T) {
+	dir := t.TempDir()
+	msgStore, err := store.NewJSONLStore(filepath.Join(dir, "sessions"))
+	if err != nil {
+		t.Fatalf("store init: %v", err)
+	}
+	app := &App{
+		ctx:             context.Background(),
+		workspaceRoot:   dir,
+		sessionID:       "sess-1",
+		msgStore:        msgStore,
+		contextWindow:   1000,
+		currentMode:     "agent",
+		model:           "deepseek-v4-pro",
+		reasoningEffort: "max",
+		cfg:             DefaultConfig(),
+	}
+
+	out, err := app.ExecuteSlash("/status")
+	if err != nil {
+		t.Fatalf("execute /status: %v", err)
+	}
+	if !out.Handled || out.LocalResult == nil || out.LocalResult.Kind != "status" {
+		t.Fatalf("expected structured status result, got %+v", out)
+	}
+	if out.Text == "" || out.Text != out.LocalResult.PlainText {
+		t.Fatalf("expected text fallback to match plain result, text=%q local=%q", out.Text, out.LocalResult.PlainText)
+	}
+}
+
+func TestBuildMCPLocalResultIncludesStructuredFields(t *testing.T) {
+	mgr := whalemcp.NewManager(whalemcp.Config{
+		Path: "/tmp/mcp.json",
+		Servers: map[string]whalemcp.ServerConfig{
+			"disabled-fs": {Disabled: true},
+		},
+	})
+	mgr.Initialize(t.Context())
+	app := &App{mcpManager: mgr}
+
+	result := app.buildMCPLocalResult()
+	if result == nil || result.Kind != "mcp" || result.Title != "MCP" {
+		t.Fatalf("unexpected mcp local result: %+v", result)
+	}
+	if result.PlainText == "" || !strings.Contains(result.PlainText, "disabled-fs") {
+		t.Fatalf("expected plain text fallback with server, got:\n%s", result.PlainText)
+	}
+	for _, want := range []string{"Config", "Servers"} {
+		if !localResultHasField(result, want) {
+			t.Fatalf("expected local result field %q, got %+v", want, result.Fields)
+		}
+	}
+	if len(result.Sections) != 1 || result.Sections[0].Title != "disabled-fs" {
+		t.Fatalf("expected disabled-fs section, got %+v", result.Sections)
+	}
+	for _, want := range []string{"Status", "Tools"} {
+		if !localResultSectionHasField(result.Sections[0], want) {
+			t.Fatalf("expected mcp section field %q, got %+v", want, result.Sections[0].Fields)
+		}
+	}
+}
+
+func TestExecuteLocalMCPReturnsStructuredLocalResult(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer app.Close()
+
+	out, err := app.ExecuteLocalCommand("/mcp")
+	if err != nil {
+		t.Fatalf("ExecuteLocalCommand: %v", err)
+	}
+	if !out.Handled || out.LocalResult == nil || out.LocalResult.Kind != "mcp" {
+		t.Fatalf("expected structured mcp result, got %+v", out)
+	}
+	if out.Text == "" || out.Text != out.LocalResult.PlainText {
+		t.Fatalf("expected text fallback to match plain result, text=%q local=%q", out.Text, out.LocalResult.PlainText)
+	}
+}
+
+func TestExecuteLocalStatsReturnsStructuredLocalResult(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer app.Close()
+
+	out, err := app.ExecuteLocalCommand("/stats usage")
+	if err != nil {
+		t.Fatalf("ExecuteLocalCommand: %v", err)
+	}
+	if !out.Handled || out.LocalResult == nil || out.LocalResult.Kind != "stats" || out.LocalResult.Title != "Stats: usage" {
+		t.Fatalf("expected structured stats result, got %+v", out)
+	}
+	if out.Text == "" || out.Text != out.LocalResult.PlainText {
+		t.Fatalf("expected text fallback to match local result, text=%q local=%q", out.Text, out.LocalResult.PlainText)
+	}
+	if !localResultHasField(out.LocalResult, "View") || len(out.LocalResult.Sections) == 0 {
+		t.Fatalf("expected stats fields and sections, got %+v", out.LocalResult)
+	}
+}
+
+func TestExecuteLocalHelpReturnsStructuredLocalResult(t *testing.T) {
+	app := &App{}
+	out, err := app.ExecuteLocalCommand("/help")
+	if err != nil {
+		t.Fatalf("ExecuteLocalCommand: %v", err)
+	}
+	if !out.Handled || out.LocalResult == nil || out.LocalResult.Kind != "help" {
+		t.Fatalf("expected structured help result, got %+v", out)
+	}
+	if out.Text == "" || out.Text != out.LocalResult.PlainText {
+		t.Fatalf("expected text fallback to match local result, text=%q local=%q", out.Text, out.LocalResult.PlainText)
+	}
+	if len(out.LocalResult.Sections) < 3 {
+		t.Fatalf("expected grouped help sections, got %+v", out.LocalResult.Sections)
+	}
+}
+
+func TestExecuteLocalMemoryReturnsStructuredLocalResult(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	workspace := t.TempDir()
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(workspace); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldwd) }()
+
+	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer app.Close()
+	memStore := memoryplugin.NewStore(filepath.Join(app.cfg.DataDir, "plugins", "memory"), app.workspaceRoot)
+	if _, err := memStore.Write(memoryplugin.WriteInput{Scope: "global", Type: "user", Name: "style", Description: "concise Chinese", Content: "Answer concisely in Chinese."}); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	out, err := app.ExecuteLocalCommand("/memory show global/style")
+	if err != nil {
+		t.Fatalf("ExecuteLocalCommand: %v", err)
+	}
+	if !out.Handled || out.LocalResult == nil || out.LocalResult.Kind != "memory" || out.LocalResult.Title != "Memory entry" {
+		t.Fatalf("expected structured memory result, got %+v", out)
+	}
+	for _, want := range []string{"Name", "Scope", "Type", "Path", "Description", "Content"} {
+		if !localResultHasField(out.LocalResult, want) {
+			t.Fatalf("expected memory field %q, got %+v", want, out.LocalResult.Fields)
+		}
+	}
+}
+
+func TestBuildMemoryShowLocalResultDoesNotParseBodyAsMetadata(t *testing.T) {
+	text := strings.Join([]string{
+		"# style (global/user)",
+		"",
+		"> concise Chinese",
+		"",
+		"path: /tmp/memory/style.md",
+		"",
+		"Keep this body.",
+		"> This is a real body quote.",
+		"path: this is body content",
+	}, "\n")
+	result := buildMemoryShowLocalResult(text)
+	if result == nil || result.Kind != "memory" {
+		t.Fatalf("expected memory local result, got %+v", result)
+	}
+	if got := localResultFieldValue(result, "Description"); got != "concise Chinese" {
+		t.Fatalf("unexpected description %q", got)
+	}
+	if got := localResultFieldValue(result, "Path"); got != "/tmp/memory/style.md" {
+		t.Fatalf("unexpected path %q", got)
+	}
+	content := localResultFieldValue(result, "Content")
+	for _, want := range []string{"Keep this body.", "> This is a real body quote.", "path: this is body content"} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("expected content to keep %q, got:\n%s", want, content)
+		}
+	}
+}
+
+func TestBuildCompactLocalResultIncludesStructuredFields(t *testing.T) {
+	text := "compacted conversation: 10 -> 2 messages; ~1000 -> ~200 tokens"
+	result := buildCompactLocalResult(agent.CompactInfo{
+		Compacted:      true,
+		MessagesBefore: 10,
+		MessagesAfter:  2,
+		BeforeEstimate: 1000,
+		AfterEstimate:  200,
+	}, text)
+	if result == nil || result.Kind != "compact" || result.PlainText != text {
+		t.Fatalf("expected structured compact result, got %+v", result)
+	}
+	for _, want := range []string{"Result", "Messages", "Tokens"} {
+		if !localResultHasField(result, want) {
+			t.Fatalf("expected compact field %q, got %+v", want, result.Fields)
+		}
+	}
+}
+
+func localResultHasField(result *LocalResult, label string) bool {
+	if result == nil {
+		return false
+	}
+	for _, field := range result.Fields {
+		if field.Label == label {
+			return true
+		}
+	}
+	return false
+}
+
+func localResultFieldValue(result *LocalResult, label string) string {
+	if result == nil {
+		return ""
+	}
+	for _, field := range result.Fields {
+		if field.Label == label {
+			return field.Value
+		}
+	}
+	return ""
+}
+
+func localResultSectionHasField(section LocalResultSection, label string) bool {
+	for _, field := range section.Fields {
+		if field.Label == label {
+			return true
+		}
+	}
+	return false
+}
+
 func TestStartupLinesIncludeEffectiveThinkingAndEffort(t *testing.T) {
 	app := &App{
 		sessionID:        "sess-1",
@@ -1425,6 +1706,20 @@ func TestHandleSlashNewIncludesResumeHint(t *testing.T) {
 	if !strings.Contains(out, "whale resume sess-1") {
 		t.Fatalf("expected output to include resume hint, got: %q", out)
 	}
+
+	app.sessionID = "sess-1"
+	res, err := app.ExecuteSlash("/new\tfresh-structured")
+	if err != nil {
+		t.Fatalf("ExecuteSlash /new: %v", err)
+	}
+	if !res.Handled || res.LocalResult == nil || res.LocalResult.Kind != "new_session" {
+		t.Fatalf("expected structured new-session result, got %+v", res)
+	}
+	for _, want := range []string{"Session", "Previous", "Resume previous", "Mode"} {
+		if !localResultHasField(res.LocalResult, want) {
+			t.Fatalf("expected new-session field %q, got %+v", want, res.LocalResult.Fields)
+		}
+	}
 }
 
 func TestHandleSlashForkCopiesConversationAndSwitchesSession(t *testing.T) {
@@ -1476,6 +1771,13 @@ func TestHandleSlashForkCopiesConversationAndSwitchesSession(t *testing.T) {
 	}
 	if !strings.Contains(out, `Forked conversation "Custom (Branch)"`) || !strings.Contains(out, "To resume the original:") || !strings.Contains(out, "sess-1") {
 		t.Fatalf("unexpected fork output: %q", out)
+	}
+	structured, err := app.ExecuteSlash("/fork\tCustomAgain")
+	if err != nil {
+		t.Fatalf("ExecuteSlash /fork: %v", err)
+	}
+	if structured.LocalResult == nil || structured.LocalResult.Kind != "fork" {
+		t.Fatalf("expected structured fork result, got %+v", structured)
 	}
 
 	got, err := st.List(context.Background(), forkID)
