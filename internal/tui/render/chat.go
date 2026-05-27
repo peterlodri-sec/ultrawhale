@@ -97,6 +97,9 @@ func renderCard(m UIMessage, block string, width int) []string {
 	if m.Kind == KindThinking || m.Role == "think" {
 		return renderThinkingCard(m, block, width)
 	}
+	if m.Kind == KindPlan {
+		return renderProposedPlanCard(m, block, width)
+	}
 	if m.Kind == KindPlanUpdate {
 		return renderPlanUpdateCard(m, block, width)
 	}
@@ -115,6 +118,27 @@ func renderCard(m UIMessage, block string, width int) []string {
 	card := spacedCardStyle(width, borderColor).
 		Render(strings.TrimRight(rendered, "\n"))
 
+	return strings.Split(strings.TrimRight(card, "\n"), "\n")
+}
+
+func renderProposedPlanCard(m UIMessage, block string, width int) []string {
+	contentWidth := width - 6
+	if contentWidth < 16 {
+		contentWidth = 16
+	}
+	title := lipgloss.NewStyle().
+		Foreground(roleBorderColor(m)).
+		Bold(true).
+		Render("Proposed Plan")
+	body := strings.TrimRight(hardWrapRendered(renderEntryText("plan", block, contentWidth), contentWidth), "\n")
+	if body != "" {
+		body = lipgloss.NewStyle().
+			Background(tuitheme.Default.PlanBackground).
+			Render(body)
+	}
+	rendered := joinTitleAndBody(title, body)
+	card := spacedCardStyle(width, roleBorderColor(m)).
+		Render(strings.TrimRight(rendered, "\n"))
 	return strings.Split(strings.TrimRight(card, "\n"), "\n")
 }
 

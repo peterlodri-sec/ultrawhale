@@ -5759,6 +5759,10 @@ func TestPlanCompletedReplacesPartialPlanAndTurnDoneShowsPicker(t *testing.T) {
 	}
 	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventPlanDelta, Text: "partial"}))
 	m = next.(model)
+	liveRendered := strings.Join(tuirender.ChatLines(m.assembler.Snapshot(), 80), "\n")
+	if !strings.Contains(liveRendered, "Proposed Plan") || !strings.Contains(liveRendered, "partial") {
+		t.Fatalf("expected live proposed plan render, got %q", liveRendered)
+	}
 	next, cmd := m.Update(svcMsg(service.Event{Kind: service.EventPlanCompleted, Text: "complete final plan"}))
 	m = next.(model)
 	if cmd == nil {
@@ -5769,6 +5773,10 @@ func TestPlanCompletedReplacesPartialPlanAndTurnDoneShowsPicker(t *testing.T) {
 	}
 	if len(m.transcript) != 1 || m.transcript[0].Kind != tuirender.KindPlan {
 		t.Fatalf("expected completed plan in transcript, got %+v", m.transcript)
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(rendered, "Proposed Plan") || !strings.Contains(rendered, "complete final plan") {
+		t.Fatalf("expected rendered proposed plan, got %q", rendered)
 	}
 	if m.lastProposedPlan != "complete final plan" {
 		t.Fatalf("expected last proposed plan to be captured, got %q", m.lastProposedPlan)
@@ -5960,6 +5968,10 @@ func TestPlanCompletedWithoutDeltasStillRendersPlan(t *testing.T) {
 	if len(m.transcript) != 1 || m.transcript[0].Kind != tuirender.KindPlan {
 		t.Fatalf("expected final plan in transcript, got %+v", m.transcript)
 	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(rendered, "Proposed Plan") || !strings.Contains(rendered, "final plan") {
+		t.Fatalf("expected rendered proposed plan, got %q", rendered)
+	}
 	next, _ = m.Update(svcMsg(service.Event{Kind: service.EventTurnDone, LastResponse: "done"}))
 	m = next.(model)
 	snap := m.assembler.Snapshot()
@@ -5968,6 +5980,27 @@ func TestPlanCompletedWithoutDeltasStillRendersPlan(t *testing.T) {
 	}
 	if m.mode != modePlanImplementation {
 		t.Fatalf("expected implementation picker, got mode %v", m.mode)
+	}
+}
+
+func TestHydrateSessionMessages_RestoresProposedPlanStyle(t *testing.T) {
+	m := &model{assembler: tuirender.NewAssembler()}
+	msgs := []core.Message{
+		{
+			Role: core.RoleAssistant,
+			Text: "drafting...\n<proposed_plan>\n# Plan\n- Patch renderer\n</proposed_plan>",
+		},
+	}
+	m.hydrateSessionMessages(msgs)
+	snap := m.assembler.Snapshot()
+	if len(snap) != 2 || snap[0].Kind != tuirender.KindText || snap[1].Kind != tuirender.KindPlan {
+		t.Fatalf("expected assistant text and proposed plan, got %+v", snap)
+	}
+	rendered := strings.Join(tuirender.ChatLines(snap, 80), "\n")
+	for _, want := range []string{"drafting", "Proposed Plan", "Patch renderer"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected %q in hydrated proposed plan:\n%s", want, rendered)
+		}
 	}
 }
 

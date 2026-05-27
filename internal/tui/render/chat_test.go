@@ -153,6 +153,31 @@ func TestChatLines_PlanUpdateHasDistinctLabel(t *testing.T) {
 	assertBlankLineBetween(t, lines, "Updated Plan", "Inspect")
 }
 
+func TestChatLines_ProposedPlanHasDistinctLabel(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	entries := []UIMessage{
+		{Role: "plan", Kind: KindPlan, Text: "# Plan\n\n- Inspect renderer\n- Add tests"},
+	}
+	lines := ChatLines(entries, 80)
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "Proposed Plan") {
+		t.Fatalf("expected proposed plan label, got: %q", joined)
+	}
+	if !strings.Contains(joined, "Plan") || !strings.Contains(joined, "Inspect renderer") || !strings.Contains(joined, "Add tests") {
+		t.Fatalf("expected markdown plan body, got: %q", joined)
+	}
+	if strings.Contains(joined, "Updated Plan") {
+		t.Fatalf("proposed plan should not use update-plan label, got: %q", joined)
+	}
+	if !strings.Contains(joined, "\x1b[48;5;236m") {
+		t.Fatalf("expected proposed plan body background styling, got: %q", joined)
+	}
+	assertBlankLineBetween(t, lines, "Proposed Plan", "Plan")
+}
+
 func TestChatLines_UserPromptGlyphAndContinuationIndent(t *testing.T) {
 	oldProfile := lipgloss.ColorProfile()
 	lipgloss.SetColorProfile(termenv.ANSI256)
