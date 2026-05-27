@@ -243,43 +243,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		}
 		pending := append([]preparedToolDispatch(nil), pendingParallelSubagents...)
 		pendingParallelSubagents = pendingParallelSubagents[:0]
-
-		ready := make([]readyParallelSubagentCall, 0, len(pending))
-		for _, prepared := range pending {
-			ready = append(ready, readyParallelSubagentCall{Index: prepared.Index, Call: prepared.Call})
-		}
-		groups := eligibleReadyParallelSubagentGroups(ready)
-
-		var outcomes []toolDispatchOutcome
-		if len(groups) != 1 || groups[0].Start != pending[0].Index || len(groups[0].Calls) != len(pending) {
-			for _, prepared := range pending {
-				finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistant.ID, lastModel, prepared.Call, events)
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-				outcomes = append(outcomes, toolDispatchOutcome{
-					Prepared:         prepared,
-					Result:           finalRes,
-					OK:               ok,
-					PrimarySucceeded: primarySucceeded,
-				})
-			}
-		} else {
-			var err error
-			outcomes, err = a.dispatchParallelSubagentsWithRecovery(ctx, sessionID, assistant.ID, lastModel, pending, events)
-			if err != nil {
-				return err
-			}
-		}
-		for _, outcome := range outcomes {
-			if !outcome.OK {
-				continue
-			}
-			if !a.appendDispatchedToolResult(ctx, sessionID, outcome.Prepared, outcome.Result, outcome.PrimarySucceeded, events, &results) {
-				return ctx.Err()
-			}
-		}
-		return nil
+		return a.flushPendingParallelSubagents(ctx, sessionID, assistant.ID, lastModel, pending, events, &results)
 	}
 	for i, call := range dispatchCalls {
 		if call.Name != parallelSubagentToolName {
@@ -634,20 +598,82 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 	return assistant, &toolMsg, lastUsage, lastModel, false, nil
 }
 
-func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent) ([]toolDispatchOutcome, error) {
-	outcomeCh := make(chan toolDispatchOutcome, len(pending))
+func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, results *[]core.ToolResult) error {
+	ready := make([]readyParallelSubagentCall, 0, len(pending))
 	for _, prepared := range pending {
-		prepared := prepared
-		go func() {
+		ready = append(ready, readyParallelSubagentCall{Index: prepared.Index, Call: prepared.Call})
+	}
+	groups := eligibleReadyParallelSubagentGroups(ready)
+
+	var outcomes []toolDispatchOutcome
+	if len(groups) != 1 || groups[0].Start != pending[0].Index || len(groups[0].Calls) != len(pending) {
+		for _, prepared := range pending {
 			finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events)
-			outcomeCh <- toolDispatchOutcome{
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			outcomes = append(outcomes, toolDispatchOutcome{
 				Prepared:         prepared,
 				Result:           finalRes,
 				OK:               ok,
 				PrimarySucceeded: primarySucceeded,
+			})
+		}
+	} else {
+		var err error
+		outcomes, err = a.dispatchParallelSubagentsWithRecovery(ctx, sessionID, assistantMessageID, model, pending, events)
+		if err != nil {
+			return err
+		}
+	}
+	for _, outcome := range outcomes {
+		if !outcome.OK {
+			continue
+		}
+		if !a.appendDispatchedToolResult(ctx, sessionID, outcome.Prepared, outcome.Result, outcome.PrimarySucceeded, events, results) {
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent) ([]toolDispatchOutcome, error) {
+	limit := a.maxParallelSubagents
+	if limit <= 0 {
+		limit = defaultMaxParallelSubagents()
+	}
+	if limit > len(pending) {
+		limit = len(pending)
+	}
+	outcomeCh := make(chan toolDispatchOutcome, len(pending))
+	workCh := make(chan preparedToolDispatch)
+	for i := 0; i < limit; i++ {
+		go func() {
+			for prepared := range workCh {
+				finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events)
+				// outcomeCh is buffered for every pending call so a worker that
+				// already started can report without blocking after parent
+				// cancellation. The actual stop still depends on
+				// dispatchWithRecovery and the tool honoring ctx.
+				outcomeCh <- toolDispatchOutcome{
+					Prepared:         prepared,
+					Result:           finalRes,
+					OK:               ok,
+					PrimarySucceeded: primarySucceeded,
+				}
 			}
 		}()
 	}
+	go func() {
+		defer close(workCh)
+		for _, prepared := range pending {
+			select {
+			case workCh <- prepared:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	outcomes := make([]toolDispatchOutcome, 0, len(pending))
 	for range pending {
@@ -677,6 +703,9 @@ func (a *Agent) appendDispatchedToolResult(ctx context.Context, sessionID string
 	if prepared.PreHookContext != "" {
 		finalRes.Content = addHookContextToToolContent(finalRes.Content, prepared.PreHookContext)
 	}
+	// Parallel spawn_subagent batches run post hooks only after the whole batch
+	// returns, in original tool-call order, so stored tool results and events
+	// stay deterministic even when the underlying subagents finish out of order.
 	if !a.hooks.Empty() {
 		var toolArgs any
 		_ = json.Unmarshal([]byte(call.Input), &toolArgs)

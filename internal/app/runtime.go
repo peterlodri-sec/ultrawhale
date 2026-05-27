@@ -63,6 +63,7 @@ func (a *App) ensureAgent() (*agent.Agent, error) {
 			agent.WithExtraSystemBlocks(pluginBlocks...),
 			agent.WithProjectMemory(a.cfg.MemoryEnabled, a.cfg.MemoryMaxChars, parseCSVList(a.cfg.MemoryFileOrder), a.workspaceRoot),
 			agent.WithWorktreeContext(a.worktree.Path, a.worktree.OriginalWorkspace),
+			agent.WithMaxParallelSubagents(a.cfg.MaxParallelSubagents),
 			agent.WithDisabledSkills(a.cfg.SkillsDisabled),
 			agent.WithExtraSkills(a.pluginManager.Skills()),
 			agent.WithApprovalFunc(func(req policy.ApprovalRequest) policy.ApprovalDecision {

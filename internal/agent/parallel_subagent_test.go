@@ -13,6 +13,14 @@ import (
 	"github.com/usewhale/whale/internal/session"
 )
 
+func eligibleParallelSubagentGroups(calls []core.ToolCall) []parallelSubagentGroup {
+	ready := make([]readyParallelSubagentCall, 0, len(calls))
+	for i, call := range calls {
+		ready = append(ready, readyParallelSubagentCall{Index: i, Call: call})
+	}
+	return eligibleReadyParallelSubagentGroups(ready)
+}
+
 func TestEligibleParallelSubagentGroupsConsecutiveSpawnSubagents(t *testing.T) {
 	calls := []core.ToolCall{
 		{ID: "1", Name: "spawn_subagent"},
@@ -115,6 +123,16 @@ func TestMaybeReadyParallelSubagentCallOnlyMarksSpawnSubagent(t *testing.T) {
 	}
 	if ready, ok := maybeReadyParallelSubagentCall(5, core.ToolCall{ID: "r", Name: "read_file"}); ok {
 		t.Fatalf("read_file should not be a parallel subagent candidate: %+v", ready)
+	}
+}
+
+func TestDefaultMaxParallelSubagentsCapsHighCPUCount(t *testing.T) {
+	orig := runtimeNumCPU
+	t.Cleanup(func() { runtimeNumCPU = orig })
+	runtimeNumCPU = func() int { return 128 }
+
+	if got := defaultMaxParallelSubagents(); got != defaultMaxParallelSubagentCap {
+		t.Fatalf("default max parallel subagents = %d, want cap %d", got, defaultMaxParallelSubagentCap)
 	}
 }
 
@@ -259,15 +277,43 @@ func (p *parallelSpawnProvider) StreamResponse(_ context.Context, _ []Message, _
 	))
 }
 
-type delayedSpawnSubagentTool struct {
-	delay   time.Duration
+type mockSpawnSubagentTool struct {
 	calls   atomic.Int32
 	running atomic.Int32
 	max     atomic.Int32
+
+	delay        time.Duration
+	delayByID    map[string]time.Duration
+	failByID     map[string]bool
+	progressByID map[string][]mockSpawnProgress
+	result       func(ToolCall) ToolResult
+	started      chan string
+	cancelSeen   chan string
+	waitCancel   bool
 }
 
-func (t *delayedSpawnSubagentTool) Name() string { return "spawn_subagent" }
-func (t *delayedSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+type mockSpawnProgress struct {
+	Delay   time.Duration
+	Status  string
+	Summary string
+	Role    string
+	Model   string
+	Count   int
+}
+
+func newCancelObservedSpawnSubagentTool(n int) *mockSpawnSubagentTool {
+	return &mockSpawnSubagentTool{
+		started:    make(chan string, n),
+		cancelSeen: make(chan string, n),
+		waitCancel: true,
+	}
+}
+
+func (t *mockSpawnSubagentTool) Name() string { return "spawn_subagent" }
+func (t *mockSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+	return t.RunWithProgress(ctx, call, nil)
+}
+func (t *mockSpawnSubagentTool) RunWithProgress(ctx context.Context, call ToolCall, progress func(core.ToolProgress)) (ToolResult, error) {
 	t.calls.Add(1)
 	running := t.running.Add(1)
 	for {
@@ -278,81 +324,43 @@ func (t *delayedSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (Tool
 	}
 	defer t.running.Add(-1)
 
-	timer := time.NewTimer(t.delay)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ToolResult{}, ctx.Err()
-	case <-timer.C:
+	if t.started != nil {
+		t.started <- call.ID
 	}
-	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok:" + call.ID}, nil
-}
+	if t.waitCancel {
+		<-ctx.Done()
+		if t.cancelSeen != nil {
+			t.cancelSeen <- call.ID
+		}
+		return ToolResult{}, ctx.Err()
+	}
 
-type reverseDelaySpawnSubagentTool struct {
-	calls   atomic.Int32
-	running atomic.Int32
-	max     atomic.Int32
-}
-
-func (t *reverseDelaySpawnSubagentTool) Name() string { return "spawn_subagent" }
-func (t *reverseDelaySpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
-	t.calls.Add(1)
-	running := t.running.Add(1)
-	for {
-		max := t.max.Load()
-		if running <= max || t.max.CompareAndSwap(max, running) {
-			break
+	steps := t.progressByID[call.ID]
+	for _, step := range steps {
+		if err := waitOrCancel(ctx, step.Delay); err != nil {
+			return ToolResult{}, err
+		}
+		if progress != nil {
+			progress(core.ToolProgress{
+				ToolCallID: call.ID,
+				ToolName:   call.Name,
+				Status:     step.Status,
+				Summary:    step.Summary,
+				Role:       step.Role,
+				Model:      step.Model,
+				Count:      step.Count,
+			})
 		}
 	}
-	defer t.running.Add(-1)
 
-	delay := 10 * time.Millisecond
-	switch call.ID {
-	case "tc-subagent-1":
-		delay = 120 * time.Millisecond
-	case "tc-subagent-2":
-		delay = 70 * time.Millisecond
+	delay := t.delay
+	if d, ok := t.delayByID[call.ID]; ok {
+		delay = d
 	}
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ToolResult{}, ctx.Err()
-	case <-timer.C:
+	if err := waitOrCancel(ctx, delay); err != nil {
+		return ToolResult{}, err
 	}
-	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok:" + call.ID}, nil
-}
-
-type partiallyFailingSpawnSubagentTool struct {
-	calls   atomic.Int32
-	running atomic.Int32
-	max     atomic.Int32
-}
-
-func (t *partiallyFailingSpawnSubagentTool) Name() string { return "spawn_subagent" }
-func (t *partiallyFailingSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
-	t.calls.Add(1)
-	running := t.running.Add(1)
-	for {
-		max := t.max.Load()
-		if running <= max || t.max.CompareAndSwap(max, running) {
-			break
-		}
-	}
-	defer t.running.Add(-1)
-
-	delay := 80 * time.Millisecond
-	if call.ID == "tc-subagent-2" {
-		delay = 20 * time.Millisecond
-	}
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ToolResult{}, ctx.Err()
-	case <-timer.C:
-	}
-	if call.ID == "tc-subagent-2" {
+	if t.failByID[call.ID] {
 		return ToolResult{
 			ToolCallID: call.ID,
 			Name:       call.Name,
@@ -360,122 +368,36 @@ func (t *partiallyFailingSpawnSubagentTool) Run(ctx context.Context, call ToolCa
 			IsError:    true,
 		}, nil
 	}
-	return ToolResult{
-		ToolCallID: call.ID,
-		Name:       call.Name,
-		Content:    `{"success":true,"data":{"summary":"ok:` + call.ID + `"}}`,
-	}, nil
-}
-
-type progressSpawnSubagentTool struct {
-	calls   atomic.Int32
-	running atomic.Int32
-	max     atomic.Int32
-}
-
-func (t *progressSpawnSubagentTool) Name() string { return "spawn_subagent" }
-func (t *progressSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
-	return t.RunWithProgress(ctx, call, nil)
-}
-func (t *progressSpawnSubagentTool) RunWithProgress(ctx context.Context, call ToolCall, progress func(core.ToolProgress)) (ToolResult, error) {
-	t.calls.Add(1)
-	running := t.running.Add(1)
-	for {
-		max := t.max.Load()
-		if running <= max || t.max.CompareAndSwap(max, running) {
-			break
-		}
+	if t.result != nil {
+		return t.result(call), nil
 	}
-	defer t.running.Add(-1)
-
-	firstDelay := 30 * time.Millisecond
-	secondDelay := 20 * time.Millisecond
-	switch call.ID {
-	case "tc-subagent-1":
-		firstDelay = 25 * time.Millisecond
-		secondDelay = 60 * time.Millisecond
-	case "tc-subagent-2":
-		firstDelay = 10 * time.Millisecond
-		secondDelay = 40 * time.Millisecond
+	if len(steps) > 0 {
+		return ToolResult{
+			ToolCallID: call.ID,
+			Name:       call.Name,
+			Content:    `{"success":true,"data":{"role":"review","summary":"subagent completed"}}`,
+		}, nil
 	}
+	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok:" + call.ID}, nil
+}
 
-	first := time.NewTimer(firstDelay)
-	defer first.Stop()
+func waitOrCancel(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return ctx.Err()
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
 	select {
 	case <-ctx.Done():
-		return ToolResult{}, ctx.Err()
-	case <-first.C:
+		return ctx.Err()
+	case <-timer.C:
+		return nil
 	}
-	progress(core.ToolProgress{
-		ToolCallID: call.ID,
-		ToolName:   call.Name,
-		Status:     "running",
-		Summary:    "first progress:" + call.ID,
-		Role:       "explore",
-		Model:      "mock-progress-model",
-		Count:      1,
-	})
-
-	second := time.NewTimer(secondDelay)
-	defer second.Stop()
-	select {
-	case <-ctx.Done():
-		return ToolResult{}, ctx.Err()
-	case <-second.C:
-	}
-	progress(core.ToolProgress{
-		ToolCallID: call.ID,
-		ToolName:   call.Name,
-		Status:     "done",
-		Summary:    "second progress:" + call.ID,
-		Role:       "review",
-		Model:      "mock-progress-model",
-		Count:      2,
-	})
-
-	return ToolResult{
-		ToolCallID: call.ID,
-		Name:       call.Name,
-		Content:    `{"success":true,"data":{"role":"review","summary":"subagent completed"}}`,
-	}, nil
-}
-
-type cancelObservedSpawnSubagentTool struct {
-	calls      atomic.Int32
-	running    atomic.Int32
-	max        atomic.Int32
-	started    chan string
-	cancelSeen chan string
-}
-
-func newCancelObservedSpawnSubagentTool(n int) *cancelObservedSpawnSubagentTool {
-	return &cancelObservedSpawnSubagentTool{
-		started:    make(chan string, n),
-		cancelSeen: make(chan string, n),
-	}
-}
-
-func (t *cancelObservedSpawnSubagentTool) Name() string { return "spawn_subagent" }
-func (t *cancelObservedSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
-	t.calls.Add(1)
-	running := t.running.Add(1)
-	for {
-		max := t.max.Load()
-		if running <= max || t.max.CompareAndSwap(max, running) {
-			break
-		}
-	}
-	defer t.running.Add(-1)
-
-	t.started <- call.ID
-	<-ctx.Done()
-	t.cancelSeen <- call.ID
-	return ToolResult{}, ctx.Err()
 }
 
 func TestReadySpawnSubagentGroupRunsConcurrently(t *testing.T) {
 	store := NewInMemoryStore()
-	spawn := &delayedSpawnSubagentTool{delay: 300 * time.Millisecond}
+	spawn := &mockSpawnSubagentTool{delay: 300 * time.Millisecond}
 	a := NewAgentWithRegistry(
 		&parallelSpawnProvider{},
 		store,
@@ -519,6 +441,74 @@ func TestReadySpawnSubagentGroupRunsConcurrently(t *testing.T) {
 		if toolMsg.ToolResults[i].ToolCallID != wantID {
 			t.Fatalf("tool result %d id = %q, want %q", i, toolMsg.ToolResults[i].ToolCallID, wantID)
 		}
+	}
+}
+
+func TestParallelSpawnSubagentsRespectsConfiguredConcurrencyLimit(t *testing.T) {
+	store := NewInMemoryStore()
+	spawn := &mockSpawnSubagentTool{delay: 80 * time.Millisecond}
+	a := NewAgentWithRegistry(
+		&parallelSpawnProvider{},
+		store,
+		NewToolRegistry([]Tool{spawn}),
+		WithMaxParallelSubagents(2),
+	)
+
+	events, err := a.RunStream(context.Background(), "s-parallel-subagents-limit", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+	}
+
+	if got := spawn.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 spawn_subagent calls, got %d", got)
+	}
+	if got := spawn.max.Load(); got != 2 {
+		t.Fatalf("max concurrency = %d, want 2", got)
+	}
+}
+
+func TestParallelSpawnSubagentsLimitOneRunsSeriallyInOriginalOrder(t *testing.T) {
+	store := NewInMemoryStore()
+	spawn := &mockSpawnSubagentTool{delayByID: map[string]time.Duration{
+		"tc-subagent-1": 120 * time.Millisecond,
+		"tc-subagent-2": 70 * time.Millisecond,
+		"tc-subagent-3": 10 * time.Millisecond,
+	}}
+	a := NewAgentWithRegistry(
+		&parallelSpawnProvider{},
+		store,
+		NewToolRegistry([]Tool{spawn}),
+		WithMaxParallelSubagents(1),
+	)
+
+	events, err := a.RunStream(context.Background(), "s-parallel-subagents-limit-one", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	var resultEventOrder []string
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil && ev.Result.Name == "spawn_subagent" {
+			resultEventOrder = append(resultEventOrder, ev.Result.ToolCallID)
+		}
+	}
+
+	if got := spawn.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 spawn_subagent calls, got %d", got)
+	}
+	if got := spawn.max.Load(); got != 1 {
+		t.Fatalf("max concurrency = %d, want 1", got)
+	}
+	wantOrder := []string{"tc-subagent-1", "tc-subagent-2", "tc-subagent-3"}
+	if !sameStringSlice(resultEventOrder, wantOrder) {
+		t.Fatalf("tool result event order = %v, want %v", resultEventOrder, wantOrder)
 	}
 }
 
@@ -625,7 +615,11 @@ func TestParallelSpawnSubagentsShareParentContextCancellation(t *testing.T) {
 
 func TestParallelSpawnSubagentResultsUseOriginalOrderAfterOutOfOrderCompletion(t *testing.T) {
 	store := NewInMemoryStore()
-	spawn := &reverseDelaySpawnSubagentTool{}
+	spawn := &mockSpawnSubagentTool{delayByID: map[string]time.Duration{
+		"tc-subagent-1": 120 * time.Millisecond,
+		"tc-subagent-2": 70 * time.Millisecond,
+		"tc-subagent-3": 10 * time.Millisecond,
+	}}
 	postHookOrder := []string{}
 	a := NewAgentWithRegistry(
 		&parallelSpawnProvider{},
@@ -705,7 +699,21 @@ func TestParallelSpawnSubagentResultsUseOriginalOrderAfterOutOfOrderCompletion(t
 
 func TestParallelSpawnSubagentFailureIsIsolatedToOriginalResultSlot(t *testing.T) {
 	store := NewInMemoryStore()
-	spawn := &partiallyFailingSpawnSubagentTool{}
+	spawn := &mockSpawnSubagentTool{
+		delayByID: map[string]time.Duration{
+			"tc-subagent-1": 80 * time.Millisecond,
+			"tc-subagent-2": 20 * time.Millisecond,
+			"tc-subagent-3": 80 * time.Millisecond,
+		},
+		failByID: map[string]bool{"tc-subagent-2": true},
+		result: func(call ToolCall) ToolResult {
+			return ToolResult{
+				ToolCallID: call.ID,
+				Name:       call.Name,
+				Content:    `{"success":true,"data":{"summary":"ok:` + call.ID + `"}}`,
+			}
+		},
+	}
 	a := NewAgentWithRegistry(
 		&parallelSpawnProvider{},
 		store,
@@ -787,7 +795,20 @@ func TestParallelSpawnSubagentFailureIsIsolatedToOriginalResultSlot(t *testing.T
 
 func TestParallelSpawnSubagentProgressKeepsToolCallIDsAndCompletionCounts(t *testing.T) {
 	store := NewInMemoryStore()
-	spawn := &progressSpawnSubagentTool{}
+	spawn := &mockSpawnSubagentTool{progressByID: map[string][]mockSpawnProgress{
+		"tc-subagent-1": {
+			{Delay: 25 * time.Millisecond, Status: "running", Summary: "first progress:tc-subagent-1", Role: "explore", Model: "mock-progress-model", Count: 1},
+			{Delay: 60 * time.Millisecond, Status: "done", Summary: "second progress:tc-subagent-1", Role: "review", Model: "mock-progress-model", Count: 2},
+		},
+		"tc-subagent-2": {
+			{Delay: 10 * time.Millisecond, Status: "running", Summary: "first progress:tc-subagent-2", Role: "explore", Model: "mock-progress-model", Count: 1},
+			{Delay: 40 * time.Millisecond, Status: "done", Summary: "second progress:tc-subagent-2", Role: "review", Model: "mock-progress-model", Count: 2},
+		},
+		"tc-subagent-3": {
+			{Delay: 30 * time.Millisecond, Status: "running", Summary: "first progress:tc-subagent-3", Role: "explore", Model: "mock-progress-model", Count: 1},
+			{Delay: 20 * time.Millisecond, Status: "done", Summary: "second progress:tc-subagent-3", Role: "review", Model: "mock-progress-model", Count: 2},
+		},
+	}}
 	a := NewAgentWithRegistry(
 		&parallelSpawnProvider{},
 		store,

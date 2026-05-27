@@ -17,6 +17,10 @@ func (a *Agent) dispatchWithRecovery(ctx context.Context, sessionID, assistantMe
 	for {
 		attempt++
 		res, err := a.tools.DispatchWithProgress(dispatchCtx, call, func(progress core.ToolProgress) {
+			// Progress events are emitted directly from tool goroutines, so
+			// different ToolCallIDs may interleave in parallel subagent batches.
+			// The stable contract is attribution plus each call's own
+			// progress-before-completion/result ordering.
 			info := TaskActivityInfo{
 				ToolCallID: firstNonEmptyString(progress.ToolCallID, call.ID),
 				ToolName:   firstNonEmptyString(progress.ToolName, call.Name),

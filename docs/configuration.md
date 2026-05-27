@@ -136,6 +136,9 @@ max_attempts = 4
 stream_max_attempts = 6
 max_delay = "60s"
 
+[tasks]
+max_parallel_subagents = 4
+
 [budget]
 session_limit_usd = 1.0
 
@@ -195,6 +198,12 @@ If you started with Whale v0.1.9 or newer, you do not need this command.
   streaming starts; set it to `0` to send one request and disable request
   retries. `stream_max_attempts` counts full stream attempts when the provider
   disconnects after streaming has started.
+- `[tasks].max_parallel_subagents` limits how many eligible `spawn_subagent`
+  calls can run at once in a parallel batch. If unset, Whale uses an internal
+  CPU-based default, and each batch is still capped by the number of calls in
+  that batch. Progress events from different tool call IDs may interleave;
+  final tool results and post-tool hooks are processed in original tool-call
+  order.
 - `[ui].view_mode = "focus"` starts the TUI in focus view. `/focus` toggles this
   global preference and hides thinking/tool detail while keeping prompts, tool
   summaries, and final responses visible.

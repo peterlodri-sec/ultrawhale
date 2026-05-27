@@ -14,14 +14,6 @@ type readyParallelSubagentCall struct {
 	Call  core.ToolCall
 }
 
-func eligibleParallelSubagentGroups(calls []core.ToolCall) []parallelSubagentGroup {
-	ready := make([]readyParallelSubagentCall, 0, len(calls))
-	for i, call := range calls {
-		ready = append(ready, readyParallelSubagentCall{Index: i, Call: call})
-	}
-	return eligibleReadyParallelSubagentGroups(ready)
-}
-
 func maybeReadyParallelSubagentCall(index int, call core.ToolCall) (readyParallelSubagentCall, bool) {
 	if call.Name != parallelSubagentToolName {
 		return readyParallelSubagentCall{}, false
@@ -39,6 +31,9 @@ func eligibleReadyParallelSubagentGroups(ready []readyParallelSubagentCall) []pa
 
 		start := i
 		for i < len(ready) && ready[i].Call.Name == parallelSubagentToolName {
+			// The production stream normally flushes on non-subagent calls, but
+			// keep this guard so future callers cannot merge ready calls that
+			// came from non-contiguous original tool-call slots.
 			if i > start && ready[i].Index != ready[i-1].Index+1 {
 				break
 			}
