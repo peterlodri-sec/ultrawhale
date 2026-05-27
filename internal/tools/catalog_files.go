@@ -70,7 +70,7 @@ func (b *Toolset) fileDiscoveryTools() []core.Tool {
 				"additionalProperties": false,
 				"properties": map[string]any{
 					"path":   map[string]any{"type": "string", "description": "Directory path relative to workspace root, an absolute path inside workspace root, or an absolute path inside a discovered local skill directory. A sibling repo name alone is treated as a workspace child, not a parent-directory repo."},
-					"ignore": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+					"ignore": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Deprecated compatibility field. Accepted but ignored; list_dir always returns the full directory listing."},
 				},
 			},
 			readOnly: true,

@@ -1846,6 +1846,64 @@ func TestListDirAndShellRun(t *testing.T) {
 	}
 }
 
+func TestListDirIgnoresLegacyIgnoreInput(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{".gitignore", "node_modules", "x.txt"} {
+		path := filepath.Join(dir, name)
+		if name == "node_modules" {
+			if err := os.Mkdir(path, 0o755); err != nil {
+				t.Fatalf("mkdir fixture: %v", err)
+			}
+			continue
+		}
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatalf("write fixture: %v", err)
+		}
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	registry := core.NewToolRegistry(ts.Tools())
+	lsRes, err := registry.Dispatch(context.Background(), tc("list_dir", map[string]any{
+		"ignore": []string{".git", "node"},
+	}))
+	if err != nil || lsRes.IsError {
+		t.Fatalf("list_dir failed: err=%v res=%+v", err, lsRes)
+	}
+	for _, want := range []string{".gitignore", "node_modules/", "x.txt"} {
+		if !strings.Contains(lsRes.Content, want) {
+			t.Fatalf("list_dir should not filter %q with legacy ignore input: %s", want, lsRes.Content)
+		}
+	}
+}
+
+func TestListDirSchemaToleratesDeprecatedIgnore(t *testing.T) {
+	ts, err := NewToolset(t.TempDir())
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	for _, tool := range ts.Tools() {
+		if tool.Name() != "list_dir" {
+			continue
+		}
+		spec := core.DescribeTool(tool)
+		props, ok := spec.Parameters["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("list_dir properties have unexpected shape: %#v", spec.Parameters["properties"])
+		}
+		ignore, ok := props["ignore"].(map[string]any)
+		if !ok {
+			t.Fatalf("list_dir schema should tolerate deprecated ignore: %#v", props)
+		}
+		if desc, _ := ignore["description"].(string); !strings.Contains(desc, "Deprecated") || !strings.Contains(desc, "ignored") {
+			t.Fatalf("list_dir deprecated ignore should be documented as ignored: %#v", ignore)
+		}
+		return
+	}
+	t.Fatal("list_dir not registered")
+}
+
 func TestApplyPatchUpdateAddDelete(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello\nworld\n"), 0o644); err != nil {
