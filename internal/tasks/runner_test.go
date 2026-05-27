@@ -98,6 +98,36 @@ func TestReadOnlyRegistryFiltersMutatingAndTaskTools(t *testing.T) {
 	}
 }
 
+func TestReadOnlyRegistryPreservesProgressRunner(t *testing.T) {
+	parent := core.NewToolRegistry([]core.Tool{
+		progressTool{testTool: testTool{name: "read_file", readOnly: true}},
+	})
+	child, err := BuildReadOnlyRegistry(parent)
+	if err != nil {
+		t.Fatalf("BuildReadOnlyRegistry: %v", err)
+	}
+	var progress []core.ToolProgress
+	res, err := child.DispatchWithProgress(context.Background(), core.ToolCall{
+		ID:    "read-1",
+		Name:  "read_file",
+		Input: `{}`,
+	}, func(p core.ToolProgress) {
+		progress = append(progress, p)
+	})
+	if err != nil {
+		t.Fatalf("DispatchWithProgress: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected result error: %+v", res)
+	}
+	if len(progress) != 1 {
+		t.Fatalf("expected wrapped read-only tool progress, got %+v", progress)
+	}
+	if progress[0].ToolCallID != "read-1" || progress[0].ToolName != "read_file" || progress[0].Summary != "progress from child read" {
+		t.Fatalf("unexpected progress: %+v", progress[0])
+	}
+}
+
 func TestSpawnSubagentSummaryTruncation(t *testing.T) {
 	factory := func(_ string, _ int) (llm.Provider, error) {
 		return providerFunc(func(_ context.Context, _ []core.Message, _ []core.Tool) <-chan llm.ProviderEvent {
@@ -555,6 +585,22 @@ type recordingTool struct {
 
 func (t recordingTool) Run(ctx context.Context, call core.ToolCall) (core.ToolResult, error) {
 	*t.ran++
+	return t.testTool.Run(ctx, call)
+}
+
+type progressTool struct {
+	testTool
+}
+
+func (t progressTool) RunWithProgress(ctx context.Context, call core.ToolCall, progress func(core.ToolProgress)) (core.ToolResult, error) {
+	if progress != nil {
+		progress(core.ToolProgress{
+			ToolCallID: call.ID,
+			ToolName:   call.Name,
+			Status:     "running",
+			Summary:    "progress from child read",
+		})
+	}
 	return t.testTool.Run(ctx, call)
 }
 
