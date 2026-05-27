@@ -8269,11 +8269,13 @@ func TestChatBusyViewTreatsWhitespaceDraftAsEmpty(t *testing.T) {
 	m.input.SetValue("  \n\t  ")
 
 	view := m.View()
-	if !strings.Contains(view, "Working (12s) · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt") {
-		t.Fatalf("expected whitespace draft to use empty-draft busy guidance:\n%s", view)
+	if !strings.Contains(view, "Working (12s) · Type follow-up · Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected whitespace draft to use draft-clearing busy guidance:\n%s", view)
 	}
-	if strings.Contains(view, "Working (12s) · Enter to queue · Esc to interrupt · Ctrl+C clears draft") {
-		t.Fatalf("whitespace-only draft should not show queueable draft guidance:\n%s", view)
+	for _, unexpected := range []string{"Enter to queue", "Esc/Ctrl+C to interrupt"} {
+		if strings.Contains(view, unexpected) {
+			t.Fatalf("whitespace-only draft should not show %q:\n%s", unexpected, view)
+		}
 	}
 }
 
