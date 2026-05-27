@@ -7,6 +7,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/usewhale/whale/internal/app"
+	appcommands "github.com/usewhale/whale/internal/app/commands"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
@@ -714,14 +716,31 @@ func (m model) renderBusyStatusLine(width int) string {
 	}
 	label := "Working"
 	if m.stopping {
-		label = "Stopping"
+		if status := busySlashDraftStatus(m.input.Value(), m.status); status != "" {
+			label = status
+		} else {
+			label = "Stopping"
+		}
 	} else if status := strings.TrimSpace(m.providerRetryStatus); status != "" && time.Now().Before(m.providerRetryUntil) {
+		label = status
+	} else if status := busySlashDraftStatus(m.input.Value(), m.status); status != "" {
 		label = status
 	}
 	line := fmt.Sprintf("%s (%s)", label, formatElapsedCompact(m.busyElapsed()))
 	if !m.stopping {
 		if m.mode == modeChat {
-			line += " · Esc/Ctrl+C to interrupt"
+			input := m.input.Value()
+			if busySlashDraftStatus(input, m.status) != "" {
+				line += " · Edit command or press Esc to interrupt · Ctrl+C clears draft"
+			} else if busySlashDraftImmediate(input) {
+				line += " · Enter to run · Esc to interrupt · Ctrl+C clears draft"
+			} else if appcommands.LooksLikeSlashCommand(input) {
+				line += " · Slash commands are disabled while working · Esc to interrupt · Ctrl+C clears draft"
+			} else if strings.TrimSpace(input) == "" {
+				line += " · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt"
+			} else {
+				line += " · Enter to queue · Esc to interrupt · Ctrl+C clears draft"
+			}
 		} else {
 			line += " · Ctrl+C to interrupt"
 		}
@@ -730,6 +749,49 @@ func (m model) renderBusyStatusLine(width int) string {
 		Width(width).
 		Foreground(tuitheme.Default.Warn).
 		Render(line)
+}
+
+func busyStatusLabel(status string) string {
+	status = strings.TrimSpace(status)
+	if strings.Contains(status, " disabled while ") {
+		return status
+	}
+	return ""
+}
+
+func busySlashDraftStatus(input, status string) string {
+	status = busyStatusLabel(status)
+	if status == "" {
+		return ""
+	}
+	fields := strings.Fields(status)
+	if len(fields) == 0 {
+		return ""
+	}
+	input = strings.TrimSpace(input)
+	if busySlashDraftMatchesCommand(input, fields[0]) {
+		return status
+	}
+	return ""
+}
+
+func busySlashDraftMatchesCommand(input, command string) bool {
+	if input == command || strings.HasPrefix(input, command+" ") {
+		return true
+	}
+	fields := strings.Fields(input)
+	if len(fields) != 1 {
+		return false
+	}
+	return appcommands.ExpandUniqueSlashPrefix(fields[0], app.CommandsHelp, "/mcp") == command
+}
+
+func busySlashDraftImmediate(input string) bool {
+	input = strings.TrimSpace(input)
+	if !appcommands.LooksLikeSlashCommand(input) {
+		return false
+	}
+	return appcommands.ClassifySubmit(input, app.CommandsHelp, "/mcp").BusyImmediate()
 }
 
 func (m model) renderQueuedPrompts(width int) string {

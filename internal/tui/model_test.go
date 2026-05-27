@@ -1250,7 +1250,7 @@ func TestWindowsDeferredBusyEnterPreservesBusySlashClassification(t *testing.T) 
 		if got := m.input.Value(); got != "/ask inspect this" {
 			t.Fatalf("expected blocked slash command to remain editable, got %q", got)
 		}
-		if m.status != "command disabled while working" {
+		if m.status != "/ask disabled while working" {
 			t.Fatalf("expected disabled status, got %q", m.status)
 		}
 	})
@@ -4738,12 +4738,17 @@ func TestEnterWhileBusyBlocksSlashCommandsWithoutQueueing(t *testing.T) {
 			if !m.busy {
 				t.Fatal("expected active turn to remain busy")
 			}
-			if !strings.Contains(m.status, "disabled") {
-				t.Fatalf("expected disabled guidance, got %q", m.status)
+			if !strings.Contains(m.status, "disabled while working") {
+				t.Fatalf("expected disabled status, got %q", m.status)
 			}
 			gotTranscript := strings.Join(tuirender.ChatLines(m.chatMessages(), 80), "\n")
-			if !strings.Contains(gotTranscript, "disabled while a turn is in progress") {
-				t.Fatalf("expected visible blocked-command message, got:\n%s", gotTranscript)
+			if strings.Contains(gotTranscript, "disabled while") {
+				t.Fatalf("blocked-command guidance should not be inserted into chat messages:\n%s", gotTranscript)
+			}
+			m.width = 100
+			m.height = 24
+			if view := m.View(); !strings.Contains(view, "disabled while working") {
+				t.Fatalf("expected blocked-command guidance in busy status line:\n%s", view)
 			}
 		})
 	}
@@ -6427,7 +6432,7 @@ func TestFinalAssistantFailedCommittedReplacementDoesNotMutateTranscript(t *test
 	}
 }
 
-func TestBusySlashWarningPreservesLiveTurnOrder(t *testing.T) {
+func TestBusySlashWarningStaysOutOfLiveTurn(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.width = 100
 	m.height = 30
@@ -6444,10 +6449,20 @@ func TestBusySlashWarningPreservesLiveTurnOrder(t *testing.T) {
 	}
 
 	rendered := strings.Join(tuirender.ChatLines(m.chatMessages(), 100), "\n")
-	assistantIx := strings.Index(rendered, "already visible")
-	warningIx := strings.Index(rendered, "disabled while a turn is in progress")
-	if assistantIx < 0 || warningIx < 0 || assistantIx > warningIx {
-		t.Fatalf("expected busy slash warning after existing live assistant output:\n%s", rendered)
+	if !strings.Contains(rendered, "already visible") {
+		t.Fatalf("expected existing live assistant output:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "disabled while") {
+		t.Fatalf("busy slash warning should not be inserted into live chat output:\n%s", rendered)
+	}
+	if view := m.View(); !strings.Contains(view, "/model disabled while working") {
+		t.Fatalf("expected busy slash warning in status line:\n%s", view)
+	}
+	if view := m.View(); strings.Contains(view, "Enter to queue") {
+		t.Fatalf("blocked slash draft should not show queue guidance:\n%s", view)
+	}
+	if view := m.View(); strings.Contains(view, "Esc/Ctrl+C to interrupt") {
+		t.Fatalf("blocked slash draft should not claim Ctrl+C interrupts:\n%s", view)
 	}
 
 	next, _ = m.Update(svcMsg(service.Event{
@@ -6457,11 +6472,36 @@ func TestBusySlashWarningPreservesLiveTurnOrder(t *testing.T) {
 	}))
 	m = next.(model)
 	rendered = strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
-	assistantIx = strings.Index(rendered, "already visible")
-	warningIx = strings.Index(rendered, "disabled while a turn is in progress")
+	assistantIx := strings.Index(rendered, "already visible")
 	tailIx := strings.Index(rendered, "recovered tail")
-	if assistantIx < 0 || warningIx < 0 || tailIx < 0 || !(assistantIx < warningIx && warningIx < tailIx) {
-		t.Fatalf("expected committed order assistant, warning, recovered tail:\n%s", rendered)
+	if assistantIx < 0 || tailIx < 0 || !(assistantIx < tailIx) {
+		t.Fatalf("expected committed order assistant then recovered tail:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "disabled while") {
+		t.Fatalf("busy slash warning should not be committed to transcript:\n%s", rendered)
+	}
+}
+
+func TestBusySlashWarningDoesNotHideProviderRetryStatus(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 140
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("/model")
+	m.status = "/model disabled while working"
+	m.providerRetryStatus = "API rate limited, retrying in 1s (1/3)"
+	m.providerRetryUntil = time.Now().Add(time.Second)
+
+	view := m.View()
+	if !strings.Contains(view, "API rate limited, retrying in 1s (1/3) (12s)") {
+		t.Fatalf("expected retry status to take priority over blocked slash status:\n%s", view)
+	}
+	if strings.Contains(view, "/model disabled while working") {
+		t.Fatalf("blocked slash status should not hide retry status:\n%s", view)
+	}
+	if strings.Contains(view, "Enter to queue") {
+		t.Fatalf("blocked slash draft should not show queue guidance during retry:\n%s", view)
 	}
 }
 
@@ -8192,7 +8232,7 @@ func TestChatBusyViewShowsWorkingAboveComposer(t *testing.T) {
 	m.startBusy()
 	m.busySince = time.Now().Add(-12 * time.Second)
 	view := m.View()
-	if !strings.Contains(view, "Working (12s) · Esc/Ctrl+C to interrupt") {
+	if !strings.Contains(view, "Working (12s) · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt") {
 		t.Fatalf("expected working status line with elapsed time:\n%s", view)
 	}
 	if strings.Contains(view, "status: working") {
@@ -8203,9 +8243,162 @@ func TestChatBusyViewShowsWorkingAboveComposer(t *testing.T) {
 	}
 }
 
-func TestChatBusyViewShowsProviderRetryStatus(t *testing.T) {
+func TestChatBusyViewShowsDraftSpecificBusyHint(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("follow up")
+
+	view := m.View()
+	if !strings.Contains(view, "Working (12s) · Enter to queue · Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected draft-specific busy status line:\n%s", view)
+	}
+	if strings.Contains(view, "Esc/Ctrl+C to interrupt") {
+		t.Fatalf("draft busy status should not claim Ctrl+C interrupts:\n%s", view)
+	}
+}
+
+func TestChatBusyViewTreatsWhitespaceDraftAsEmpty(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("  \n\t  ")
+
+	view := m.View()
+	if !strings.Contains(view, "Working (12s) · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt") {
+		t.Fatalf("expected whitespace draft to use empty-draft busy guidance:\n%s", view)
+	}
+	if strings.Contains(view, "Working (12s) · Enter to queue · Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("whitespace-only draft should not show queueable draft guidance:\n%s", view)
+	}
+}
+
+func TestChatBusyViewShowsBlockedSlashDraftHint(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("/model")
+	m.status = "/model disabled while working"
+
+	view := m.View()
+	if !strings.Contains(view, "/model disabled while working (12s) · Edit command or press Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected blocked slash busy status line:\n%s", view)
+	}
+	if strings.Contains(view, "Enter to queue") {
+		t.Fatalf("blocked slash draft should not show queue guidance:\n%s", view)
+	}
+	if strings.Contains(view, "Esc/Ctrl+C to interrupt") {
+		t.Fatalf("blocked slash draft should not claim Ctrl+C interrupts:\n%s", view)
+	}
+}
+
+func TestChatBusyViewShowsBlockedSlashPrefixDraftHint(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("/mo")
+	m.status = "/model disabled while working"
+
+	view := m.View()
+	if !strings.Contains(view, "/model disabled while working (12s) · Edit command or press Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected expanded blocked slash prefix status line:\n%s", view)
+	}
+	if strings.Contains(view, "Enter to queue") {
+		t.Fatalf("blocked slash prefix draft should not show queue guidance:\n%s", view)
+	}
+}
+
+func TestChatBusyViewDoesNotQueueUnsentSlashDraft(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 120
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("/model")
+
+	view := m.View()
+	if !strings.Contains(view, "Working (12s) · Slash commands are disabled while working · Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected unsent slash draft busy guidance:\n%s", view)
+	}
+	if strings.Contains(view, "Enter to queue") {
+		t.Fatalf("unsent slash draft should not show queue guidance:\n%s", view)
+	}
+}
+
+func TestChatBusyViewShowsRunHintForBusyImmediateSlashDraft(t *testing.T) {
+	for _, draft := range []string{"/status", "/btw remember this"} {
+		t.Run(draft, func(t *testing.T) {
+			m := newModel(nil, "", "", "")
+			m.width = 120
+			m.height = 24
+			m.startBusy()
+			m.busySince = time.Now().Add(-12 * time.Second)
+			m.input.SetValue(draft)
+
+			view := m.View()
+			if !strings.Contains(view, "Working (12s) · Enter to run · Esc to interrupt · Ctrl+C clears draft") {
+				t.Fatalf("expected busy-immediate slash draft run guidance:\n%s", view)
+			}
+			if strings.Contains(view, "Slash commands are disabled while working") {
+				t.Fatalf("busy-immediate slash draft should not show disabled guidance:\n%s", view)
+			}
+			if strings.Contains(view, "Enter to queue") {
+				t.Fatalf("busy-immediate slash draft should not show queue guidance:\n%s", view)
+			}
+		})
+	}
+}
+
+func TestChatBusyViewDoesNotQueueEditedSlashDraft(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 120
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("/permissions")
+	m.status = "/model disabled while working"
+
+	view := m.View()
+	if !strings.Contains(view, "Working (12s) · Slash commands are disabled while working · Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected edited slash draft busy guidance:\n%s", view)
+	}
+	if strings.Contains(view, "/model disabled while working") {
+		t.Fatalf("edited slash draft should not show stale blocked status:\n%s", view)
+	}
+	if strings.Contains(view, "Enter to queue") {
+		t.Fatalf("edited slash draft should not show queue guidance:\n%s", view)
+	}
+}
+
+func TestChatBusyViewIgnoresStaleBlockedSlashStatusForNormalDraft(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.busySince = time.Now().Add(-12 * time.Second)
+	m.input.SetValue("normal follow up")
+	m.status = "/model disabled while working"
+
+	view := m.View()
+	if strings.Contains(view, "/model disabled while working") {
+		t.Fatalf("stale blocked slash status should not label normal drafts:\n%s", view)
+	}
+	if !strings.Contains(view, "Working (12s) · Enter to queue · Esc to interrupt · Ctrl+C clears draft") {
+		t.Fatalf("expected normal draft queue guidance after slash edit:\n%s", view)
+	}
+}
+
+func TestChatBusyViewShowsProviderRetryStatus(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 140
 	m.height = 24
 	m.startBusy()
 	m.busySince = time.Now().Add(-12 * time.Second)
@@ -8213,7 +8406,7 @@ func TestChatBusyViewShowsProviderRetryStatus(t *testing.T) {
 	m.providerRetryUntil = time.Now().Add(time.Second)
 
 	view := m.View()
-	if !strings.Contains(view, "API rate limited, retrying in 1s (1/3) (12s) · Esc/Ctrl+C to interrupt") {
+	if !strings.Contains(view, "API rate limited, retrying in 1s (1/3) (12s) · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt") {
 		t.Fatalf("expected retry status in busy line:\n%s", view)
 	}
 }
@@ -8231,7 +8424,7 @@ func TestChatBusyViewIgnoresExpiredProviderRetryStatus(t *testing.T) {
 	if strings.Contains(view, "API rate limited") {
 		t.Fatalf("expired retry status should not render:\n%s", view)
 	}
-	if !strings.Contains(view, "Working (12s) · Esc/Ctrl+C to interrupt") {
+	if !strings.Contains(view, "Working (12s) · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt") {
 		t.Fatalf("expected working status after retry expiry:\n%s", view)
 	}
 }
@@ -8341,6 +8534,28 @@ func TestChatStoppingViewShowsStoppingAboveComposer(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "Stopping (1m 05s)") {
 		t.Fatalf("expected stopping status line with continued elapsed time:\n%s", view)
+	}
+	if strings.Contains(view, "to interrupt") {
+		t.Fatalf("stopping view should not show interrupt hint:\n%s", view)
+	}
+}
+
+func TestChatStoppingViewShowsBlockedSlashStatus(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.width = 100
+	m.height = 24
+	m.startBusy()
+	m.stopping = true
+	m.busySince = time.Now().Add(-(time.Minute + 5*time.Second))
+	m.input.SetValue("/model")
+	m.status = "/model disabled while stopping"
+
+	view := m.View()
+	if !strings.Contains(view, "/model disabled while stopping (1m 05s)") {
+		t.Fatalf("expected blocked slash stopping status line:\n%s", view)
+	}
+	if strings.Contains(view, "Enter to queue") {
+		t.Fatalf("blocked slash while stopping should not show queue guidance:\n%s", view)
 	}
 	if strings.Contains(view, "to interrupt") {
 		t.Fatalf("stopping view should not show interrupt hint:\n%s", view)
