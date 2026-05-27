@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -265,7 +266,23 @@ type Agent struct {
 	toolResultArchiveDir   string
 	budgetWarned80         sync.Map
 	maxToolIters           int
+	maxParallelSubagents   int
 	active                 sync.Map
+}
+
+const defaultMaxParallelSubagentCap = 128
+
+var runtimeNumCPU = runtime.NumCPU
+
+func defaultMaxParallelSubagents() int {
+	n := runtimeNumCPU() * 2
+	if n < 2 {
+		return 2
+	}
+	if n > defaultMaxParallelSubagentCap {
+		return defaultMaxParallelSubagentCap
+	}
+	return n
 }
 
 func NewAgent(provider llm.Provider, store store.MessageStore, tools []core.Tool) *Agent {
@@ -289,6 +306,7 @@ func NewAgent(provider llm.Provider, store store.MessageStore, tools []core.Tool
 		usageLogPath:           telemetry.DefaultUsageLogPath(),
 		toolResultArchiveDir:   defaultToolResultArchiveDir(telemetry.DefaultUsageLogPath()),
 		maxToolIters:           64,
+		maxParallelSubagents:   defaultMaxParallelSubagents(),
 	}
 }
 
@@ -316,6 +334,7 @@ func NewAgentWithRegistry(provider llm.Provider, store store.MessageStore, tools
 		usageLogPath:           telemetry.DefaultUsageLogPath(),
 		toolResultArchiveDir:   defaultToolResultArchiveDir(telemetry.DefaultUsageLogPath()),
 		maxToolIters:           64,
+		maxParallelSubagents:   defaultMaxParallelSubagents(),
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -468,6 +487,14 @@ func WithMaxToolIters(maxIters int) AgentOption {
 	return func(a *Agent) {
 		if maxIters > 0 {
 			a.maxToolIters = maxIters
+		}
+	}
+}
+
+func WithMaxParallelSubagents(maxParallel int) AgentOption {
+	return func(a *Agent) {
+		if maxParallel > 0 {
+			a.maxParallelSubagents = maxParallel
 		}
 	}
 }
