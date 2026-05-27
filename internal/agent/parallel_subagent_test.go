@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -322,6 +323,50 @@ func (t *reverseDelaySpawnSubagentTool) Run(ctx context.Context, call ToolCall) 
 	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok:" + call.ID}, nil
 }
 
+type partiallyFailingSpawnSubagentTool struct {
+	calls   atomic.Int32
+	running atomic.Int32
+	max     atomic.Int32
+}
+
+func (t *partiallyFailingSpawnSubagentTool) Name() string { return "spawn_subagent" }
+func (t *partiallyFailingSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+	t.calls.Add(1)
+	running := t.running.Add(1)
+	for {
+		max := t.max.Load()
+		if running <= max || t.max.CompareAndSwap(max, running) {
+			break
+		}
+	}
+	defer t.running.Add(-1)
+
+	delay := 80 * time.Millisecond
+	if call.ID == "tc-subagent-2" {
+		delay = 20 * time.Millisecond
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ToolResult{}, ctx.Err()
+	case <-timer.C:
+	}
+	if call.ID == "tc-subagent-2" {
+		return ToolResult{
+			ToolCallID: call.ID,
+			Name:       call.Name,
+			Content:    `{"success":false,"error":"subagent failed","code":"spawn_subagent_failed"}`,
+			IsError:    true,
+		}, nil
+	}
+	return ToolResult{
+		ToolCallID: call.ID,
+		Name:       call.Name,
+		Content:    `{"success":true,"data":{"summary":"ok:` + call.ID + `"}}`,
+	}, nil
+}
+
 type progressSpawnSubagentTool struct {
 	calls   atomic.Int32
 	running atomic.Int32
@@ -521,6 +566,88 @@ func TestParallelSpawnSubagentResultsUseOriginalOrderAfterOutOfOrderCompletion(t
 	}
 	if !sameStringSlice(gotOrder, wantOrder) {
 		t.Fatalf("persisted tool result order = %v, want %v", gotOrder, wantOrder)
+	}
+}
+
+func TestParallelSpawnSubagentFailureIsIsolatedToOriginalResultSlot(t *testing.T) {
+	store := NewInMemoryStore()
+	spawn := &partiallyFailingSpawnSubagentTool{}
+	a := NewAgentWithRegistry(
+		&parallelSpawnProvider{},
+		store,
+		NewToolRegistry([]Tool{spawn}),
+	)
+
+	events, err := a.RunStream(context.Background(), "s-parallel-subagents-isolated-failure", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	var resultEvents []ToolResult
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil && ev.Result.Name == "spawn_subagent" {
+			resultEvents = append(resultEvents, *ev.Result)
+		}
+	}
+
+	if got := spawn.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 spawn_subagent calls, got %d", got)
+	}
+	if got := spawn.max.Load(); got < 2 {
+		t.Fatalf("expected overlapping spawn_subagent calls, max concurrency was %d", got)
+	}
+
+	msgs, err := store.List(context.Background(), "s-parallel-subagents-isolated-failure")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	var toolMsg Message
+	toolMessages := 0
+	for _, msg := range msgs {
+		if msg.Role == RoleTool {
+			toolMessages++
+			toolMsg = msg
+		}
+	}
+	if toolMessages != 1 {
+		t.Fatalf("expected one persisted tool message, got %d", toolMessages)
+	}
+
+	wantIDs := []string{"tc-subagent-1", "tc-subagent-2", "tc-subagent-3"}
+	if len(toolMsg.ToolResults) != len(wantIDs) {
+		t.Fatalf("expected %d persisted tool results, got %d", len(wantIDs), len(toolMsg.ToolResults))
+	}
+	if len(resultEvents) != len(wantIDs) {
+		t.Fatalf("expected %d tool result events, got %d: %+v", len(wantIDs), len(resultEvents), resultEvents)
+	}
+	for i, wantID := range wantIDs {
+		persisted := toolMsg.ToolResults[i]
+		event := resultEvents[i]
+		if persisted.ToolCallID != wantID {
+			t.Fatalf("persisted result %d id = %q, want %q", i, persisted.ToolCallID, wantID)
+		}
+		if event.ToolCallID != wantID {
+			t.Fatalf("tool result event %d id = %q, want %q", i, event.ToolCallID, wantID)
+		}
+		if persisted.IsError != event.IsError || persisted.Content != event.Content {
+			t.Fatalf("event result %d = %+v, want persisted %+v", i, event, persisted)
+		}
+	}
+	if !toolMsg.ToolResults[1].IsError {
+		t.Fatalf("expected middle subagent result to be marked error: %+v", toolMsg.ToolResults[1])
+	}
+	if !strings.Contains(toolMsg.ToolResults[1].Content, `"code":"spawn_subagent_failed"`) {
+		t.Fatalf("expected existing spawn_subagent_failed envelope, got %q", toolMsg.ToolResults[1].Content)
+	}
+	for _, idx := range []int{0, 2} {
+		if toolMsg.ToolResults[idx].IsError {
+			t.Fatalf("expected successful subagent result at index %d, got error %+v", idx, toolMsg.ToolResults[idx])
+		}
+		if !strings.Contains(toolMsg.ToolResults[idx].Content, `"success":true`) {
+			t.Fatalf("expected successful envelope at index %d, got %q", idx, toolMsg.ToolResults[idx].Content)
+		}
 	}
 }
 
