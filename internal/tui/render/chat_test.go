@@ -494,6 +494,29 @@ func TestChatLines_ShellResultPreservesOutputLines(t *testing.T) {
 	}
 }
 
+func TestChatLines_ShellResultPreservesANSIOutput(t *testing.T) {
+	entries := []UIMessage{
+		{
+			Role: "shell_result_ok",
+			Kind: KindToolCall,
+			Text: "Ran printf colors\n✓ · 23ms\n\x1b[31mRED\x1b[0m\n\x1b[34mBLUE\x1b[0m",
+		},
+	}
+	lines := ChatLines(entries, 100)
+	raw := strings.Join(lines, "\n")
+	plain := xansi.Strip(raw)
+	for _, want := range []string{"RED", "BLUE"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected visible output %q preserved, got: %q", want, plain)
+		}
+	}
+	for _, want := range []string{"\x1b[31mRED\x1b[0m", "\x1b[34mBLUE\x1b[0m"} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("expected ANSI output %q preserved, got: %q", want, raw)
+		}
+	}
+}
+
 func TestMarkdown_NarrowWidthFallback(t *testing.T) {
 	input := "a **b** c"
 	got := Markdown(input, 10, false)

@@ -379,7 +379,7 @@ func renderToolEventHeader(m UIMessage, header string, width int) []string {
 
 func renderToolEventChild(line string, width int) []string {
 	line = strings.TrimRight(line, "\r\n")
-	if strings.TrimSpace(line) == "" {
+	if strings.TrimSpace(xansi.Strip(line)) == "" {
 		return nil
 	}
 	if hasLeadingCommandSpace(line) {
