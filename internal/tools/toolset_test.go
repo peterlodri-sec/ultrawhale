@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -245,6 +246,36 @@ func TestWriteFileKeepsNewFileContentExact(t *testing.T) {
 	}
 	if string(got) != "alpha\r\nwhale\r\n" {
 		t.Fatalf("content = %q, want new file content unchanged", string(got))
+	}
+}
+
+func TestWriteFilePreservesExistingExecutableMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix execute bits are not portable to Windows")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "script.sh")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho before\n"), 0o755); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+
+	res, err := ts.writeFile(context.Background(), tc("write", map[string]any{
+		"file_path": "script.sh",
+		"content":   "#!/bin/sh\necho after\n",
+	}))
+	if err != nil || res.IsError {
+		t.Fatalf("write failed: err=%v res=%+v", err, res)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat script: %v", err)
+	}
+	if got := info.Mode().Perm() & 0o111; got == 0 {
+		t.Fatalf("existing executable bits were not preserved: mode=%#o", info.Mode().Perm())
 	}
 }
 
@@ -763,6 +794,78 @@ func TestApplyPatchPreservesMixedLineEndings(t *testing.T) {
 	}
 	if string(got) != "alpha\r\nwhale\ninserted\ngamma\r\ndelta\n" {
 		t.Fatalf("content = %q, want mixed line endings preserved", string(got))
+	}
+}
+
+func TestApplyPatchMultipleHunksUseOriginalForwardPositions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(path, []byte("A\nA\n"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	patch := strings.Join([]string{
+		"*** Begin Patch",
+		"*** Update File: a.txt",
+		"@@",
+		"-A",
+		"+X",
+		"+A",
+		"@@",
+		"-A",
+		"+Y",
+		"*** End Patch",
+	}, "\n")
+
+	res, err := ts.applyPatch(context.Background(), tc("apply_patch", map[string]any{"patch": patch}))
+	if err != nil || res.IsError {
+		t.Fatalf("apply patch failed: err=%v res=%+v", err, res)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read result: %v", err)
+	}
+	if string(got) != "X\nA\nY\n" {
+		t.Fatalf("content = %q, want later hunk to match the later original line", string(got))
+	}
+}
+
+func TestApplyPatchMultipleHunksUseOriginalForwardPositionsWithMixedLineEndings(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(path, []byte("A\r\nA\n"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	patch := strings.Join([]string{
+		"*** Begin Patch",
+		"*** Update File: a.txt",
+		"@@",
+		"-A",
+		"+X",
+		"+A",
+		"@@",
+		"-A",
+		"+Y",
+		"*** End Patch",
+	}, "\n")
+
+	res, err := ts.applyPatch(context.Background(), tc("apply_patch", map[string]any{"patch": patch}))
+	if err != nil || res.IsError {
+		t.Fatalf("apply patch failed: err=%v res=%+v", err, res)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read result: %v", err)
+	}
+	if string(got) != "X\r\nA\nY\n" {
+		t.Fatalf("content = %q, want later hunk to match the later original line and preserve separators", string(got))
 	}
 }
 
@@ -1844,6 +1947,122 @@ func TestListDirAndShellRun(t *testing.T) {
 	if !strings.Contains(shellRes.Content, "hi") {
 		t.Fatalf("unexpected shell output: %s", shellRes.Content)
 	}
+}
+
+func TestListDirIgnoresLegacyIgnoreInput(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{".gitignore", "node_modules", "x.txt"} {
+		path := filepath.Join(dir, name)
+		if name == "node_modules" {
+			if err := os.Mkdir(path, 0o755); err != nil {
+				t.Fatalf("mkdir fixture: %v", err)
+			}
+			continue
+		}
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatalf("write fixture: %v", err)
+		}
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	registry := core.NewToolRegistry(ts.Tools())
+	lsRes, err := registry.Dispatch(context.Background(), tc("list_dir", map[string]any{
+		"ignore": []string{".git", "node"},
+	}))
+	if err != nil || lsRes.IsError {
+		t.Fatalf("list_dir failed: err=%v res=%+v", err, lsRes)
+	}
+	for _, want := range []string{".gitignore", "node_modules/", "x.txt"} {
+		if !strings.Contains(lsRes.Content, want) {
+			t.Fatalf("list_dir should not filter %q with legacy ignore input: %s", want, lsRes.Content)
+		}
+	}
+}
+
+func TestListDirSchemaDocumentsDefaultRootAndToleratesDeprecatedIgnore(t *testing.T) {
+	ts, err := NewToolset(t.TempDir())
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	for _, tool := range ts.Tools() {
+		if tool.Name() != "list_dir" {
+			continue
+		}
+		spec := core.DescribeTool(tool)
+		props, ok := spec.Parameters["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("list_dir properties have unexpected shape: %#v", spec.Parameters["properties"])
+		}
+		ignore, ok := props["ignore"].(map[string]any)
+		if !ok {
+			t.Fatalf("list_dir schema should tolerate deprecated ignore: %#v", props)
+		}
+		if desc, _ := ignore["description"].(string); !strings.Contains(desc, "Deprecated") || !strings.Contains(desc, "ignored") {
+			t.Fatalf("list_dir deprecated ignore should be documented as ignored: %#v", ignore)
+		}
+		path, ok := props["path"].(map[string]any)
+		if !ok {
+			t.Fatalf("list_dir schema should expose path: %#v", props)
+		}
+		if desc, _ := path["description"].(string); !strings.Contains(desc, "Omit") || !strings.Contains(desc, "workspace root") {
+			t.Fatalf("list_dir path should document default workspace root: %#v", path)
+		}
+		return
+	}
+	t.Fatal("list_dir not registered")
+}
+
+func TestSearchToolSchemasDocumentDefaultRoot(t *testing.T) {
+	ts, err := NewToolset(t.TempDir())
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	wantTools := map[string]bool{"grep": false, "search_files": false}
+	for _, tool := range ts.Tools() {
+		if _, ok := wantTools[tool.Name()]; !ok {
+			continue
+		}
+		spec := core.DescribeTool(tool)
+		props, ok := spec.Parameters["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s properties have unexpected shape: %#v", tool.Name(), spec.Parameters["properties"])
+		}
+		path, ok := props["path"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s schema should expose path: %#v", tool.Name(), props)
+		}
+		if desc, _ := path["description"].(string); !strings.Contains(desc, "Omit") || !strings.Contains(desc, "workspace root") {
+			t.Fatalf("%s path should document default workspace root: %#v", tool.Name(), path)
+		}
+		wantTools[tool.Name()] = true
+	}
+	for name, found := range wantTools {
+		if !found {
+			t.Fatalf("%s not registered", name)
+		}
+	}
+}
+
+func TestWriteSchemaDocumentsRegularFilePermissions(t *testing.T) {
+	ts, err := NewToolset(t.TempDir())
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	for _, tool := range ts.Tools() {
+		if tool.Name() != "write" {
+			continue
+		}
+		spec := core.DescribeTool(tool)
+		for _, want := range []string{"regular non-executable files", "chmod"} {
+			if !strings.Contains(spec.Description, want) {
+				t.Fatalf("write description missing %q:\n%s", want, spec.Description)
+			}
+		}
+		return
+	}
+	t.Fatal("write not registered")
 }
 
 func TestApplyPatchUpdateAddDelete(t *testing.T) {
