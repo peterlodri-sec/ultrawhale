@@ -19,6 +19,7 @@ import (
 
 	"github.com/usewhale/whale/internal/build"
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/shell"
 )
 
 const (
@@ -240,7 +241,12 @@ func createTransport(ctx context.Context, kind string, srv ServerConfig) (sdk.Tr
 		}
 		cmd := exec.CommandContext(ctx, expandHome(srv.Command), srv.Args...)
 		cmd.Env = append(os.Environ(), env...)
-		return &sdk.CommandTransport{Command: cmd}, cmd, nil, nil
+		shell.ConfigureCommand(cmd)
+		transport := &stdioProcessTransport{
+			base: &sdk.CommandTransport{Command: cmd},
+			cmd:  cmd,
+		}
+		return transport, cmd, nil, nil
 	case "http":
 		if strings.TrimSpace(srv.URL) == "" {
 			return nil, nil, nil, fmt.Errorf("mcp server %q requires url", srv.Name)
