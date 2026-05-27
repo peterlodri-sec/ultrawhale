@@ -600,6 +600,188 @@ func TestToDeepSeekMessagesCompactsToolResultOnRuneBoundaries(t *testing.T) {
 	}
 }
 
+func TestSanitizeDeepSeekMessagesStripsPlainAssistantReasoning(t *testing.T) {
+	msgs := []map[string]any{
+		{"role": "user", "content": "hi"},
+		{"role": "assistant", "content": "plain", "reasoning_content": strings.Repeat("r", 400)},
+	}
+
+	out, diag := sanitizeDeepSeekMessagesForRequest(msgs, true)
+	if diag.strippedReasoning != 1 {
+		t.Fatalf("expected stripped reasoning count=1, got %+v", diag)
+	}
+	if _, ok := out[1]["reasoning_content"]; ok {
+		t.Fatalf("plain assistant reasoning must not be replayed: %+v", out[1])
+	}
+	if got := estimateReasoningReplayTokens(out); got != 0 {
+		t.Fatalf("expected replay tokens to drop to 0, got %d", got)
+	}
+	if _, ok := msgs[1]["reasoning_content"]; !ok {
+		t.Fatal("sanitizer mutated input message")
+	}
+}
+
+func TestSanitizeDeepSeekMessagesPreservesToolCallReasoning(t *testing.T) {
+	msgs := []map[string]any{
+		{
+			"role":              "assistant",
+			"content":           "",
+			"reasoning_content": "need a tool",
+			"tool_calls": []map[string]any{
+				{"id": "call_1", "type": "function", "function": map[string]any{"name": "echo", "arguments": "{}"}},
+			},
+		},
+		{"role": "tool", "tool_call_id": "call_1", "content": "ok"},
+	}
+
+	out, diag := sanitizeDeepSeekMessagesForRequest(msgs, true)
+	if diag.preservedToolReasoning != 1 || diag.strippedReasoning != 0 {
+		t.Fatalf("unexpected diagnostics: %+v", diag)
+	}
+	if out[0]["reasoning_content"] != "need a tool" {
+		t.Fatalf("tool-call reasoning should be preserved: %+v", out[0])
+	}
+	if out[1]["role"] != "tool" || out[1]["tool_call_id"] != "call_1" {
+		t.Fatalf("tool pairing changed: %+v", out)
+	}
+}
+
+func TestSanitizeDeepSeekMessagesKeepsEmptyReasoningForThinkingToolCall(t *testing.T) {
+	msgs := []map[string]any{
+		{
+			"role":    "assistant",
+			"content": "",
+			"tool_calls": []map[string]any{
+				{"id": "call_1", "type": "function", "function": map[string]any{"name": "echo", "arguments": "{}"}},
+			},
+		},
+		{"role": "tool", "tool_call_id": "call_1", "content": "ok"},
+	}
+
+	out, _ := sanitizeDeepSeekMessagesForRequest(msgs, true)
+	value, ok := out[0]["reasoning_content"].(string)
+	if !ok || value != "" {
+		t.Fatalf("thinking tool-call assistant should carry empty reasoning_content, got %+v", out[0])
+	}
+}
+
+func TestSanitizeDeepSeekMessagesRepairsMissingToolCallID(t *testing.T) {
+	msgs := []map[string]any{
+		{
+			"role":    "assistant",
+			"content": "",
+			"tool_calls": []map[string]any{
+				{"id": "", "type": "function", "function": map[string]any{"name": "echo", "arguments": "{}"}},
+			},
+		},
+		{"role": "tool", "tool_call_id": "", "content": "ok"},
+	}
+
+	out, diag := sanitizeDeepSeekMessagesForRequest(msgs, true)
+	if diag.repairedMissingToolCallID != 1 {
+		t.Fatalf("expected one repaired missing id, got %+v", diag)
+	}
+	calls, ok := out[0]["tool_calls"].([]map[string]any)
+	if !ok || len(calls) != 1 {
+		t.Fatalf("expected tool calls, got %+v", out[0]["tool_calls"])
+	}
+	id, _ := calls[0]["id"].(string)
+	if id == "" {
+		t.Fatalf("expected synthetic id: %+v", calls[0])
+	}
+	if out[1]["tool_call_id"] != id {
+		t.Fatalf("tool result id should match repaired call id: call=%q tool=%q", id, out[1]["tool_call_id"])
+	}
+}
+
+func TestSanitizeDeepSeekMessagesRepairsMissingToolResultAndDropsStrays(t *testing.T) {
+	msgs := []map[string]any{
+		{"role": "tool", "tool_call_id": "orphan", "content": "secret orphan content"},
+		{
+			"role":    "assistant",
+			"content": "",
+			"tool_calls": []map[string]any{
+				{"id": "call_1", "type": "function", "function": map[string]any{"name": "echo", "arguments": "{}"}},
+			},
+		},
+		{"role": "user", "content": "next"},
+	}
+
+	out, diag := sanitizeDeepSeekMessagesForRequest(msgs, true)
+	if diag.syntheticToolResults != 1 || diag.droppedStrayTools != 1 {
+		t.Fatalf("unexpected diagnostics: %+v", diag)
+	}
+	if out[0]["role"] != "assistant" || out[1]["role"] != "tool" || out[1]["tool_call_id"] != "call_1" {
+		t.Fatalf("expected assistant plus synthetic tool result first, got %+v", out)
+	}
+	content, _ := out[1]["content"].(string)
+	if !strings.Contains(content, "missing_tool_result_recovered") {
+		t.Fatalf("expected synthetic missing tool result, got %q", content)
+	}
+	for _, msg := range out {
+		if strings.Contains(fmt.Sprint(msg["content"]), "secret orphan content") {
+			t.Fatalf("stray tool content leaked into sanitized messages: %+v", out)
+		}
+	}
+}
+
+func TestSanitizeDeepSeekMessagesLeavesCompactedToolResultPaired(t *testing.T) {
+	large := "HEAD-" + strings.Repeat("x", 45000) + "-TAIL"
+	msgs := []map[string]any{
+		{
+			"role":    "assistant",
+			"content": "",
+			"tool_calls": []map[string]any{
+				{"id": "call_1", "type": "function", "function": map[string]any{"name": "read_file", "arguments": "{}"}},
+			},
+		},
+		{"role": "tool", "tool_call_id": "call_1", "content": compactToolResultForReplay(large)},
+	}
+
+	out, diag := sanitizeDeepSeekMessagesForRequest(msgs, true)
+	if diag.syntheticToolResults != 0 || diag.droppedStrayTools != 0 {
+		t.Fatalf("valid compacted pair should not need repair: %+v", diag)
+	}
+	content, _ := out[1]["content"].(string)
+	if !strings.Contains(content, "[tool result compacted for model replay]") || !strings.Contains(content, "HEAD-") || !strings.Contains(content, "-TAIL") {
+		t.Fatalf("compacted content was not preserved: %q", content)
+	}
+}
+
+func TestDeepSeek400IncludesBoundedMessageDiagnostics(t *testing.T) {
+	const secretReasoning = "SECRET_REASONING_SHOULD_NOT_LEAK"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "invalid message shape", http.StatusBadRequest)
+	}))
+	defer srv.Close()
+
+	t.Setenv("DEEPSEEK_API_KEY", "test-key")
+	c, err := New(WithBaseURL(srv.URL), WithHTTPClient(srv.Client()), WithRetryPolicy(llmretry.Policy{MaxAttempts: 1}))
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+
+	history := []core.Message{
+		{Role: core.RoleAssistant, Text: "plain", Reasoning: secretReasoning},
+	}
+	var gotErr error
+	for ev := range c.StreamResponse(context.Background(), history, nil) {
+		if ev.Type == llm.EventError {
+			gotErr = ev.Err
+		}
+	}
+	if gotErr == nil {
+		t.Fatal("expected provider error")
+	}
+	msg := gotErr.Error()
+	if !strings.Contains(msg, "message diagnostics:") || !strings.Contains(msg, "stripped_reasoning=1") {
+		t.Fatalf("expected bounded diagnostics in error, got %q", msg)
+	}
+	if strings.Contains(msg, secretReasoning) {
+		t.Fatalf("diagnostic leaked message content: %q", msg)
+	}
+}
+
 func TestToDeepSeekTools_FlattensDeepSchema(t *testing.T) {
 	out := toDeepSeekTools([]core.Tool{nestedTool{}})
 	if len(out) != 1 {
@@ -658,5 +840,79 @@ func TestEstimateReasoningReplayTokens(t *testing.T) {
 	got := estimateReasoningReplayTokens(msgs)
 	if got != 3 {
 		t.Fatalf("expected replay tokens=3, got %d", got)
+	}
+}
+
+func TestToolResultReplayDiagnosticsCountsCompactionSavings(t *testing.T) {
+	large := strings.Repeat("0123456789abcdef", 4096)
+	history := []core.Message{
+		{Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{ID: "call_1", Name: "shell_run"}}},
+		{Role: core.RoleTool, ToolResults: []core.ToolResult{{ToolCallID: "call_1", Name: "shell_run", Content: large}}},
+	}
+	msgs, _ := sanitizeDeepSeekMessagesForRequest(toDeepSeekMessages(history), true)
+
+	diag := toolResultReplayDiagnostics(history, msgs)
+	if diag.rawChars != len(large) {
+		t.Fatalf("unexpected raw chars: got %d want %d", diag.rawChars, len(large))
+	}
+	if diag.replayChars <= 0 || diag.replayChars >= diag.rawChars {
+		t.Fatalf("expected compacted replay chars below raw chars, got replay=%d raw=%d", diag.replayChars, diag.rawChars)
+	}
+	if diag.rawTokens <= diag.replayTokens || diag.tokensSaved() <= 0 {
+		t.Fatalf("expected token savings, got raw=%d replay=%d saved=%d", diag.rawTokens, diag.replayTokens, diag.tokensSaved())
+	}
+	if diag.compacted != 1 {
+		t.Fatalf("expected one compacted tool result, got %d", diag.compacted)
+	}
+}
+
+func TestToolResultReplayDiagnosticsIgnoresStrayRawToolResults(t *testing.T) {
+	history := []core.Message{
+		{Role: core.RoleTool, ToolResults: []core.ToolResult{{ToolCallID: "orphan", Name: "shell_run", Content: "unused"}}},
+	}
+	msgs, _ := sanitizeDeepSeekMessagesForRequest(toDeepSeekMessages(history), true)
+
+	diag := toolResultReplayDiagnostics(history, msgs)
+	if diag.rawChars != 0 || diag.replayChars != 0 || diag.rawTokens != 0 || diag.replayTokens != 0 {
+		t.Fatalf("expected stray tool result to be ignored, got %+v", diag)
+	}
+}
+
+func TestToDeepSeekMessagesCompactsOlderToolResultsWhenTotalReplayBudgetExceeded(t *testing.T) {
+	chunk := strings.Repeat("tool-output ", 650)
+	var history []core.Message
+	for i := 0; i < 12; i++ {
+		id := fmt.Sprintf("call_%02d", i)
+		content := fmt.Sprintf("result-%02d %s", i, chunk)
+		history = append(history,
+			core.Message{Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{ID: id, Name: "shell_run", Input: "{}"}}},
+			core.Message{Role: core.RoleTool, ToolResults: []core.ToolResult{{ToolCallID: id, Name: "shell_run", Content: content}}},
+		)
+	}
+
+	msgs := toDeepSeekMessages(history)
+	var firstTool, lastTool string
+	for _, msg := range msgs {
+		if msg["role"] != "tool" {
+			continue
+		}
+		content, _ := msg["content"].(string)
+		if msg["tool_call_id"] == "call_00" {
+			firstTool = content
+		}
+		if msg["tool_call_id"] == "call_11" {
+			lastTool = content
+		}
+	}
+	if !strings.Contains(firstTool, "tool_result_replay_budget_compacted") {
+		t.Fatalf("expected oldest tool result to be compacted by cumulative budget, got %q", firstTool)
+	}
+	if !strings.Contains(lastTool, "result-11") || strings.Contains(lastTool, "tool_result_replay_budget_compacted") {
+		t.Fatalf("expected newest tool result to remain available, got %q", lastTool)
+	}
+	msgs, _ = sanitizeDeepSeekMessagesForRequest(msgs, true)
+	diag := toolResultReplayDiagnostics(history, msgs)
+	if diag.compacted == 0 || diag.rawTokens <= diag.replayTokens || diag.tokensSaved() == 0 {
+		t.Fatalf("expected cumulative compaction savings, got %+v", diag)
 	}
 }

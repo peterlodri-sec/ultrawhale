@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/defaults"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/telemetry"
 )
@@ -20,27 +21,29 @@ const statsProfileSessionLimit = 50
 const statsProfileToolHeavyChars = 12_000
 
 type usageStats struct {
-	Turns            int
-	Sessions         map[string]bool
-	PromptTokens     int
-	CompletionTokens int
-	CacheHit         int
-	CacheMiss        int
-	CostUSD          float64
-	Last7CostUSD     float64
-	ByModel          map[string]*usageModelStats
-	Recent           []telemetry.UsageRecord
+	Turns                 int
+	Sessions              map[string]bool
+	PromptTokens          int
+	CompletionTokens      int
+	CacheHit              int
+	CacheMiss             int
+	ReasoningReplayTokens int
+	CostUSD               float64
+	Last7CostUSD          float64
+	ByModel               map[string]*usageModelStats
+	Recent                []telemetry.UsageRecord
 }
 
 type usageModelStats struct {
-	Model            string
-	Turns            int
-	Tokens           int
-	CostUSD          float64
-	CacheHit         int
-	CacheMiss        int
-	PromptTokens     int
-	CompletionTokens int
+	Model                 string
+	Turns                 int
+	Tokens                int
+	CostUSD               float64
+	CacheHit              int
+	CacheMiss             int
+	PromptTokens          int
+	CompletionTokens      int
+	ReasoningReplayTokens int
 }
 
 type toolInputStats struct {
@@ -66,63 +69,91 @@ type toolInputModelStats struct {
 }
 
 type profileStats struct {
-	Limit                    int
-	Sessions                 []profileSessionStats
-	MainWorkSessions         int
-	TrivialSessions          int
-	ToolHeavySessions        int
-	SubagentSessions         int
-	PromptTokens             int
-	CompletionTokens         int
-	CacheHit                 int
-	CacheMiss                int
-	CostUSD                  float64
-	MaxPromptTokens          int
-	SubagentPromptTokens     int
-	SubagentCompletionTokens int
-	SubagentCacheHit         int
-	SubagentCacheMiss        int
-	SubagentCostUSD          float64
-	SubagentMaxPromptTokens  int
-	PrefixFingerprints       map[string]bool
-	ToolCalls                int
-	ToolResultChars          int
-	ReasoningChars           int
-	VisibleTextChars         int
-	ByTool                   map[string]*profileToolStats
-	TopSessions              []profileSessionStats
-	UsageMatchedSessions     int
+	Limit                          int
+	Sessions                       []profileSessionStats
+	MainWorkSessions               int
+	TrivialSessions                int
+	ToolHeavySessions              int
+	SubagentSessions               int
+	PromptTokens                   int
+	CompletionTokens               int
+	CacheHit                       int
+	CacheMiss                      int
+	CostUSD                        float64
+	MaxPromptTokens                int
+	SubagentPromptTokens           int
+	SubagentCompletionTokens       int
+	SubagentCacheHit               int
+	SubagentCacheMiss              int
+	ReasoningReplayTokens          int
+	SubagentReasoningReplay        int
+	ToolResultRawChars             int
+	ToolResultReplayChars          int
+	ToolResultRawTokens            int
+	ToolResultReplayTokens         int
+	ToolResultTokensSaved          int
+	ToolResultsCompacted           int
+	SubagentToolResultRawChars     int
+	SubagentToolResultReplayChars  int
+	SubagentToolResultRawTokens    int
+	SubagentToolResultReplayTokens int
+	SubagentToolResultTokensSaved  int
+	SubagentToolResultsCompacted   int
+	SubagentCostUSD                float64
+	SubagentMaxPromptTokens        int
+	PrefixFingerprints             map[string]bool
+	ToolCalls                      int
+	ToolResultChars                int
+	ReasoningChars                 int
+	VisibleTextChars               int
+	ByTool                         map[string]*profileToolStats
+	TopSessions                    []profileSessionStats
+	UsageMatchedSessions           int
 }
 
 type profileSessionStats struct {
-	ID                       string
-	ModTime                  time.Time
-	Messages                 int
-	UserMessages             int
-	AssistantMessages        int
-	ToolMessages             int
-	ToolCalls                int
-	ToolResultChars          int
-	ReasoningChars           int
-	VisibleTextChars         int
-	FirstUserText            string
-	HasHiddenUserTask        bool
-	Trivial                  bool
-	PromptTokens             int
-	CompletionTokens         int
-	CacheHit                 int
-	CacheMiss                int
-	CostUSD                  float64
-	MaxPromptTokens          int
-	SubagentSessions         int
-	SubagentPromptTokens     int
-	SubagentCompletionTokens int
-	SubagentCacheHit         int
-	SubagentCacheMiss        int
-	SubagentCostUSD          float64
-	SubagentMaxPromptTokens  int
-	PrefixFingerprints       map[string]bool
-	ByTool                   map[string]*profileToolStats
+	ID                             string
+	ModTime                        time.Time
+	Messages                       int
+	UserMessages                   int
+	AssistantMessages              int
+	ToolMessages                   int
+	ToolCalls                      int
+	ToolResultChars                int
+	ReasoningChars                 int
+	VisibleTextChars               int
+	FirstUserText                  string
+	HasHiddenUserTask              bool
+	Trivial                        bool
+	PromptTokens                   int
+	CompletionTokens               int
+	CacheHit                       int
+	CacheMiss                      int
+	CostUSD                        float64
+	MaxPromptTokens                int
+	SubagentSessions               int
+	SubagentPromptTokens           int
+	SubagentCompletionTokens       int
+	SubagentCacheHit               int
+	SubagentCacheMiss              int
+	ReasoningReplayTokens          int
+	SubagentReasoningReplay        int
+	ToolResultRawChars             int
+	ToolResultReplayChars          int
+	ToolResultRawTokens            int
+	ToolResultReplayTokens         int
+	ToolResultTokensSaved          int
+	ToolResultsCompacted           int
+	SubagentToolResultRawChars     int
+	SubagentToolResultReplayChars  int
+	SubagentToolResultRawTokens    int
+	SubagentToolResultReplayTokens int
+	SubagentToolResultTokensSaved  int
+	SubagentToolResultsCompacted   int
+	SubagentCostUSD                float64
+	SubagentMaxPromptTokens        int
+	PrefixFingerprints             map[string]bool
+	ByTool                         map[string]*profileToolStats
 }
 
 type profileToolStats struct {
@@ -189,6 +220,9 @@ func readUsageStats(path string, now time.Time) usageStats {
 		if err := json.Unmarshal(scanner.Bytes(), &rec); err != nil {
 			continue
 		}
+		if !isSupportedUsageModel(rec.Model) {
+			continue
+		}
 		stats.Turns++
 		if rec.Session != "" {
 			stats.Sessions[rec.Session] = true
@@ -197,9 +231,11 @@ func readUsageStats(path string, now time.Time) usageStats {
 		stats.CompletionTokens += rec.CompletionTokens
 		stats.CacheHit += rec.PromptCacheHit
 		stats.CacheMiss += rec.PromptCacheMiss
-		stats.CostUSD += rec.CostUSD
+		stats.ReasoningReplayTokens += rec.ReasoningReplayTok
+		cost := telemetry.EstimateUsageRecordUSD(rec)
+		stats.CostUSD += cost
 		if rec.TS >= cutoff {
-			stats.Last7CostUSD += rec.CostUSD
+			stats.Last7CostUSD += cost
 		}
 		model := strings.TrimSpace(rec.Model)
 		if model == "" {
@@ -214,9 +250,11 @@ func readUsageStats(path string, now time.Time) usageStats {
 		ms.PromptTokens += rec.PromptTokens
 		ms.CompletionTokens += rec.CompletionTokens
 		ms.Tokens += rec.PromptTokens + rec.CompletionTokens
-		ms.CostUSD += rec.CostUSD
+		ms.ReasoningReplayTokens += rec.ReasoningReplayTok
+		ms.CostUSD += cost
 		ms.CacheHit += rec.PromptCacheHit
 		ms.CacheMiss += rec.PromptCacheMiss
+		rec.CostUSD = cost
 		stats.Recent = appendRecentUsage(stats.Recent, rec)
 	}
 	return stats
@@ -450,13 +488,31 @@ func readProfileUsage(path string, sessionIndex map[string]int, childSessionInde
 		if err := json.Unmarshal(scanner.Bytes(), &rec); err != nil {
 			continue
 		}
+		if !isSupportedUsageModel(rec.Model) {
+			continue
+		}
 		if idx, ok := sessionIndex[rec.Session]; ok {
+			cost := telemetry.EstimateUsageRecordUSD(rec)
 			sp := &stats.Sessions[idx]
 			sp.PromptTokens += rec.PromptTokens
 			sp.CompletionTokens += rec.CompletionTokens
 			sp.CacheHit += rec.PromptCacheHit
 			sp.CacheMiss += rec.PromptCacheMiss
-			sp.CostUSD += rec.CostUSD
+			sp.ReasoningReplayTokens += rec.ReasoningReplayTok
+			stats.ReasoningReplayTokens += rec.ReasoningReplayTok
+			sp.ToolResultRawChars += rec.ToolResultRawChars
+			sp.ToolResultReplayChars += rec.ToolResultReplayChars
+			sp.ToolResultRawTokens += rec.ToolResultRawTokens
+			sp.ToolResultReplayTokens += rec.ToolResultReplayTokens
+			sp.ToolResultTokensSaved += rec.ToolResultTokensSaved
+			sp.ToolResultsCompacted += rec.ToolResultsCompacted
+			stats.ToolResultRawChars += rec.ToolResultRawChars
+			stats.ToolResultReplayChars += rec.ToolResultReplayChars
+			stats.ToolResultRawTokens += rec.ToolResultRawTokens
+			stats.ToolResultReplayTokens += rec.ToolResultReplayTokens
+			stats.ToolResultTokensSaved += rec.ToolResultTokensSaved
+			stats.ToolResultsCompacted += rec.ToolResultsCompacted
+			sp.CostUSD += cost
 			if rec.PromptTokens > sp.MaxPromptTokens {
 				sp.MaxPromptTokens = rec.PromptTokens
 			}
@@ -466,12 +522,27 @@ func readProfileUsage(path string, sessionIndex map[string]int, childSessionInde
 			continue
 		}
 		if idx, ok := childSessionIndex[rec.Session]; ok {
+			cost := telemetry.EstimateUsageRecordUSD(rec)
 			sp := &stats.Sessions[idx]
 			sp.SubagentPromptTokens += rec.PromptTokens
 			sp.SubagentCompletionTokens += rec.CompletionTokens
 			sp.SubagentCacheHit += rec.PromptCacheHit
 			sp.SubagentCacheMiss += rec.PromptCacheMiss
-			sp.SubagentCostUSD += rec.CostUSD
+			sp.SubagentReasoningReplay += rec.ReasoningReplayTok
+			stats.SubagentReasoningReplay += rec.ReasoningReplayTok
+			sp.SubagentToolResultRawChars += rec.ToolResultRawChars
+			sp.SubagentToolResultReplayChars += rec.ToolResultReplayChars
+			sp.SubagentToolResultRawTokens += rec.ToolResultRawTokens
+			sp.SubagentToolResultReplayTokens += rec.ToolResultReplayTokens
+			sp.SubagentToolResultTokensSaved += rec.ToolResultTokensSaved
+			sp.SubagentToolResultsCompacted += rec.ToolResultsCompacted
+			stats.SubagentToolResultRawChars += rec.ToolResultRawChars
+			stats.SubagentToolResultReplayChars += rec.ToolResultReplayChars
+			stats.SubagentToolResultRawTokens += rec.ToolResultRawTokens
+			stats.SubagentToolResultReplayTokens += rec.ToolResultReplayTokens
+			stats.SubagentToolResultTokensSaved += rec.ToolResultTokensSaved
+			stats.SubagentToolResultsCompacted += rec.ToolResultsCompacted
+			sp.SubagentCostUSD += cost
 			if rec.PromptTokens > sp.SubagentMaxPromptTokens {
 				sp.SubagentMaxPromptTokens = rec.PromptTokens
 			}
@@ -650,19 +721,31 @@ func formatUsageStats(stats usageStats) []string {
 		fmt.Sprintf("- cache: %s hit · %s miss · %.1f%%", formatCount(stats.CacheHit), formatCount(stats.CacheMiss), ratioPercent(stats.CacheHit, stats.CacheHit+stats.CacheMiss)),
 		fmt.Sprintf("- estimated cost: $%.4f total · $%.4f last 7d", stats.CostUSD, stats.Last7CostUSD),
 	}
+	if stats.ReasoningReplayTokens > 0 {
+		lines = append(lines, fmt.Sprintf("- reasoning replay: %s tokens · %.1f%% of input", formatCount(stats.ReasoningReplayTokens), ratioPercent(stats.ReasoningReplayTokens, stats.PromptTokens)))
+	}
 	if len(stats.ByModel) > 0 {
 		lines = append(lines, "", "By model")
 		for _, ms := range topUsageModels(stats.ByModel, statsRecentLimit) {
-			lines = append(lines, fmt.Sprintf("- %s: %d turns · %s tokens · %.1f%% cache · $%.4f", ms.Model, ms.Turns, formatCount(ms.Tokens), ratioPercent(ms.CacheHit, ms.CacheHit+ms.CacheMiss), ms.CostUSD))
+			replayDetail := ""
+			if ms.ReasoningReplayTokens > 0 {
+				replayDetail = fmt.Sprintf(" · %s reasoning replay", formatCount(ms.ReasoningReplayTokens))
+			}
+			lines = append(lines, fmt.Sprintf("- %s: %d turns · %s tokens%s · %.1f%% cache · $%.4f", ms.Model, ms.Turns, formatCount(ms.Tokens), replayDetail, ratioPercent(ms.CacheHit, ms.CacheHit+ms.CacheMiss), ms.CostUSD))
 		}
 	}
 	return lines
+}
+
+func isSupportedUsageModel(model string) bool {
+	return defaults.IsSupportedModel(model)
 }
 
 func formatProfileStats(stats profileStats) []string {
 	totalTokens := stats.PromptTokens + stats.CompletionTokens
 	subagentTokens := stats.SubagentPromptTokens + stats.SubagentCompletionTokens
 	allInTokens := totalTokens + subagentTokens
+	allInReasoningReplay := stats.ReasoningReplayTokens + stats.SubagentReasoningReplay
 	lines := []string{
 		fmt.Sprintf("- scanned sessions: %d latest main sessions (limit %d)", len(stats.Sessions), stats.Limit),
 		fmt.Sprintf("- main work sessions: %d", stats.MainWorkSessions),
@@ -679,10 +762,38 @@ func formatProfileStats(stats profileStats) []string {
 		fmt.Sprintf("- tools: %d calls · %s result chars", stats.ToolCalls, formatCount(stats.ToolResultChars)),
 		fmt.Sprintf("- reasoning/text: %s reasoning chars · %s visible text chars", formatCount(stats.ReasoningChars), formatCount(stats.VisibleTextChars)),
 	}
+	if allInReasoningReplay > 0 {
+		lines = append(lines, fmt.Sprintf("- reasoning replay: %s main · %s subagent · %s all-in · %.1f%% of main input", formatCount(stats.ReasoningReplayTokens), formatCount(stats.SubagentReasoningReplay), formatCount(allInReasoningReplay), ratioPercent(stats.ReasoningReplayTokens, stats.PromptTokens)))
+	}
+	allInToolReplayTokens := stats.ToolResultReplayTokens + stats.SubagentToolResultReplayTokens
+	allInToolRawTokens := stats.ToolResultRawTokens + stats.SubagentToolResultRawTokens
+	allInToolSavedTokens := stats.ToolResultTokensSaved + stats.SubagentToolResultTokensSaved
+	allInToolCompacted := stats.ToolResultsCompacted + stats.SubagentToolResultsCompacted
+	if allInToolReplayTokens > 0 || allInToolRawTokens > 0 || allInToolSavedTokens > 0 || allInToolCompacted > 0 {
+		lines = append(lines, fmt.Sprintf("- tool replay: %s sent · %s raw · %s saved · %d compacted", formatCount(allInToolReplayTokens), formatCount(allInToolRawTokens), formatCount(allInToolSavedTokens), allInToolCompacted))
+	}
 	if len(stats.ByTool) > 0 {
 		lines = append(lines, "", "Top tools")
 		for _, ts := range topProfileTools(stats.ByTool, statsRecentLimit) {
 			lines = append(lines, fmt.Sprintf("- %s: %d calls · %s result chars", ts.Tool, ts.Calls, formatCount(ts.ResultChars)))
+		}
+	}
+	if top := topToolReplaySessions(stats.Sessions, statsRecentLimit); len(top) > 0 {
+		lines = append(lines, "", "Top tool replay sessions")
+		for _, sp := range top {
+			lines = append(lines, fmt.Sprintf("- %s: %s sent · %s raw · %s saved · %d compacted · %s", sp.ID, formatCount(profileSessionToolReplayTokens(sp)), formatCount(profileSessionToolRawTokens(sp)), formatCount(profileSessionToolSavedTokens(sp)), profileSessionToolCompacted(sp), nonEmpty(sp.FirstUserText, "(no user text)")))
+		}
+	}
+	if top := topReasoningReplaySessions(stats.Sessions, statsRecentLimit); len(top) > 0 {
+		lines = append(lines, "", "Top reasoning replay sessions")
+		for _, sp := range top {
+			childDetail := ""
+			if sp.SubagentReasoningReplay > 0 {
+				childDetail = fmt.Sprintf(" · +%s subagents", formatCount(sp.SubagentReasoningReplay))
+			}
+			replayTokens := profileSessionReasoningReplayTokens(sp)
+			inputTokens := sp.PromptTokens + sp.SubagentPromptTokens
+			lines = append(lines, fmt.Sprintf("- %s: %s tokens%s · %.1f%% of input · %s", sp.ID, formatCount(replayTokens), childDetail, ratioPercent(replayTokens, inputTokens), nonEmpty(sp.FirstUserText, "(no user text)")))
 		}
 	}
 	if len(stats.TopSessions) > 0 {
@@ -749,6 +860,9 @@ func formatStatsOverview(usage usageStats, toolInput toolInputStats) []string {
 		fmt.Sprintf("- turns: %d", usage.Turns),
 		fmt.Sprintf("- tokens: %s total", formatCount(totalTokens)),
 		fmt.Sprintf("- estimated cost: $%.4f total · $%.4f last 7d", usage.CostUSD, usage.Last7CostUSD),
+	}
+	if usage.ReasoningReplayTokens > 0 {
+		lines = append(lines, fmt.Sprintf("- reasoning replay: %s tokens", formatCount(usage.ReasoningReplayTokens)))
 	}
 	if model := topUsageModel(usage.ByModel); model != nil {
 		lines = append(lines, fmt.Sprintf("- top model: %s · %d turns · $%.4f", model.Model, model.Turns, model.CostUSD))
@@ -880,6 +994,74 @@ func topProfileSessions(in []profileSessionStats, limit int, includeTrivial bool
 		return out[i].CostUSD > out[j].CostUSD
 	})
 	return limitSlice(out, limit)
+}
+
+func topReasoningReplaySessions(in []profileSessionStats, limit int) []profileSessionStats {
+	out := make([]profileSessionStats, 0, len(in))
+	for _, sp := range in {
+		if sp.Trivial || profileSessionReasoningReplayTokens(sp) <= 0 {
+			continue
+		}
+		out = append(out, sp)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		left := profileSessionReasoningReplayTokens(out[i])
+		right := profileSessionReasoningReplayTokens(out[j])
+		if left == right {
+			leftCost := out[i].CostUSD + out[i].SubagentCostUSD
+			rightCost := out[j].CostUSD + out[j].SubagentCostUSD
+			if leftCost == rightCost {
+				return out[i].ID < out[j].ID
+			}
+			return leftCost > rightCost
+		}
+		return left > right
+	})
+	return limitSlice(out, limit)
+}
+
+func topToolReplaySessions(in []profileSessionStats, limit int) []profileSessionStats {
+	out := make([]profileSessionStats, 0, len(in))
+	for _, sp := range in {
+		if sp.Trivial || (profileSessionToolReplayTokens(sp) <= 0 && profileSessionToolRawTokens(sp) <= 0) {
+			continue
+		}
+		out = append(out, sp)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		left := profileSessionToolReplayTokens(out[i])
+		right := profileSessionToolReplayTokens(out[j])
+		if left == right {
+			leftRaw := profileSessionToolRawTokens(out[i])
+			rightRaw := profileSessionToolRawTokens(out[j])
+			if leftRaw == rightRaw {
+				return out[i].ID < out[j].ID
+			}
+			return leftRaw > rightRaw
+		}
+		return left > right
+	})
+	return limitSlice(out, limit)
+}
+
+func profileSessionReasoningReplayTokens(sp profileSessionStats) int {
+	return sp.ReasoningReplayTokens + sp.SubagentReasoningReplay
+}
+
+func profileSessionToolReplayTokens(sp profileSessionStats) int {
+	return sp.ToolResultReplayTokens + sp.SubagentToolResultReplayTokens
+}
+
+func profileSessionToolRawTokens(sp profileSessionStats) int {
+	return sp.ToolResultRawTokens + sp.SubagentToolResultRawTokens
+}
+
+func profileSessionToolSavedTokens(sp profileSessionStats) int {
+	return sp.ToolResultTokensSaved + sp.SubagentToolResultTokensSaved
+}
+
+func profileSessionToolCompacted(sp profileSessionStats) int {
+	return sp.ToolResultsCompacted + sp.SubagentToolResultsCompacted
 }
 
 func topToolInputTools(in map[string]*toolInputToolStats, limit int) []*toolInputToolStats {
