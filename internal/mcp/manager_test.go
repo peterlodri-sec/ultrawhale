@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -214,7 +215,7 @@ func TestManagerRecordsHTTPConfigErrorWithoutLeakingHeaderValue(t *testing.T) {
 	}
 }
 
-func TestManagerRecordsHTTPStatusErrorWithRedactedBody(t *testing.T) {
+func TestManagerRecordsHTTPStatusErrorWithoutBodyPreview(t *testing.T) {
 	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte("missing Authorization: Bearer ctx-secret-token token=abc123\nretry later"))
@@ -234,12 +235,12 @@ func TestManagerRecordsHTTPStatusErrorWithRedactedBody(t *testing.T) {
 	t.Cleanup(func() { _ = mgr.Close() })
 
 	errText := singleFailedStateError(t, mgr)
-	for _, want := range []string{`mcp server "remote"`, "transport=http", "/mcp", "401 Unauthorized", "Bearer ***", "token=***", "retry later"} {
+	for _, want := range []string{`mcp server "remote"`, "transport=http", "/mcp", "401 Unauthorized"} {
 		if !strings.Contains(errText, want) {
 			t.Fatalf("error missing %q: %q", want, errText)
 		}
 	}
-	for _, secret := range []string{"ctx-secret-token", "abc123", "request-secret", "query-secret"} {
+	for _, secret := range []string{"ctx-secret-token", "abc123", "request-secret", "query-secret", "retry later"} {
 		if strings.Contains(errText, secret) {
 			t.Fatalf("error leaked secret %q: %q", secret, errText)
 		}
@@ -261,34 +262,71 @@ func TestManagerRecordsHTTPNotFoundBody(t *testing.T) {
 	t.Cleanup(func() { _ = mgr.Close() })
 
 	errText := singleFailedStateError(t, mgr)
-	for _, want := range []string{"404 Not Found", "/wrong", "not an MCP endpoint"} {
+	for _, want := range []string{"404 Not Found", "/wrong"} {
 		if !strings.Contains(errText, want) {
 			t.Fatalf("error missing %q: %q", want, errText)
 		}
 	}
+	if strings.Contains(errText, "not an MCP endpoint") {
+		t.Fatalf("error included response body: %q", errText)
+	}
 }
 
-func TestManagerRecordsHTTPServerErrorWithBoundedBody(t *testing.T) {
-	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(strings.Repeat("x", httpErrorBodyPreviewBytes+20)))
-	}))
-	t.Cleanup(httpServer.Close)
-
-	mgr := NewManager(Config{
-		Servers: map[string]ServerConfig{
-			"remote": {URL: httpServer.URL, Timeout: 1},
-		},
-	})
-	mgr.Initialize(context.Background())
-	t.Cleanup(func() { _ = mgr.Close() })
-
-	errText := singleFailedStateError(t, mgr)
-	if !strings.Contains(errText, "500 Internal Server Error") || !strings.Contains(errText, "...") {
-		t.Fatalf("unexpected error: %q", errText)
+func TestHeaderRoundTripperDoesNotMutateHTTPErrorBody(t *testing.T) {
+	body := strings.Repeat("x", 220)
+	rt := headerRoundTripper{
+		serverName: "remote",
+		diag:       &httpDiagnostics{},
+		base: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Status:     "500 Internal Server Error",
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Request:    req,
+			}, nil
+		}),
 	}
-	if strings.Count(errText, "x") > httpErrorBodyPreviewBytes {
-		t.Fatalf("error body was not bounded: %q", errText)
+
+	req, err := http.NewRequest(http.MethodPost, "https://example.com/mcp", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := rt.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != body {
+		t.Fatalf("body mutated: len=%d want=%d", len(got), len(body))
+	}
+	if summary := rt.diag.summary(); !strings.Contains(summary, "500 Internal Server Error") || strings.Contains(summary, body) {
+		t.Fatalf("unexpected diagnostics summary: %q", summary)
+	}
+}
+
+func TestNormalizedCommandBase(t *testing.T) {
+	tests := []struct {
+		name    string
+		command string
+		want    string
+	}{
+		{name: "unix npx", command: "npx", want: "npx"},
+		{name: "windows npx cmd", command: `C:\Program Files\nodejs\npx.cmd`, want: "npx"},
+		{name: "windows npm exe", command: `C:\Program Files\nodejs\npm.exe`, want: "npm"},
+		{name: "windows npm bat", command: `C:\Program Files\nodejs\npm.bat`, want: "npm"},
+		{name: "relative dotted server", command: "./server", want: "server"},
+		{name: "case folded", command: "/usr/local/bin/NPX.CMD", want: "npx"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := normalizedCommandBase(tt.command); got != tt.want {
+				t.Fatalf("normalizedCommandBase(%q) = %q, want %q", tt.command, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -323,19 +361,29 @@ func TestManagerRecordsHTTPStartupTimeout(t *testing.T) {
 }
 
 func TestStartupTimeoutForNpxIncludesActionableHint(t *testing.T) {
-	err := startupTimeoutErr(ServerConfig{
-		Name:    "fs",
-		Command: "npx",
-		Args:    []string{"-y", "@modelcontextprotocol/server-filesystem", "/tmp"},
-		Timeout: 15,
-	}, "connect")
+	for _, command := range []string{"npx", "npm", "npx.cmd", "npm.cmd", `C:\Program Files\nodejs\npx.cmd`, "npm.exe", "npx.bat"} {
+		t.Run(command, func(t *testing.T) {
+			err := startupTimeoutErr(ServerConfig{
+				Name:    "fs",
+				Command: command,
+				Args:    []string{"-y", "@modelcontextprotocol/server-filesystem", "/tmp"},
+				Timeout: 15,
+			}, "connect")
 
-	errText := err.Error()
-	for _, want := range []string{"npx/npm", "download packages", "consume stdio", "point command at its binary", "increase the server timeout"} {
-		if !strings.Contains(errText, want) {
-			t.Fatalf("error missing %q: %q", want, errText)
-		}
+			errText := err.Error()
+			for _, want := range []string{"npx/npm", "download packages", "consume stdio", "point command at its binary", "increase the server timeout"} {
+				if !strings.Contains(errText, want) {
+					t.Fatalf("error missing %q: %q", want, errText)
+				}
+			}
+		})
 	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func singleFailedStateError(t *testing.T, mgr *Manager) string {
