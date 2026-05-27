@@ -501,15 +501,20 @@ func RenderCommandLike(text string) string {
 	}
 	var out strings.Builder
 	tokenIndex := 0
+	commandPosition := true
 	for _, part := range splitCommandPreservingSpace(text) {
 		if part == "" {
 			continue
 		}
 		if isCommandSpace(part) {
 			out.WriteString(part)
+			if strings.ContainsAny(part, "\n\r") {
+				commandPosition = true
+			}
 			continue
 		}
-		out.WriteString(styleCommandToken(part, tokenIndex))
+		out.WriteString(styleCommandToken(part, tokenIndex, commandPosition))
+		commandPosition = isShellCommandBoundary(part)
 		tokenIndex++
 	}
 	return out.String()
@@ -567,19 +572,28 @@ func isCommandSpace(text string) bool {
 	return text != ""
 }
 
-func styleCommandToken(token string, index int) string {
+func styleCommandToken(token string, index int, commandPosition bool) string {
 	style := lipgloss.NewStyle().Foreground(tuitheme.Default.Text)
 	switch {
 	case isShellOperator(token):
-		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Muted)
+		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Palette)
 	case strings.HasPrefix(token, "-"):
 		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Warn)
 	case strings.HasPrefix(token, "\"") || strings.HasPrefix(token, "'"):
 		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Success)
-	case index == 0:
-		style = lipgloss.NewStyle().Foreground(tuitheme.Default.InfoSoft)
+	case index == 0 || commandPosition:
+		style = lipgloss.NewStyle().Foreground(tuitheme.Default.Info)
 	}
 	return style.Render(token)
+}
+
+func isShellCommandBoundary(token string) bool {
+	switch token {
+	case "&&", "||", "|", ";":
+		return true
+	default:
+		return false
+	}
 }
 
 func isShellOperator(token string) bool {

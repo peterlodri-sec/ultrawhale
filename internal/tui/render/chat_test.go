@@ -337,6 +337,23 @@ func TestRenderCommandLikePreservesShellCommandText(t *testing.T) {
 	}
 }
 
+func TestRenderCommandLikeStylesCommandAfterOperator(t *testing.T) {
+	oldProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(oldProfile) })
+
+	cmd := "git status | head -1\nprintf 'done'"
+	rendered := RenderCommandLike(cmd)
+	if got := xansi.Strip(rendered); got != cmd {
+		t.Fatalf("command rendering changed text:\nwant %q\n got %q", cmd, got)
+	}
+	for _, want := range []string{"\x1b[38;5;111mgit", "\x1b[38;5;212m|", "\x1b[38;5;111mhead", "\x1b[38;5;111mprintf"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected styled command token %q, got %q", want, rendered)
+		}
+	}
+}
+
 func TestChatLines_ToolEventPreservesIndentedOutputRows(t *testing.T) {
 	entries := []UIMessage{
 		{
@@ -485,6 +502,31 @@ func TestMarkdown_NarrowWidthFallback(t *testing.T) {
 	}
 }
 
+func TestMarkdown_InlineCodeUsesColor(t *testing.T) {
+	input := "Run `git status` before `origin/main`."
+	got := Markdown(input, 80, false)
+	plain := xansi.Strip(got)
+	for _, want := range []string{"git status", "origin/main"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected inline code text %q preserved, got: %q", want, got)
+		}
+	}
+	if !strings.Contains(got, "\x1b[") {
+		t.Fatalf("expected inline code styling, got: %q", got)
+	}
+}
+
+func TestMarkdown_QuietInlineCodeKeepsBackticks(t *testing.T) {
+	input := "Run `git status` before `origin/main`."
+	got := Markdown(input, 80, true)
+	plain := xansi.Strip(got)
+	for _, want := range []string{"`git status`", "`origin/main`"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected quiet inline code marker %q preserved, got: %q", want, got)
+		}
+	}
+}
+
 func TestMarkdown_NarrowWidthAutolinkDoesNotLeakEscapes(t *testing.T) {
 	input := "URL：<https://example.com/a-b.c>"
 	got := Markdown(input, 10, false)
@@ -618,7 +660,7 @@ func TestChatLines_OrderedListKeepsDotSeparator(t *testing.T) {
 		},
 	}
 	lines := ChatLines(entries, 90)
-	joined := strings.Join(lines, "\n")
+	joined := joinedPlain(lines)
 	if strings.Contains(joined, "1core.py") || strings.Contains(joined, "2server.py") {
 		t.Fatalf("ordered list marker collapsed into text: %q", joined)
 	}
