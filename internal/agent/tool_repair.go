@@ -9,10 +9,7 @@ import (
 	"github.com/usewhale/whale/internal/core"
 )
 
-var (
-	trailingCommaBeforeCloser = regexp.MustCompile(`,(\s*[}\]])`)
-	colonEnding              = regexp.MustCompile(`"\s*:\s*$`)
-)
+var trailingCommaBeforeCloser = regexp.MustCompile(`,(\s*[}\]])`)
 
 type stormConfig struct {
 	WindowSize int
@@ -119,7 +116,7 @@ func repairTruncatedJSON(raw string) truncationRepairResult {
 	if s, ok := closeLikelyJSON(candidate); ok {
 		candidate = s
 	}
-	if colonEnding.MatchString(candidate) {
+	if regexp.MustCompile(`"\s*:\s*$`).MatchString(candidate) {
 		candidate += " null"
 	}
 	candidate = trailingCommaBeforeCloser.ReplaceAllString(candidate, "$1")
