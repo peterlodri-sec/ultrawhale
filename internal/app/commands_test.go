@@ -42,6 +42,36 @@ func TestResolveInitialSessionID(t *testing.T) {
 	}
 }
 
+func TestResolveInitialSessionIDIgnoresRecentSubagentSession(t *testing.T) {
+	dir := t.TempDir()
+	sessionsDir := filepath.Join(dir, "sessions")
+	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	parentPath := filepath.Join(sessionsDir, "parent.jsonl")
+	childPath := filepath.Join(sessionsDir, "parent--subagent-call-1.jsonl")
+	if err := os.WriteFile(parentPath, []byte("{}\n"), 0o600); err != nil {
+		t.Fatalf("write parent: %v", err)
+	}
+	if err := os.WriteFile(childPath, []byte("{}\n"), 0o600); err != nil {
+		t.Fatalf("write child: %v", err)
+	}
+	if err := session.SaveSessionMeta(sessionsDir, "parent--subagent-call-1", session.SessionMeta{Kind: "subagent", ParentSessionID: "parent"}); err != nil {
+		t.Fatalf("save child meta: %v", err)
+	}
+	now := time.Now()
+	_ = os.Chtimes(parentPath, now.Add(-time.Hour), now.Add(-time.Hour))
+	_ = os.Chtimes(childPath, now, now)
+
+	got, err := resolveInitialSessionID(sessionsDir)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if got != "parent" {
+		t.Fatalf("want parent, got %s", got)
+	}
+}
+
 func TestHandleCommandResumeAndNew(t *testing.T) {
 	now := time.Date(2026, 5, 2, 10, 20, 30, 0, time.UTC)
 

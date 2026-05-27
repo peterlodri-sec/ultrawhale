@@ -14,13 +14,15 @@ import (
 	"github.com/usewhale/whale/internal/plugins"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/skills"
-	"github.com/usewhale/whale/internal/store"
 )
 
 func resolveInitialSessionID(sessionsDir string) (string, error) {
-	recent, err := store.MostRecentSessionID(sessionsDir)
-	if err == nil && recent != "" {
-		return recent, nil
+	sessions, err := session.ListSessions(sessionsDir, 1)
+	if err != nil {
+		return "", err
+	}
+	if len(sessions) > 0 && strings.TrimSpace(sessions[0].ID) != "" {
+		return sessions[0].ID, nil
 	}
 	return "default", nil
 }
