@@ -49,6 +49,26 @@ func TestProjectFocusMessagesKeepsSingleShellCommandVisible(t *testing.T) {
 	}
 }
 
+func TestProjectFocusMessagesCollapsesSubagentCells(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "you", Kind: tuirender.KindText, Text: "inspect this"},
+		{Role: "result_running", Kind: tuirender.KindSubagent, ToolName: "spawn_subagent", Text: "Subagent review running\nsession: child-123\ncurrent: read_file\ndetail: reading internal/tasks/runner.go"},
+		{Role: "assistant", Kind: tuirender.KindText, Text: "done"},
+	}
+
+	rendered := strings.Join(tuirender.ChatLines(projectFocusMessages(messages), 100), "\n")
+	for _, hidden := range []string{"child-123", "read_file", "reading internal/tasks/runner.go"} {
+		if strings.Contains(rendered, hidden) {
+			t.Fatalf("focus view leaked subagent detail %q:\n%s", hidden, rendered)
+		}
+	}
+	for _, want := range []string{"inspect this", "Ran 1 subagent task (1 running)", "(ctrl+o to expand)", "done"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("focus view missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestProjectFocusMessagesExpandedShowsHiddenDetailsWithCollapseHint(t *testing.T) {
 	messages := []tuirender.UIMessage{
 		{Role: "you", Kind: tuirender.KindText, Text: "inspect this"},

@@ -41,7 +41,7 @@ func ChatLines(messages []UIMessage, width int) []string {
 }
 
 func IsWorkEvent(m UIMessage) bool {
-	return m.Kind == KindToolCall || m.Kind == KindToolResult
+	return m.Kind == KindToolCall || m.Kind == KindToolResult || m.Kind == KindSubagent
 }
 
 func NeedsWorkSeparatorBefore(m UIMessage) bool {

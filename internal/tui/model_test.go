@@ -9380,14 +9380,24 @@ func TestTaskProgressUpdatesTaskToolRow(t *testing.T) {
 		ToolCallID: "tc-task",
 		ToolName:   "spawn_subagent",
 		Text:       "spawn_subagent running · review · reading internal/tasks/runner.go",
+		Metadata: map[string]any{
+			"child_session_id": "parent--subagent-tc-task",
+			"child_tool":       "read_file",
+			"role":             "review",
+		},
 	}))
 	m = next.(model)
 	snap := m.assembler.Snapshot()
 	if len(snap) != 1 {
 		t.Fatalf("expected one tool row, got %+v", snap)
 	}
-	if snap[0].Role != "result_running" || !strings.Contains(snap[0].Text, "reading internal/tasks/runner.go") {
-		t.Fatalf("unexpected progress row: %+v", snap[0])
+	if snap[0].Kind != tuirender.KindSubagent || snap[0].Role != "result_running" {
+		t.Fatalf("expected running subagent row, got %+v", snap[0])
+	}
+	for _, want := range []string{"Subagent review running", "session: parent--subagent-tc-task", "current: read_file", "detail: reading internal/tasks/runner.go"} {
+		if !strings.Contains(snap[0].Text, want) {
+			t.Fatalf("expected %q in progress row: %+v", want, snap[0])
+		}
 	}
 
 	next, _ = m.Update(svcMsg(service.Event{
@@ -9395,11 +9405,113 @@ func TestTaskProgressUpdatesTaskToolRow(t *testing.T) {
 		ToolCallID: "tc-task",
 		ToolName:   "spawn_subagent",
 		Text:       `spawn_subagent running · review · Searched "TaskProgress" in internal/tui (*.go) · 7 matches in 3 files`,
+		Metadata: map[string]any{
+			"child_session_id": "parent--subagent-tc-task",
+			"child_tool":       "grep",
+			"role":             "review",
+		},
 	}))
 	m = next.(model)
 	snap = m.assembler.Snapshot()
-	if !strings.Contains(snap[0].Text, `Searched "TaskProgress" in internal/tui (*.go) · 7 matches in 3 files`) {
-		t.Fatalf("expected progress target and metric to be preserved: %+v", snap[0])
+	if !strings.Contains(snap[0].Text, "current: grep") || !strings.Contains(snap[0].Text, `detail: Searched "TaskProgress" in internal/tui (*.go) · 7 matches in 3 files`) {
+		t.Fatalf("expected child tool and progress metric to be preserved: %+v", snap[0])
+	}
+
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:       service.EventTaskProgress,
+		ToolCallID: "tc-task",
+		ToolName:   "spawn_subagent",
+		Text:       "spawn_subagent compacted · review · Compacted child context (10 -> 3 messages)",
+		Status:     "compacted",
+		Metadata: map[string]any{
+			"child_session_id": "parent--subagent-tc-task",
+			"role":             "review",
+		},
+	}))
+	m = next.(model)
+	snap = m.assembler.Snapshot()
+	if snap[0].Role != "result_running" || !strings.Contains(snap[0].Text, "Subagent review compacted") || !strings.Contains(snap[0].Text, "current: grep") {
+		t.Fatalf("expected non-running progress status to update subagent row without losing current tool: %+v", snap[0])
+	}
+
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:       service.EventTaskProgress,
+		ToolCallID: "tc-task",
+		ToolName:   "spawn_subagent",
+		Text:       "spawn_subagent completed · review · Child finished",
+		Status:     "completed",
+		Metadata: map[string]any{
+			"child_session_id": "parent--subagent-tc-task",
+			"role":             "review",
+		},
+	}))
+	m = next.(model)
+	snap = m.assembler.Snapshot()
+	if snap[0].Role != "result_ok" || !strings.Contains(snap[0].Text, "Subagent review completed") {
+		t.Fatalf("expected completed progress status to update subagent row: %+v", snap[0])
+	}
+
+	result := `{"ok":true,"success":true,"data":{"role":"review","child_session_id":"parent--subagent-tc-task","summary":"no permission bypass found"},"metadata":{"duration_ms":1500}}`
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolResult,
+		ToolCallID: "tc-task",
+		ToolName:   "spawn_subagent",
+		Text:       result,
+	}))
+	m = next.(model)
+	if len(m.transcript) == 0 {
+		t.Fatalf("expected completed subagent row in transcript")
+	}
+	completed := m.transcript[len(m.transcript)-1]
+	for _, want := range []string{"Subagent review completed", "session: parent--subagent-tc-task", "current: grep", "duration: 1.5s", "summary: no permission bypass found"} {
+		if !strings.Contains(completed.Text, want) {
+			t.Fatalf("expected %q in completed row: %+v", want, completed)
+		}
+	}
+}
+
+func TestSubagentFailureUpdatesDedicatedCell(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat}
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolCall,
+		ToolCallID: "tc-task",
+		ToolName:   "spawn_subagent",
+		Text:       "spawn_subagent: review · inspect internal/tasks",
+	}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:       service.EventTaskProgress,
+		ToolCallID: "tc-task",
+		ToolName:   "spawn_subagent",
+		Text:       "spawn_subagent tool_failed · review · Read internal/tasks/runner.go failed",
+		Metadata: map[string]any{
+			"child_session_id": "parent--subagent-tc-task",
+			"child_tool":       "read_file",
+			"role":             "review",
+		},
+	}))
+	m = next.(model)
+	snap := m.assembler.Snapshot()
+	if !strings.Contains(snap[0].Text, "Subagent review failed") || !strings.Contains(snap[0].Text, "current: read_file") {
+		t.Fatalf("unexpected progress row: %+v", snap[0])
+	}
+
+	result := `{"ok":false,"success":false,"code":"spawn_subagent_failed","error":"subagent failed","data":{"role":"review","child_session_id":"parent--subagent-tc-task"},"metadata":{"duration_ms":41}}`
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolResult,
+		ToolCallID: "tc-task",
+		ToolName:   "spawn_subagent",
+		Text:       result,
+	}))
+	m = next.(model)
+	if len(m.transcript) == 0 {
+		t.Fatalf("expected failed subagent row in transcript")
+	}
+	failed := m.transcript[len(m.transcript)-1]
+	for _, want := range []string{"Subagent review failed", "session: parent--subagent-tc-task", "duration: 41ms", "summary: subagent failed"} {
+		if !strings.Contains(failed.Text, want) {
+			t.Fatalf("expected %q in failed row: %+v", want, failed)
+		}
 	}
 }
 

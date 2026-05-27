@@ -14,6 +14,7 @@ const (
 	KindToolCall    MessageKind = "tool_call"
 	KindToolResult  MessageKind = "tool_result"
 	KindToolSummary MessageKind = "tool_summary"
+	KindSubagent    MessageKind = "subagent"
 )
 
 type UIMessage struct {
@@ -119,6 +120,23 @@ func (a *Assembler) AddToolCall(toolCallID, toolName, text string) {
 		Kind:     KindToolCall,
 		Text:     t,
 		ToolName: strings.TrimSpace(toolName),
+	})
+	if toolCallID != "" {
+		a.toolEntryByID[toolCallID] = len(a.messages) - 1
+	}
+}
+
+func (a *Assembler) AddSubagent(toolCallID, text string) {
+	t := strings.TrimSpace(strings.TrimRight(text, "\n"))
+	if t == "" {
+		return
+	}
+	a.messages = append(a.messages, UIMessage{
+		ID:       toolCallID,
+		Role:     "tool",
+		Kind:     KindSubagent,
+		Text:     t,
+		ToolName: "spawn_subagent",
 	})
 	if toolCallID != "" {
 		a.toolEntryByID[toolCallID] = len(a.messages) - 1
@@ -306,10 +324,14 @@ func (a *Assembler) BackfillToolCall(toolCallID, replacement string) {
 func (a *Assembler) rebuildToolEntryIndex() {
 	a.toolEntryByID = map[string]int{}
 	for i, msg := range a.messages {
-		if msg.ID != "" && msg.Kind == KindToolCall {
+		if msg.ID != "" && isIndexableToolMessage(msg.Kind) {
 			a.toolEntryByID[msg.ID] = i
 		}
 	}
+}
+
+func isIndexableToolMessage(kind MessageKind) bool {
+	return kind == KindToolCall || kind == KindSubagent
 }
 
 func canCoalesce(role string, last UIMessage) bool {
