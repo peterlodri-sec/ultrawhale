@@ -440,6 +440,39 @@ func (t *progressSpawnSubagentTool) RunWithProgress(ctx context.Context, call To
 	}, nil
 }
 
+type cancelObservedSpawnSubagentTool struct {
+	calls      atomic.Int32
+	running    atomic.Int32
+	max        atomic.Int32
+	started    chan string
+	cancelSeen chan string
+}
+
+func newCancelObservedSpawnSubagentTool(n int) *cancelObservedSpawnSubagentTool {
+	return &cancelObservedSpawnSubagentTool{
+		started:    make(chan string, n),
+		cancelSeen: make(chan string, n),
+	}
+}
+
+func (t *cancelObservedSpawnSubagentTool) Name() string { return "spawn_subagent" }
+func (t *cancelObservedSpawnSubagentTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+	t.calls.Add(1)
+	running := t.running.Add(1)
+	for {
+		max := t.max.Load()
+		if running <= max || t.max.CompareAndSwap(max, running) {
+			break
+		}
+	}
+	defer t.running.Add(-1)
+
+	t.started <- call.ID
+	<-ctx.Done()
+	t.cancelSeen <- call.ID
+	return ToolResult{}, ctx.Err()
+}
+
 func TestReadySpawnSubagentGroupRunsConcurrently(t *testing.T) {
 	store := NewInMemoryStore()
 	spawn := &delayedSpawnSubagentTool{delay: 300 * time.Millisecond}
@@ -486,6 +519,107 @@ func TestReadySpawnSubagentGroupRunsConcurrently(t *testing.T) {
 		if toolMsg.ToolResults[i].ToolCallID != wantID {
 			t.Fatalf("tool result %d id = %q, want %q", i, toolMsg.ToolResults[i].ToolCallID, wantID)
 		}
+	}
+}
+
+func TestParallelSpawnSubagentsShareParentContextCancellation(t *testing.T) {
+	store := NewInMemoryStore()
+	spawn := newCancelObservedSpawnSubagentTool(3)
+	a := NewAgentWithRegistry(
+		&parallelSpawnProvider{},
+		store,
+		NewToolRegistry([]Tool{spawn}),
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	events, err := a.RunStream(ctx, "s-parallel-subagents-cancel", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+
+	started := map[string]bool{}
+	for len(started) < 3 {
+		select {
+		case id := <-spawn.started:
+			started[id] = true
+		case <-time.After(time.Second):
+			t.Fatalf("timed out waiting for parallel subagents to start; started=%v calls=%d max=%d", started, spawn.calls.Load(), spawn.max.Load())
+		}
+	}
+
+	cancel()
+
+	cancelSeen := map[string]bool{}
+	for len(cancelSeen) < 3 {
+		select {
+		case id := <-spawn.cancelSeen:
+			cancelSeen[id] = true
+		case <-time.After(time.Second):
+			t.Fatalf("timed out waiting for parallel subagents to observe cancellation; seen=%v", cancelSeen)
+		}
+	}
+
+	seenCancelled := false
+	var toolResultEvents []ToolResult
+	var subagentDoneEvents []TaskActivityInfo
+	for ev := range events {
+		switch ev.Type {
+		case AgentEventTypeError:
+			if ev.Err != nil {
+				t.Fatalf("run stream emitted error: %v", ev.Err)
+			}
+		case AgentEventTypeTurnCancelled:
+			seenCancelled = true
+		case AgentEventTypeToolResult:
+			if ev.Result != nil && ev.Result.Name == "spawn_subagent" {
+				toolResultEvents = append(toolResultEvents, *ev.Result)
+			}
+		case AgentEventTypeSubagentDone:
+			if ev.Task != nil {
+				subagentDoneEvents = append(subagentDoneEvents, *ev.Task)
+			}
+		case AgentEventTypeDone:
+			t.Fatalf("unexpected done event after parent cancellation")
+		}
+	}
+
+	if !seenCancelled {
+		t.Fatal("expected turn_cancelled event")
+	}
+	if len(toolResultEvents) != 0 {
+		t.Fatalf("expected no completed spawn_subagent tool results after cancellation, got %+v", toolResultEvents)
+	}
+	if len(subagentDoneEvents) != 0 {
+		t.Fatalf("expected no subagent completed events after cancellation, got %+v", subagentDoneEvents)
+	}
+	if got := spawn.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 spawn_subagent calls, got %d", got)
+	}
+	if got := spawn.max.Load(); got < 2 {
+		t.Fatalf("expected overlapping spawn_subagent calls, max concurrency was %d", got)
+	}
+	for _, wantID := range []string{"tc-subagent-1", "tc-subagent-2", "tc-subagent-3"} {
+		if !started[wantID] {
+			t.Fatalf("expected %s to start, started=%v", wantID, started)
+		}
+		if !cancelSeen[wantID] {
+			t.Fatalf("expected %s to observe cancellation, seen=%v", wantID, cancelSeen)
+		}
+	}
+
+	msgs, err := store.List(context.Background(), "s-parallel-subagents-cancel")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	for _, msg := range msgs {
+		if msg.Role == RoleTool {
+			t.Fatalf("expected cancellation to skip persisted fake tool results, got tool message %+v", msg)
+		}
+	}
+	last := msgs[len(msgs)-1]
+	if last.Role != RoleUser || !last.Hidden || last.FinishReason != FinishReasonCanceled || !strings.Contains(last.Text, "<turn_aborted>") {
+		t.Fatalf("expected hidden interrupt marker, got: %+v", last)
 	}
 }
 

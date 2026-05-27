@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/llm"
@@ -636,15 +635,12 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 }
 
 func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent) ([]toolDispatchOutcome, error) {
-	outcomes := make([]toolDispatchOutcome, len(pending))
-	var wg sync.WaitGroup
-	for i, prepared := range pending {
-		i, prepared := i, prepared
-		wg.Add(1)
+	outcomeCh := make(chan toolDispatchOutcome, len(pending))
+	for _, prepared := range pending {
+		prepared := prepared
 		go func() {
-			defer wg.Done()
 			finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events)
-			outcomes[i] = toolDispatchOutcome{
+			outcomeCh <- toolDispatchOutcome{
 				Prepared:         prepared,
 				Result:           finalRes,
 				OK:               ok,
@@ -652,9 +648,15 @@ func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessi
 			}
 		}()
 	}
-	wg.Wait()
-	if err := ctx.Err(); err != nil {
-		return nil, err
+
+	outcomes := make([]toolDispatchOutcome, 0, len(pending))
+	for range pending {
+		select {
+		case outcome := <-outcomeCh:
+			outcomes = append(outcomes, outcome)
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 	sort.SliceStable(outcomes, func(i, j int) bool {
 		return outcomes[i].Prepared.Index < outcomes[j].Prepared.Index
