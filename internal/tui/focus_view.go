@@ -121,7 +121,7 @@ func isFocusHiddenMessage(msg tuirender.UIMessage) bool {
 }
 
 func isFocusHiddenToolMessage(msg tuirender.UIMessage) bool {
-	return msg.Kind == tuirender.KindToolCall || msg.Kind == tuirender.KindToolResult
+	return msg.Kind == tuirender.KindToolCall || msg.Kind == tuirender.KindToolResult || msg.Kind == tuirender.KindSubagent
 }
 
 type focusToolSummary struct {
