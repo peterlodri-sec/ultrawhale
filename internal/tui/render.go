@@ -736,8 +736,10 @@ func (m model) renderBusyStatusLine(width int) string {
 				line += " · Enter to run · Esc to interrupt · Ctrl+C clears draft"
 			} else if appcommands.LooksLikeSlashCommand(input) {
 				line += " · Slash commands are disabled while working · Esc to interrupt · Ctrl+C clears draft"
-			} else if strings.TrimSpace(input) == "" {
+			} else if input == "" {
 				line += " · Type follow-up, Enter to queue · Esc/Ctrl+C to interrupt"
+			} else if strings.TrimSpace(input) == "" {
+				line += " · Type follow-up · Esc to interrupt · Ctrl+C clears draft"
 			} else {
 				line += " · Enter to queue · Esc to interrupt · Ctrl+C clears draft"
 			}
