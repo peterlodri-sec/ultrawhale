@@ -18,6 +18,7 @@ func TestApprovalTelemetryPersistsRequestAndDecision(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithSessionsDir(dir),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			return ApprovalDeny

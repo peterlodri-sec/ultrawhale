@@ -152,7 +152,7 @@ func DefaultPermissionConfig() PermissionConfig {
 			"*.env.example": "allow",
 		},
 		Edit: map[string]string{
-			"*": "ask",
+			"*": "allow",
 		},
 		Shell: map[string]string{
 			"*":                       "allow",
