@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/usewhale/whale/internal/app"
+	"github.com/usewhale/whale/internal/core"
 )
 
 type MessageKind string
@@ -24,17 +25,19 @@ const (
 )
 
 type UIMessage struct {
-	ID            string
-	Role          string
-	Kind          MessageKind
-	Text          string
-	ToolName      string
-	ToolIdentity  string
-	Streaming     bool
-	Local         *app.LocalResult
-	FocusSummary  *FocusSummary
-	Notice        *SystemNotice
-	FullReasoning bool
+	ID               string
+	Role             string
+	Kind             MessageKind
+	Text             string
+	ToolName         string
+	ToolIdentity     string
+	Streaming        bool
+	Local            *app.LocalResult
+	FocusSummary     *FocusSummary
+	Notice           *SystemNotice
+	FullReasoning    bool
+	SubagentSteps    []core.SubagentStep
+	SubagentExpanded bool
 }
 
 type SystemNotice struct {
@@ -226,20 +229,55 @@ func (a *Assembler) AddToolCall(toolCallID, toolName, text string) {
 }
 
 func (a *Assembler) AddSubagent(toolCallID, text string) {
+	a.AddSubagentWithSteps(toolCallID, text, nil)
+}
+
+func (a *Assembler) AddSubagentWithSteps(toolCallID, text string, steps []core.SubagentStep) {
 	t := strings.TrimSpace(strings.TrimRight(text, "\n"))
 	if t == "" {
 		return
 	}
 	a.messages = append(a.messages, UIMessage{
-		ID:       toolCallID,
-		Role:     "tool",
-		Kind:     KindSubagent,
-		Text:     t,
-		ToolName: "spawn_subagent",
+		ID:            toolCallID,
+		Role:          "tool",
+		Kind:          KindSubagent,
+		Text:          t,
+		ToolName:      "spawn_subagent",
+		SubagentSteps: steps,
 	})
 	if toolCallID != "" {
 		a.toolEntryByID[toolCallID] = len(a.messages) - 1
 	}
+}
+
+func (a *Assembler) UpdateSubagentProgress(toolCallID, text string, role string, steps []core.SubagentStep) {
+	if toolCallID == "" {
+		return
+	}
+	idx, ok := a.toolEntryByID[toolCallID]
+	if !ok || idx < 0 || idx >= len(a.messages) {
+		return
+	}
+	a.messages[idx].Text = text
+	a.messages[idx].Role = role
+	if len(steps) > 0 {
+		a.messages[idx].SubagentSteps = steps
+	}
+}
+
+func (a *Assembler) Messages() []UIMessage {
+	return a.messages
+}
+
+func (a *Assembler) ToggleSubagentExpanded(toolCallID string) {
+	if toolCallID == "" {
+		return
+	}
+	idx, ok := a.toolEntryByID[toolCallID]
+	if !ok || idx < 0 || idx >= len(a.messages) {
+		return
+	}
+	a.messages[idx].SubagentExpanded = !a.messages[idx].SubagentExpanded
 }
 
 func (a *Assembler) AddNotice(text string) {

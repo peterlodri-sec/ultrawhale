@@ -118,6 +118,7 @@ type Event struct {
 	Status          string
 	Count           int
 	DurationMS      int64
+	ProgressMessages []core.SubagentStep
 	Questions       []core.UserInputQuestion
 	Choices         []string
 	Approval        *policy.ApprovalRequest

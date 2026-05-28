@@ -5,8 +5,25 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/usewhale/whale/internal/core"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
+
+func (m *model) toggleSubagentCard() bool {
+	if m.assembler == nil {
+		return false
+	}
+	// Find the most recent subagent card that has steps
+	for i := len(m.assembler.Messages()) - 1; i >= 0; i-- {
+		msg := m.assembler.Messages()[i]
+		if msg.Kind == tuirender.KindSubagent && len(msg.SubagentSteps) > 0 {
+			m.assembler.ToggleSubagentExpanded(msg.ID)
+			m.refreshLiveViewportContent()
+			return true
+		}
+	}
+	return false
+}
 
 func (m *model) appendToolCall(toolCallID, toolName, text string) {
 	if m.assembler == nil {
@@ -70,6 +87,10 @@ func shellCommandIdentityFromResult(raw string) string {
 }
 
 func (m *model) updateTaskProgress(toolCallID, toolName, text, status string, metadata map[string]any) bool {
+	return m.updateTaskProgressWithSteps(toolCallID, toolName, text, status, metadata, nil)
+}
+
+func (m *model) updateTaskProgressWithSteps(toolCallID, toolName, text, status string, metadata map[string]any, steps []core.SubagentStep) bool {
 	if toolCallID == "" || m.assembler == nil {
 		return false
 	}
@@ -79,12 +100,12 @@ func (m *model) updateTaskProgress(toolCallID, toolName, text, status string, me
 		previous := m.assembler.ToolCallText(toolCallID)
 		title = subagentProgressText(text, status, metadata, previous)
 		role = subagentProgressRole(status, text)
+		m.assembler.UpdateSubagentProgress(toolCallID, title, role, steps)
+	} else {
+		m.assembler.UpdateToolCall(toolCallID, title, role)
 	}
-	ok := m.assembler.UpdateToolCall(toolCallID, title, role)
-	if ok {
-		m.refreshLiveViewportContent()
-	}
-	return ok
+	m.refreshLiveViewportContent()
+	return true
 }
 
 func (m *model) markToolCallPending(toolCallID string) {

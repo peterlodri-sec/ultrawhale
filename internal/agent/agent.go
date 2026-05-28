@@ -164,15 +164,16 @@ type PlanUpdateInfo struct {
 }
 
 type TaskActivityInfo struct {
-	ToolCallID string
-	ToolName   string
-	Role       string
-	Model      string
-	Count      int
-	Summary    string
-	Status     string
-	DurationMS int64
-	Metadata   map[string]any
+	ToolCallID       string
+	ToolName         string
+	Role             string
+	Model            string
+	Count            int
+	Summary          string
+	Status           string
+	DurationMS       int64
+	Metadata         map[string]any
+	ProgressMessages []core.SubagentStep
 }
 
 type BudgetWarningInfo struct {
