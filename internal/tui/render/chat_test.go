@@ -311,6 +311,36 @@ func TestChatLines_ThinkingLargeShowsTailPreview(t *testing.T) {
 	}
 }
 
+func TestDisplayThinkingTextCapsLongStreamingSingleLine(t *testing.T) {
+	text := strings.Repeat("a", thinkingPreviewLineRuneLimit+50) + "TAIL"
+
+	got := displayThinkingText(text, true, false)
+	if strings.Contains(got, "TAIL") {
+		t.Fatalf("streaming single-line preview leaked tail suffix")
+	}
+	if gotRunes := len([]rune(got)); gotRunes > thinkingPreviewLineRuneLimit+3 {
+		t.Fatalf("streaming single-line preview length = %d, want capped", gotRunes)
+	}
+	if !strings.HasSuffix(got, "...") {
+		t.Fatalf("streaming single-line preview should show truncation marker, got suffix %q", got[len(got)-8:])
+	}
+}
+
+func TestDisplayThinkingTextCapsLongSettledSingleLine(t *testing.T) {
+	text := strings.Repeat("b", thinkingLargeCharThreshold+50) + "TAIL"
+
+	got := displayThinkingText(text, false, false)
+	if !strings.Contains(got, "... reasoning scrolled past") {
+		t.Fatalf("settled single-line preview missing large-reasoning marker:\n%s", got)
+	}
+	if strings.Contains(got, "TAIL") {
+		t.Fatalf("settled single-line preview leaked tail suffix")
+	}
+	if gotRunes := len([]rune(got)); gotRunes > thinkingPreviewLineRuneLimit+len([]rune("... reasoning scrolled past\n...")) {
+		t.Fatalf("settled single-line preview length = %d, want capped", gotRunes)
+	}
+}
+
 func TestChatLines_ThinkingFullReasoningBypassesPreview(t *testing.T) {
 	text := strings.Join([]string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"}, "\n")
 	entries := []UIMessage{

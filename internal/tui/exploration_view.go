@@ -104,6 +104,9 @@ func explorationItemFromMessage(msg tuirender.UIMessage) (explorationItem, bool)
 	}
 	detail := normalExplorationDetail(msg, kind)
 	if detail == "" {
+		if isMCPToolName(msg.ToolName) {
+			return explorationItem{}, false
+		}
 		switch kind {
 		case "read":
 			detail = "file"
@@ -116,6 +119,10 @@ func explorationItemFromMessage(msg tuirender.UIMessage) (explorationItem, bool)
 	return explorationItem{kind: kind, detail: detail, running: state == "running"}, true
 }
 
+func isMCPToolName(toolName string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(toolName)), "mcp__")
+}
+
 func normalExplorationKind(msg tuirender.UIMessage) string {
 	name := strings.ToLower(strings.TrimSpace(msg.ToolName))
 	switch name {
@@ -126,7 +133,7 @@ func normalExplorationKind(msg tuirender.UIMessage) string {
 	case "search_files", "grep", "search_content":
 		return "search"
 	}
-	if strings.HasPrefix(name, "mcp__") {
+	if isMCPToolName(name) {
 		switch {
 		case strings.Contains(name, "read_text_file"), strings.Contains(name, "read_file"):
 			return "read"
@@ -165,7 +172,7 @@ func normalExplorationDetail(msg tuirender.UIMessage, kind string) string {
 			return strings.TrimSpace(detail)
 		}
 	}
-	return focusToolDetail(msg)
+	return focusStandardDetail(focusToolSummaryInput{ToolName: msg.ToolName, Text: msg.Text})
 }
 
 func explorationItemLine(item explorationItem) string {

@@ -454,6 +454,77 @@ func TestProjectNormalMessagesDoesNotGroupGitStatusOrDiff(t *testing.T) {
 	}
 }
 
+func TestProjectNormalMessagesDoesNotGroupMCPWithoutRealDetail(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "mcp__fs__read_text_file", Text: "Ran mcp__fs__read_text_file"},
+	}
+
+	projected := projectNormalMessages(messages, false)
+	if len(projected) != 1 {
+		t.Fatalf("expected one ungrouped MCP message, got %+v", projected)
+	}
+	if projected[0].Role == "exploration_group" {
+		t.Fatalf("MCP message without real detail should not be grouped: %+v", projected[0])
+	}
+	rendered := strings.Join(tuirender.ChatLines(projected, 100), "\n")
+	if strings.Contains(rendered, "Read file") || strings.Contains(rendered, "Search content") {
+		t.Fatalf("MCP message without real detail should not fall back to generic exploration labels:\n%s", rendered)
+	}
+}
+
+func TestCompletedMCPDisplayUsesUserFacingLabel(t *testing.T) {
+	tests := []struct {
+		name     string
+		toolName string
+		previous string
+		want     string
+	}{
+		{
+			name:     "read",
+			toolName: "mcp__fs__read_text_file",
+			previous: "Exploring\nRead internal/tui/focus_view.go",
+			want:     "Called MCP fs · read_text_file",
+		},
+		{
+			name:     "list",
+			toolName: "mcp__fs__list_directory",
+			previous: "Exploring\nList internal/tui",
+			want:     "Called MCP fs · list_directory",
+		},
+		{
+			name:     "search",
+			toolName: "mcp__fs__search_files",
+			previous: "Exploring\nSearch focus in internal/tui",
+			want:     "Called MCP fs · search_files",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := completedToolTitle(tt.toolName, `{"success":true}`, tt.previous); got != tt.want {
+				t.Fatalf("completed MCP title = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProjectNormalMessagesKeepsCompletedMCPDisplay(t *testing.T) {
+	title := completedToolTitle("mcp__fs__read_text_file", `{"success":true}`, "Exploring\nRead internal/tui/focus_view.go")
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "mcp__fs__read_text_file", Text: title},
+	}
+
+	rendered := strings.Join(tuirender.ChatLines(projectNormalMessages(messages, false), 100), "\n")
+	for _, want := range []string{"Called MCP fs · read_text_file", "(ctrl+o to collapse)"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("completed MCP display missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "• Explored") || strings.Contains(rendered, "Read file") {
+		t.Fatalf("completed MCP display should not become generic exploration:\n%s", rendered)
+	}
+}
+
 func TestModelChatMessagesApplyFocusView(t *testing.T) {
 	m := newModel(nil, "deepseek-v4-pro", "high", "on")
 	m.viewMode = app.ViewModeFocus
