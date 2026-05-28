@@ -399,10 +399,11 @@ func shouldShowUnmatchedToolResult(toolName, role, text string) bool {
 }
 
 func toolDisplayKind(toolName string) string {
-	if isMCPDisplayTool(toolName) {
+	name := strings.TrimSpace(toolName)
+	if isMCPDisplayTool(name) {
 		return "mcp"
 	}
-	switch strings.TrimSpace(toolName) {
+	switch name {
 	case "shell_run", "shell_wait", "shell_cancel":
 		return "shell"
 	case "read_file", "list_dir", "search_files", "grep", "search_content", "fetch", "web_fetch", "web_search":
@@ -417,6 +418,23 @@ func toolDisplayKind(toolName string) string {
 		return "todo"
 	default:
 		return "unknown"
+	}
+}
+
+func mcpExplorationKind(toolName string) string {
+	name := strings.ToLower(strings.TrimSpace(toolName))
+	if !strings.HasPrefix(name, "mcp__") {
+		return ""
+	}
+	switch {
+	case strings.Contains(name, "read_text_file"), strings.Contains(name, "read_file"):
+		return "read"
+	case strings.Contains(name, "list_directory"), strings.Contains(name, "list_dir"):
+		return "list"
+	case strings.Contains(name, "search"), strings.Contains(name, "grep"):
+		return "search"
+	default:
+		return ""
 	}
 }
 
@@ -462,26 +480,48 @@ func explorationLine(toolName, fallback string, env toolResultEnvelope) string {
 	data := env.data
 	switch toolName {
 	case "read_file":
-		path := firstNonEmpty(asString(payload["file_path"]), asString(data["file_path"]), fallback, "file")
+		path := firstNonEmpty(asString(payload["file_path"]), asString(data["file_path"]), actionDetailFallback(fallback, "Read"), "file")
 		return "Read " + path
 	case "list_dir":
-		path := firstNonEmpty(asString(payload["path"]), asString(data["path"]), fallback, ".")
+		path := firstNonEmpty(asString(payload["path"]), asString(data["path"]), actionDetailFallback(fallback, "List"), ".")
 		return "List " + path
 	case "search_files":
-		return formatSearchActionLine(firstNonEmpty(searchDetailFromPayload(payload, data, ""), fallback), "files")
+		return formatSearchActionLine(firstNonEmpty(searchDetailFromPayload(payload, data, ""), actionDetailFallback(fallback, "Search")), "files")
 	case "grep", "search_content":
-		return formatSearchActionLine(firstNonEmpty(searchDetailFromPayload(payload, data, asString(payload["include"])), fallback), "content")
+		return formatSearchActionLine(firstNonEmpty(searchDetailFromPayload(payload, data, asString(payload["include"])), actionDetailFallback(fallback, "Search")), "content")
 	case "fetch", "web_fetch":
-		return "Fetch " + firstNonEmpty(asString(payload["url"]), asString(data["url"]), fallback, "url")
+		return "Fetch " + firstNonEmpty(asString(payload["url"]), asString(data["url"]), actionDetailFallback(fallback, "Fetch"), "url")
 	case "web_search":
-		query := firstNonEmpty(webSearchQueryFromMaps(payload, data), fallback)
+		query := firstNonEmpty(webSearchQueryFromMaps(payload, data), actionDetailFallback(fallback, "Search web for"), actionDetailFallback(fallback, "Search"))
 		if query != "" {
 			return "Search web for " + query
 		}
 		return "Search web"
 	default:
+		switch mcpExplorationKind(toolName) {
+		case "read":
+			path := firstNonEmpty(asString(payload["file_path"]), asString(payload["path"]), asString(data["file_path"]), asString(data["path"]), actionDetailFallback(fallback, "Read"), "file")
+			return "Read " + path
+		case "list":
+			path := firstNonEmpty(asString(payload["path"]), asString(data["path"]), actionDetailFallback(fallback, "List"), ".")
+			return "List " + path
+		case "search":
+			return formatSearchActionLine(firstNonEmpty(searchDetailFromPayload(payload, data, ""), actionDetailFallback(fallback, "Search")), "content")
+		}
 		return "Run " + firstNonEmpty(fallback, toolName)
 	}
+}
+
+func actionDetailFallback(fallback, action string) string {
+	fallback = strings.TrimSpace(fallback)
+	action = strings.TrimSpace(action)
+	if fallback == "" || action == "" {
+		return fallback
+	}
+	if after, ok := strings.CutPrefix(fallback, action+" "); ok {
+		return strings.TrimSpace(after)
+	}
+	return fallback
 }
 
 func searchDetailFromPayload(payload, data map[string]any, includeFallback string) string {

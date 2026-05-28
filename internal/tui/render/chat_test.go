@@ -246,6 +246,127 @@ func TestChatLines_ThinkingCardHasDistinctLabel(t *testing.T) {
 	assertBlankLineBetween(t, lines, "Thinking", "I should answer carefully.")
 }
 
+func TestChatLines_ThinkingStreamingShowsTailPreview(t *testing.T) {
+	entries := []UIMessage{
+		{
+			Role:      "think",
+			Kind:      KindThinking,
+			Streaming: true,
+			Text:      strings.Join([]string{"alpha", "bravo", "charlie", "delta", "echo"}, "\n"),
+		},
+	}
+	plain := joinedPlain(ChatLines(entries, 80))
+	for _, hidden := range []string{"alpha", "bravo"} {
+		if strings.Contains(plain, hidden) {
+			t.Fatalf("streaming thinking preview leaked %q:\n%s", hidden, plain)
+		}
+	}
+	for _, want := range []string{"...", "charlie", "delta", "echo"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("streaming thinking preview missing %q:\n%s", want, plain)
+		}
+	}
+}
+
+func TestChatLines_ThinkingSettledShowsHeadTailPreview(t *testing.T) {
+	entries := []UIMessage{
+		{
+			Role: "think",
+			Kind: KindThinking,
+			Text: strings.Join([]string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"}, "\n"),
+		},
+	}
+	plain := joinedPlain(ChatLines(entries, 80))
+	for _, want := range []string{"alpha", "bravo", "... 3 lines omitted", "foxtrot", "golf"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("settled thinking preview missing %q:\n%s", want, plain)
+		}
+	}
+	for _, hidden := range []string{"charlie", "delta", "echo"} {
+		if strings.Contains(plain, hidden) {
+			t.Fatalf("settled thinking preview leaked %q:\n%s", hidden, plain)
+		}
+	}
+}
+
+func TestChatLines_ThinkingLargeShowsTailPreview(t *testing.T) {
+	lines := make([]string, 85)
+	for i := range lines {
+		lines[i] = "line-" + string(rune('a'+i%26)) + "-" + string(rune('a'+(i/26)))
+	}
+	entries := []UIMessage{
+		{Role: "think", Kind: KindThinking, Text: strings.Join(lines, "\n")},
+	}
+	plain := joinedPlain(ChatLines(entries, 80))
+	if !strings.Contains(plain, "... reasoning scrolled past") {
+		t.Fatalf("large thinking preview missing scrolled-past hint:\n%s", plain)
+	}
+	if strings.Contains(plain, lines[0]) || strings.Contains(plain, lines[40]) {
+		t.Fatalf("large thinking preview leaked early/middle lines:\n%s", plain)
+	}
+	for _, want := range lines[len(lines)-2:] {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("large thinking preview missing tail %q:\n%s", want, plain)
+		}
+	}
+}
+
+func TestDisplayThinkingTextCapsLongStreamingSingleLine(t *testing.T) {
+	text := strings.Repeat("a", thinkingPreviewLineRuneLimit+50) + "TAIL"
+
+	got := displayThinkingText(text, true, false)
+	if strings.Contains(got, "TAIL") {
+		t.Fatalf("streaming single-line preview leaked tail suffix")
+	}
+	if gotRunes := len([]rune(got)); gotRunes > thinkingPreviewLineRuneLimit+3 {
+		t.Fatalf("streaming single-line preview length = %d, want capped", gotRunes)
+	}
+	if !strings.HasSuffix(got, "...") {
+		t.Fatalf("streaming single-line preview should show truncation marker, got suffix %q", got[len(got)-8:])
+	}
+}
+
+func TestDisplayThinkingTextCapsLongSettledSingleLine(t *testing.T) {
+	text := strings.Repeat("b", thinkingLargeCharThreshold+50) + "TAIL"
+
+	got := displayThinkingText(text, false, false)
+	if !strings.Contains(got, "... reasoning scrolled past") {
+		t.Fatalf("settled single-line preview missing large-reasoning marker:\n%s", got)
+	}
+	if strings.Contains(got, "TAIL") {
+		t.Fatalf("settled single-line preview leaked tail suffix")
+	}
+	if gotRunes := len([]rune(got)); gotRunes > thinkingPreviewLineRuneLimit+len([]rune("... reasoning scrolled past\n...")) {
+		t.Fatalf("settled single-line preview length = %d, want capped", gotRunes)
+	}
+}
+
+func TestChatLines_ThinkingFullReasoningBypassesPreview(t *testing.T) {
+	text := strings.Join([]string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"}, "\n")
+	entries := []UIMessage{
+		{Role: "think", Kind: KindThinking, Streaming: true, FullReasoning: true, Text: text},
+	}
+	plain := joinedPlain(ChatLines(entries, 80))
+	for _, want := range []string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("full thinking missing %q:\n%s", want, plain)
+		}
+	}
+	if strings.Contains(plain, "omitted") || strings.Contains(plain, "scrolled past") {
+		t.Fatalf("full thinking should not show preview elision:\n%s", plain)
+	}
+}
+
+func TestAssemblerMarksLiveThinkingStreaming(t *testing.T) {
+	a := NewAssembler()
+	a.AppendDelta("think", "alpha")
+	a.AppendDelta("think", "\nbravo")
+	snap := a.Snapshot()
+	if len(snap) != 1 || !snap[0].Streaming {
+		t.Fatalf("expected live thinking to be marked streaming, got %+v", snap)
+	}
+}
+
 func TestChatLines_PlanUpdateHasDistinctLabel(t *testing.T) {
 	entries := []UIMessage{
 		{Role: "plan", Kind: KindPlanUpdate, Text: "[x] Inspect\n[~] Patch\n[ ] Test"},
@@ -625,8 +746,11 @@ func TestChatLines_ShellToolRendersAsEventRows(t *testing.T) {
 	if !strings.Contains(plain, "• Ran ./bin/whale --dangerously-skip-permissions") {
 		t.Fatalf("expected shell command event header, got: %q", plain)
 	}
-	if !strings.Contains(plain, "  └ (no output)") {
+	if !strings.Contains(plain, "  (no output)") {
 		t.Fatalf("expected child output row, got: %q", plain)
+	}
+	if strings.Contains(plain, "  └ (no output)") {
+		t.Fatalf("shell output should render as body text, got: %q", plain)
 	}
 	if !strings.Contains(strings.Join(lines, "\n"), "\x1b[") {
 		t.Fatalf("expected styled command event, got: %q", strings.Join(lines, "\n"))
@@ -716,13 +840,16 @@ func TestChatLines_ToolEventPreservesIndentedOutputRows(t *testing.T) {
 
 	plain := joinedPlain(ChatLines(entries, 100))
 	for _, want := range []string{
-		"  └   yaml:",
-		"  └ \t- item",
-		"  └     nested: value",
+		"    yaml:",
+		"  \t- item",
+		"      nested: value",
 	} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("expected indented output row %q in:\n%s", want, plain)
 		}
+	}
+	if strings.Contains(plain, "  └   yaml:") {
+		t.Fatalf("shell output should not render as nested action rows:\n%s", plain)
 	}
 }
 
@@ -834,6 +961,12 @@ func TestChatLines_ShellResultPreservesOutputLines(t *testing.T) {
 	joined := joinedPlain(lines)
 	if strings.Contains(joined, "23ms 284 model.go") {
 		t.Fatalf("shell status and output collapsed onto one line: %q", joined)
+	}
+	if !strings.Contains(joined, "• Ran cd internal/tui && wc -l model.go model_events.go model_keys.go model_prompt.go  ✓ · 23ms") {
+		t.Fatalf("expected shell status in header, got: %q", joined)
+	}
+	if strings.Contains(joined, "  └ 284 model.go") {
+		t.Fatalf("shell output should render as body text, got: %q", joined)
 	}
 	for _, want := range []string{"✓ · 23ms", "284 model.go", "202 model_events.go", "975 total", "NAME       SIZE", "file.txt   12K"} {
 		if !strings.Contains(joined, want) {

@@ -43,6 +43,7 @@ type FileConfig struct {
 
 type FileUIConfig struct {
 	ViewMode                string `toml:"view_mode,omitempty"`
+	ShowReasoning           *bool  `toml:"show_reasoning,omitempty"`
 	CheckForUpdateOnStartup *bool  `toml:"check_for_update_on_startup,omitempty"`
 }
 
@@ -242,6 +243,9 @@ func ApplyFileConfig(cfg *Config, file FileConfig) error {
 		}
 		cfg.ViewMode = mode
 	}
+	if file.UI.ShowReasoning != nil {
+		cfg.ShowReasoning = *file.UI.ShowReasoning
+	}
 	if file.UI.CheckForUpdateOnStartup != nil {
 		cfg.CheckForUpdateOnStartup = *file.UI.CheckForUpdateOnStartup
 	}
@@ -377,6 +381,9 @@ func overlayExplicitConfig(dst *Config, src Config) {
 	}
 	if strings.TrimSpace(src.ViewMode) != "" && src.ViewMode != def.ViewMode {
 		dst.ViewMode = src.ViewMode
+	}
+	if src.ShowReasoning != def.ShowReasoning {
+		dst.ShowReasoning = src.ShowReasoning
 	}
 	if src.RetryMaxAttemptsExplicit || (src.RetryMaxAttempts != 0 && src.RetryMaxAttempts != def.RetryMaxAttempts) {
 		dst.RetryMaxAttempts = src.RetryMaxAttempts

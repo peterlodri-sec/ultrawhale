@@ -18,11 +18,12 @@ func TestConfigFileRoundTrip(t *testing.T) {
 	path := GlobalConfigPath(dir)
 	enabled := true
 	checkUpdates := false
+	showReasoning := true
 	cfg := FileConfig{
 		Model:           "deepseek-v4-pro",
 		ReasoningEffort: "max",
 		ThinkingEnabled: &enabled,
-		UI:              FileUIConfig{ViewMode: ViewModeFocus, CheckForUpdateOnStartup: &checkUpdates},
+		UI:              FileUIConfig{ViewMode: ViewModeFocus, ShowReasoning: &showReasoning, CheckForUpdateOnStartup: &checkUpdates},
 		API:             FileAPIConfig{BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1/"},
 		Permissions: FilePermissionsConfig{
 			Default:    "ask",
@@ -64,6 +65,9 @@ func TestConfigFileRoundTrip(t *testing.T) {
 	if loaded.UI.ViewMode != ViewModeFocus {
 		t.Fatalf("ui.view_mode: want focus, got %+v", loaded.UI)
 	}
+	if loaded.UI.ShowReasoning == nil || !*loaded.UI.ShowReasoning {
+		t.Fatalf("ui.show_reasoning: want true, got %+v", loaded.UI.ShowReasoning)
+	}
 	if loaded.UI.CheckForUpdateOnStartup == nil || *loaded.UI.CheckForUpdateOnStartup {
 		t.Fatalf("ui.check_for_update_on_startup: want false, got %+v", loaded.UI.CheckForUpdateOnStartup)
 	}
@@ -101,6 +105,27 @@ func TestApplyFileConfigSupportsViewMode(t *testing.T) {
 	}
 	if err := ApplyFileConfig(&cfg, FileConfig{UI: FileUIConfig{ViewMode: "verbose"}}); err == nil {
 		t.Fatal("expected invalid view mode error")
+	}
+}
+
+func TestApplyFileConfigSupportsShowReasoning(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.ShowReasoning {
+		t.Fatal("default show_reasoning should be disabled")
+	}
+	enabled := true
+	if err := ApplyFileConfig(&cfg, FileConfig{UI: FileUIConfig{ShowReasoning: &enabled}}); err != nil {
+		t.Fatalf("ApplyFileConfig: %v", err)
+	}
+	if !cfg.ShowReasoning {
+		t.Fatal("expected show_reasoning to be enabled")
+	}
+	disabled := false
+	if err := ApplyFileConfig(&cfg, FileConfig{UI: FileUIConfig{ShowReasoning: &disabled}}); err != nil {
+		t.Fatalf("ApplyFileConfig: %v", err)
+	}
+	if cfg.ShowReasoning {
+		t.Fatal("expected show_reasoning to be disabled")
 	}
 }
 

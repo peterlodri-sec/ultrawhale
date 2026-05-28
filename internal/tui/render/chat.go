@@ -1,6 +1,7 @@
 package render
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -9,6 +10,13 @@ import (
 	"github.com/usewhale/whale/internal/app"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
+
+const thinkingStreamingPreviewLines = 3
+const thinkingSettledHeadLines = 2
+const thinkingSettledTailLines = 2
+const thinkingLargeLineThreshold = 80
+const thinkingLargeCharThreshold = 12000
+const thinkingPreviewLineRuneLimit = 1200
 
 func ChatLines(messages []UIMessage, width int) []string {
 	if len(messages) == 0 {
@@ -584,14 +592,78 @@ func renderThinkingCard(m UIMessage, block string, width int) []string {
 		Foreground(tuitheme.Default.Muted).
 		Bold(true).
 		Render("Thinking")
+	bodyText := displayThinkingText(block, m.Streaming, m.FullReasoning)
 	body := lipgloss.NewStyle().
 		Foreground(tuitheme.Default.Muted).
 		Italic(true).
-		Render(hardWrapRendered(renderEntryText("think", block, contentWidth), contentWidth))
+		Render(hardWrapRendered(renderEntryText("think", bodyText, contentWidth), contentWidth))
 	rendered := joinTitleAndBody(title, body)
 	card := spacedCardStyle(width, roleBorderColor(m)).
 		Render(rendered)
 	return strings.Split(strings.TrimRight(card, "\n"), "\n")
+}
+
+func displayThinkingText(block string, streaming, full bool) string {
+	text := strings.TrimRight(strings.ReplaceAll(block, "\r\n", "\n"), "\n")
+	if strings.TrimSpace(text) == "" {
+		return text
+	}
+	if full {
+		return text
+	}
+	lines := strings.Split(text, "\n")
+	if streaming {
+		if len(lines) <= thinkingStreamingPreviewLines {
+			return capThinkingPreviewLines(lines)
+		}
+		return strings.Join(append([]string{"..."}, capThinkingPreviewLineSlice(lines[len(lines)-thinkingStreamingPreviewLines:])...), "\n")
+	}
+	if len(lines) > thinkingLargeLineThreshold || len(text) > thinkingLargeCharThreshold {
+		visible := capThinkingPreviewLineSlice(tailLines(lines, thinkingSettledTailLines))
+		return strings.Join(append([]string{"... reasoning scrolled past"}, visible...), "\n")
+	}
+	totalShown := thinkingSettledHeadLines + thinkingSettledTailLines
+	if len(lines) <= totalShown {
+		return capThinkingPreviewLines(lines)
+	}
+	head := capThinkingPreviewLineSlice(lines[:thinkingSettledHeadLines])
+	tail := capThinkingPreviewLineSlice(tailLines(lines, thinkingSettledTailLines))
+	omitted := len(lines) - len(head) - len(tail)
+	out := make([]string, 0, len(head)+1+len(tail))
+	out = append(out, head...)
+	out = append(out, fmt.Sprintf("... %d lines omitted", omitted))
+	out = append(out, tail...)
+	return strings.Join(out, "\n")
+}
+
+func capThinkingPreviewLines(lines []string) string {
+	return strings.Join(capThinkingPreviewLineSlice(lines), "\n")
+}
+
+func capThinkingPreviewLineSlice(lines []string) []string {
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		out[i] = capThinkingPreviewLine(line)
+	}
+	return out
+}
+
+func capThinkingPreviewLine(line string) string {
+	runes := []rune(line)
+	if len(runes) <= thinkingPreviewLineRuneLimit {
+		return line
+	}
+	return string(runes[:thinkingPreviewLineRuneLimit]) + "..."
+}
+
+func tailLines(lines []string, count int) []string {
+	if count <= 0 || len(lines) == 0 {
+		return nil
+	}
+	if len(lines) <= count {
+		return lines
+	}
+	return lines[len(lines)-count:]
 }
 
 func renderFocusSummaryCard(m UIMessage, width int) []string {
@@ -741,6 +813,12 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 	if header == "" {
 		return nil
 	}
+	if isShellToolEvent(m) {
+		return renderShellToolEvent(m, header, rawLines[1:], width, contentWidth)
+	}
+	if isExplorationGroupEvent(m) {
+		return renderExplorationGroupEvent(m, header, rawLines[1:], width, contentWidth)
+	}
 	out := make([]string, 0, len(rawLines)+2)
 	out = append(out, renderToolEventHeader(m, header, width)...)
 	for _, raw := range rawLines[1:] {
@@ -754,7 +832,50 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 	return out
 }
 
+func renderShellToolEvent(m UIMessage, header string, rawLines []string, width, contentWidth int) []string {
+	status := ""
+	if len(rawLines) > 0 && isToolStatusLine(rawLines[0]) {
+		status = strings.TrimSpace(rawLines[0])
+		rawLines = rawLines[1:]
+	}
+	out := make([]string, 0, len(rawLines)+1)
+	out = append(out, renderToolEventHeaderWithStatus(m, header, status, width)...)
+	for _, raw := range rawLines {
+		line := strings.TrimRight(raw, "\n")
+		if strings.TrimSpace(line) == "" {
+			out = append(out, "")
+			continue
+		}
+		out = append(out, wrapWithPrefixes(line, "  ", "  ", contentWidth)...)
+	}
+	return out
+}
+
+func renderExplorationGroupEvent(m UIMessage, header string, rawLines []string, width, contentWidth int) []string {
+	out := make([]string, 0, len(rawLines)+1)
+	out = append(out, renderToolEventHeader(m, header, width)...)
+	first := true
+	for _, raw := range rawLines {
+		line := strings.TrimRight(raw, "\n")
+		if strings.TrimSpace(line) == "" {
+			out = append(out, "")
+			continue
+		}
+		firstPrefix := "    "
+		if first {
+			firstPrefix = tuitheme.MutedStyle().Render("  └ ")
+			first = false
+		}
+		out = append(out, wrapWithPrefixes(line, firstPrefix, "    ", contentWidth)...)
+	}
+	return out
+}
+
 func renderToolEventHeader(m UIMessage, header string, width int) []string {
+	return renderToolEventHeaderWithStatus(m, header, "", width)
+}
+
+func renderToolEventHeaderWithStatus(m UIMessage, header, status string, width int) []string {
 	contentWidth := width - 2
 	if contentWidth < 16 {
 		contentWidth = 16
@@ -767,6 +888,9 @@ func renderToolEventHeader(m UIMessage, header string, width int) []string {
 		rendered = bullet + " " + verbStyle.Render(verb)
 	} else {
 		rendered = bullet + " " + verbStyle.Render(verb) + " " + RenderCommandLike(rest)
+	}
+	if strings.TrimSpace(status) != "" {
+		rendered += tuitheme.MutedStyle().Render("  ") + renderToolStatusLine(status)
 	}
 	return wrapWithPrefixes(rendered, "", "  ", width)
 }
@@ -814,6 +938,15 @@ func hasLeadingCommandSpace(text string) bool {
 	return r == ' ' || r == '\t'
 }
 
+func isShellToolEvent(m UIMessage) bool {
+	return strings.HasPrefix(m.Role, "shell_result_")
+}
+
+func isToolStatusLine(line string) bool {
+	action, _ := splitStatusLinePreservingSpace(line)
+	return normalizedStatusToken(action) != ""
+}
+
 func splitStatusLinePreservingSpace(text string) (string, string) {
 	text = strings.TrimRight(text, "\r\n")
 	if text == "" {
@@ -854,6 +987,17 @@ func toolEventDetailStyle(token string) lipgloss.Style {
 	default:
 		return lipgloss.NewStyle().Foreground(tuitheme.Default.Text)
 	}
+}
+
+func renderToolStatusLine(line string) string {
+	action, rest := splitStatusLinePreservingSpace(line)
+	if normalizedStatusToken(action) == "" {
+		return tuitheme.MutedStyle().Render(line)
+	}
+	if rest == "" {
+		return toolEventStatusStyle(action).Render(action)
+	}
+	return toolEventStatusStyle(action).Render(action) + toolEventDetailStyle(action).Render(rest)
 }
 
 func normalizedStatusToken(token string) string {
@@ -1006,10 +1150,14 @@ func isShellOperator(token string) bool {
 	}
 }
 
+func isExplorationGroupEvent(m UIMessage) bool {
+	return m.Role == "exploration_group" || m.Role == "exploration_group_running"
+}
+
 func toolEventBulletStyle(m UIMessage) lipgloss.Style {
 	style := lipgloss.NewStyle().Foreground(tuitheme.Default.Muted).Bold(true)
 	switch m.Role {
-	case "result_ok", "shell_result_ok":
+	case "result_ok", "shell_result_ok", "exploration_group":
 		return style.Foreground(tuitheme.Default.Success)
 	case "result_denied", "shell_result_denied":
 		return style.Foreground(tuitheme.Default.ResultDenied)
@@ -1019,7 +1167,7 @@ func toolEventBulletStyle(m UIMessage) lipgloss.Style {
 		return style.Foreground(tuitheme.Default.ResultTimeout)
 	case "result_canceled", "shell_result_canceled":
 		return style.Foreground(tuitheme.Default.Muted)
-	case "result_running", "shell_result_running", "tool":
+	case "result_running", "shell_result_running", "tool", "exploration_group_running":
 		return style.Foreground(tuitheme.Default.Tool)
 	default:
 		return style
@@ -1028,7 +1176,7 @@ func toolEventBulletStyle(m UIMessage) lipgloss.Style {
 
 func toolEventVerbColor(m UIMessage) lipgloss.Color {
 	switch m.Role {
-	case "result_ok", "shell_result_ok":
+	case "result_ok", "shell_result_ok", "exploration_group":
 		return tuitheme.Default.Success
 	case "result_denied", "shell_result_denied":
 		return tuitheme.Default.ResultDenied
@@ -1038,7 +1186,7 @@ func toolEventVerbColor(m UIMessage) lipgloss.Color {
 		return tuitheme.Default.ResultTimeout
 	case "result_canceled", "shell_result_canceled":
 		return tuitheme.Default.Muted
-	case "result_running", "shell_result_running", "tool":
+	case "result_running", "shell_result_running", "tool", "exploration_group_running":
 		return tuitheme.Default.Tool
 	default:
 		return tuitheme.Default.Text

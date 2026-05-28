@@ -24,15 +24,17 @@ const (
 )
 
 type UIMessage struct {
-	ID           string
-	Role         string
-	Kind         MessageKind
-	Text         string
-	ToolName     string
-	ToolIdentity string
-	Local        *app.LocalResult
-	FocusSummary *FocusSummary
-	Notice       *SystemNotice
+	ID            string
+	Role          string
+	Kind          MessageKind
+	Text          string
+	ToolName      string
+	ToolIdentity  string
+	Streaming     bool
+	Local         *app.LocalResult
+	FocusSummary  *FocusSummary
+	Notice        *SystemNotice
+	FullReasoning bool
 }
 
 type SystemNotice struct {
@@ -190,15 +192,19 @@ func (a *Assembler) AppendDelta(role, text string) {
 	}
 	if n := len(a.messages); n > 0 && canCoalesce(role, a.messages[n-1]) {
 		a.messages[n-1].Text += t
+		if role == "think" {
+			a.messages[n-1].Streaming = true
+		}
 		return
 	}
 	if strings.TrimSpace(t) == "" {
 		return
 	}
 	a.messages = append(a.messages, UIMessage{
-		Role: role,
-		Kind: kindForRole(role),
-		Text: t,
+		Role:      role,
+		Kind:      kindForRole(role),
+		Text:      t,
+		Streaming: role == "think",
 	})
 }
 

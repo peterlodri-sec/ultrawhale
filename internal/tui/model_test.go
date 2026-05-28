@@ -6116,10 +6116,30 @@ func TestReasoningDeltaKeepsSingleThinkingCardAcrossNewlines(t *testing.T) {
 	if got := strings.Count(joined, "Thinking"); got != 1 {
 		t.Fatalf("expected one thinking card, got %d:\n%s", got, joined)
 	}
-	for _, want := range []string{"first thought", "second thought", "third thought"} {
+	if strings.Contains(joined, "first thought") {
+		t.Fatalf("expected streaming thinking preview to hide older line:\n%s", joined)
+	}
+	for _, want := range []string{"second thought", "third thought"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("expected %q in thinking card:\n%s", want, joined)
 		}
+	}
+}
+
+func TestCommittedReasoningIsNoLongerStreaming(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventReasoningDelta, Text: "first\nsecond\nthird"}))
+	m = next.(model)
+	snap := m.assembler.Snapshot()
+	if len(snap) != 1 || !snap[0].Streaming {
+		t.Fatalf("expected live reasoning to be streaming, got %+v", snap)
+	}
+	m.commitLiveTranscript(true)
+	if got := len(m.transcript); got != 1 {
+		t.Fatalf("expected one transcript message, got %d", got)
+	}
+	if m.transcript[0].Streaming {
+		t.Fatalf("committed reasoning should not stay streaming: %+v", m.transcript[0])
 	}
 }
 
