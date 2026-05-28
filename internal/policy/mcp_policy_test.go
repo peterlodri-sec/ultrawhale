@@ -118,7 +118,16 @@ func TestRulePolicyNonFilesystemMCPPathDoesNotRequireExternalDirectoryApproval(t
 }
 
 func TestRulePolicyMCPPathOutsideServerAllowedDirsDeniesBeforeApproval(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "repo")
+	root, err := os.MkdirTemp(".", "whale-mcp-policy-root-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err = filepath.Abs(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(root) })
+	workspace := filepath.Join(root, "repo")
 	if err := os.MkdirAll(workspace, 0o755); err != nil {
 		t.Fatal(err)
 	}
