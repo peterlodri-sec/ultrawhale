@@ -17,6 +17,7 @@ func (m *model) resetTranscript() {
 	m.nativeScrollbackPrinted = 0
 	m.turnTranscriptStart = len(m.transcript)
 	m.visibleAssistantThisTurn = ""
+	m.resetBusyTokenEstimate()
 	m.viewportLayoutReady = false
 	m.viewportFrozen = false
 	m.frozenChatMessages = nil
