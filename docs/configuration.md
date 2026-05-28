@@ -147,6 +147,7 @@ config_path = "~/.whale/mcp.json"
 
 [ui]
 view_mode = "default" # "default" or "focus"
+show_reasoning = false
 
 [context]
 auto_compact = true
@@ -207,6 +208,9 @@ If you started with Whale v0.1.9 or newer, you do not need this command.
 - `[ui].view_mode = "focus"` starts the TUI in focus view. `/focus` toggles this
   global preference and hides thinking/tool detail while keeping prompts, tool
   summaries, and final responses visible.
+- `[ui].show_reasoning = true` shows complete thinking blocks in the normal TUI
+  view. The default is `false`, which keeps the shorter reasoning preview.
+  Focus view still hides thinking.
 - Skill enable/disable choices are stored in project local config under
   `[skills].enabled` and `[skills].disabled`. A project local enabled entry
   overrides a shared project disabled entry.

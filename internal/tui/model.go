@@ -91,6 +91,7 @@ type model struct {
 	effort               string
 	thinking             string
 	viewMode             string
+	showReasoning        bool
 	chatMode             string
 	autoAccept           bool
 	product              string
@@ -281,8 +282,10 @@ func newModel(svc *service.Service, modelName, effort, thinking string) model {
 		thinking = "on"
 	}
 	viewMode := app.ViewModeDefault
+	showReasoning := false
 	if svc != nil {
 		viewMode = svc.ViewMode()
+		showReasoning = svc.ShowReasoning()
 	}
 	m := model{
 		svc:               svc,
@@ -303,6 +306,7 @@ func newModel(svc *service.Service, modelName, effort, thinking string) model {
 		effort:            effort,
 		thinking:          thinking,
 		viewMode:          viewMode,
+		showReasoning:     showReasoning,
 		chatMode:          "agent",
 		product:           "Whale",
 		version:           resolveVersion(),

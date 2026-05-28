@@ -21,7 +21,7 @@ func (m model) focusMessages(messages []tuirender.UIMessage) []tuirender.UIMessa
 	if m.focusEnabled() {
 		return projectFocusMessages(messages)
 	}
-	return projectExpandedFocusMessages(messages)
+	return projectExpandedFocusMessages(messages, m.showReasoning)
 }
 
 func (m *model) toggleFocusView() bool {
@@ -96,11 +96,14 @@ func projectFocusMessages(messages []tuirender.UIMessage) []tuirender.UIMessage 
 	return out
 }
 
-func projectExpandedFocusMessages(messages []tuirender.UIMessage) []tuirender.UIMessage {
+func projectExpandedFocusMessages(messages []tuirender.UIMessage, showReasoning bool) []tuirender.UIMessage {
 	out := make([]tuirender.UIMessage, 0, len(messages))
 	for _, msg := range messages {
-		if isFocusHiddenMessage(msg) || isFocusHiddenToolMessage(msg) {
+		if isFocusHiddenToolMessage(msg) {
 			msg.Text = appendFocusToggleHint(msg.Text, "collapse")
+		}
+		if showReasoning && isFocusHiddenMessage(msg) {
+			msg.FullReasoning = true
 		}
 		out = append(out, msg)
 	}

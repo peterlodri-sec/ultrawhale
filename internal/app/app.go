@@ -50,6 +50,7 @@ type Config struct {
 	ThinkingEnabled          bool
 	CheckForUpdateOnStartup  bool
 	ViewMode                 string
+	ShowReasoning            bool
 	RetryMaxAttempts         int
 	RetryMaxAttemptsExplicit bool
 	RetryStreamMaxAttempts   int
@@ -158,6 +159,7 @@ func DefaultConfig() Config {
 		ThinkingEnabled:         defaults.DefaultThinkingEnabled,
 		CheckForUpdateOnStartup: true,
 		ViewMode:                ViewModeDefault,
+		ShowReasoning:           false,
 		RetryMaxAttempts:        llmretry.DefaultPolicy().MaxAttempts,
 		RetryStreamMaxAttempts:  6,
 		RetryMaxDelay:           llmretry.DefaultPolicy().MaxDelay,
@@ -482,6 +484,12 @@ func (a *App) WorkspaceRoot() string   { return a.workspaceRoot }
 func (a *App) Model() string           { return a.model }
 func (a *App) ReasoningEffort() string { return a.reasoningEffort }
 func (a *App) ThinkingEnabled() bool   { return a.thinkingEnabled }
+func (a *App) ShowReasoning() bool {
+	if a == nil {
+		return false
+	}
+	return a.cfg.ShowReasoning
+}
 func (a *App) ViewMode() string {
 	if a == nil {
 		return ViewModeDefault

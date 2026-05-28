@@ -69,6 +69,8 @@ func (m *model) appendTranscriptMessages(messages []tuirender.UIMessage) {
 		if strings.TrimSpace(msg.Text) == "" {
 			continue
 		}
+		msg.Streaming = false
+		msg.FullReasoning = false
 		m.transcript = append(m.transcript, msg)
 	}
 }
