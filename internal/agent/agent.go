@@ -238,6 +238,7 @@ type Agent struct {
 	provider               llm.Provider
 	store                  store.MessageStore
 	tools                  *core.ToolRegistry
+	toolRefresh            func(context.Context) error
 	storm                  stormConfig
 	repairer               *toolCallRepair
 	policy                 policy.ToolPolicy
@@ -351,6 +352,12 @@ func WithToolPolicy(policy policy.ToolPolicy) AgentOption {
 		if policy != nil {
 			a.policy = policy
 		}
+	}
+}
+
+func WithToolRefresh(fn func(context.Context) error) AgentOption {
+	return func(a *Agent) {
+		a.toolRefresh = fn
 	}
 }
 
