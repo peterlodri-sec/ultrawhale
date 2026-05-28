@@ -3803,6 +3803,9 @@ func TestProviderRetryStreamResetClearsLiveAttempt(t *testing.T) {
 	if len(m.assembler.Snapshot()) == 0 {
 		t.Fatal("expected live attempt content before retry reset")
 	}
+	if m.busyTokenCount == 0 {
+		t.Fatal("expected live token count before retry reset")
+	}
 	m.handleServiceEvent(service.Event{
 		Kind:     service.EventProviderRetry,
 		Text:     "API stream disconnected, retrying in 1s (1/1)",
@@ -3815,11 +3818,57 @@ func TestProviderRetryStreamResetClearsLiveAttempt(t *testing.T) {
 	if m.visibleAssistantThisTurn != "" || m.sawAssistantThisTurn || m.sawReasoningThisTurn {
 		t.Fatalf("turn visibility not reset: visible=%q assistant=%v reasoning=%v", m.visibleAssistantThisTurn, m.sawAssistantThisTurn, m.sawReasoningThisTurn)
 	}
+	if m.busyTokenCount != 0 {
+		t.Fatalf("expected live token count reset, got %d", m.busyTokenCount)
+	}
 	if m.providerRetryStatus == "" {
 		t.Fatal("expected provider retry status after reset")
 	}
 	if len(m.transcript) != 0 {
 		t.Fatalf("retry reset should not append transcript: %+v", m.transcript)
+	}
+}
+
+func TestLiveTokenEstimateAccumulatesDeltas(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	full := "hello 世界"
+
+	for _, r := range full {
+		m.recordAssistantDelta(string(r))
+	}
+
+	if m.busyTokenCount != estimateTokens(full) {
+		t.Fatalf("chunked estimate = %d, want %d", m.busyTokenCount, estimateTokens(full))
+	}
+	if m.busyTokenASCIIChars != 6 || m.busyTokenNonASCIIChars != 2 {
+		t.Fatalf("unexpected token char counts: ascii=%d nonASCII=%d", m.busyTokenASCIIChars, m.busyTokenNonASCIIChars)
+	}
+}
+
+func TestLiveTokenEstimateCountsReasoningAndPlanDeltas(t *testing.T) {
+	m := newModel(nil, "", "", "")
+
+	m.handleServiceEvent(service.Event{Kind: service.EventReasoningDelta, Text: "think "})
+	m.handleServiceEvent(service.Event{Kind: service.EventPlanDelta, Text: "plan "})
+	m.handleServiceEvent(service.Event{Kind: service.EventAssistantDelta, Text: "answer"})
+
+	want := estimateTokens("think plan answer")
+	if m.busyTokenCount != want {
+		t.Fatalf("live token estimate = %d, want %d", m.busyTokenCount, want)
+	}
+	if m.visibleAssistantThisTurn != "answer" {
+		t.Fatalf("assistant visibility should only track assistant deltas, got %q", m.visibleAssistantThisTurn)
+	}
+}
+
+func TestResetTurnVisibilityClearsLiveTokenEstimate(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.recordAssistantDelta("hello 世界")
+
+	m.resetTurnVisibility()
+
+	if m.busyTokenCount != 0 || m.busyTokenASCIIChars != 0 || m.busyTokenNonASCIIChars != 0 {
+		t.Fatalf("expected token estimate reset, got count=%d ascii=%d nonASCII=%d", m.busyTokenCount, m.busyTokenASCIIChars, m.busyTokenNonASCIIChars)
 	}
 }
 

@@ -70,6 +70,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	case service.EventReasoningDelta:
 		m.clearProviderRetryStatus()
 		m.append("think", ev.Text)
+		m.recordModelOutputDelta(ev.Text)
 		m.addLog(logEntry{Kind: "reasoning_delta", Source: "reasoning", Summary: ev.Text, Raw: ev.Text})
 		if strings.TrimSpace(ev.Text) != "" {
 			m.sawReasoningThisTurn = true
@@ -77,6 +78,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	case service.EventPlanDelta:
 		m.clearProviderRetryStatus()
 		m.appendPlanDelta(ev.Text)
+		m.recordModelOutputDelta(ev.Text)
 		m.addLog(logEntry{Kind: "plan_delta", Source: "plan", Summary: ev.Text, Raw: ev.Text})
 		if strings.TrimSpace(ev.Text) != "" {
 			m.sawPlanThisTurn = true
@@ -625,6 +627,7 @@ func (m *model) resetTurnVisibility() {
 	m.sawReasoningThisTurn = false
 	m.sawTerminalToolOutcomeThisTurn = false
 	m.visibleAssistantThisTurn = ""
+	m.resetBusyTokenEstimate()
 	m.turnTranscriptStart = len(m.transcript)
 }
 

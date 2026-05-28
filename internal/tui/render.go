@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -12,6 +13,11 @@ import (
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
+
+// busyTokenMinDisplayAge is the minimum elapsed time before showing the
+// real-time token count in the busy status line. Short turns (sub-second
+// responses) skip token display to avoid flicker.
+const busyTokenMinDisplayAge = 2 * time.Second
 
 func (m model) renderBody(mainWidth, bodyHeight int) string {
 	if bodyHeight <= 0 {
@@ -718,7 +724,11 @@ func (m model) renderBusyStatusLine(width int) string {
 	} else if status := busySlashDraftStatus(m.input.Value(), m.status); status != "" {
 		label = status
 	}
-	line := fmt.Sprintf("%s (%s)", label, formatElapsedCompact(m.busyElapsed()))
+	busyElapsed := m.busyElapsed()
+	line := fmt.Sprintf("%s (%s)", label, formatElapsedCompact(busyElapsed))
+	if m.busyTokenCount > 0 && busyElapsed >= busyTokenMinDisplayAge {
+		line += fmt.Sprintf(" · ↓ %s tokens", formatTokenCount(m.busyTokenCount))
+	}
 	if !m.stopping {
 		if m.mode == modeChat {
 			input := m.input.Value()
@@ -864,6 +874,18 @@ func formatElapsedCompact(elapsed time.Duration) string {
 	minutes := (seconds % 3600) / 60
 	remSeconds := seconds % 60
 	return fmt.Sprintf("%dh %02dm %02ds", hours, minutes, remSeconds)
+}
+
+// formatTokenCount formats a token count for display, compacting large values.
+// e.g., 3281 → "3.3k", 500 → "500".
+func formatTokenCount(count int) string {
+	if count < 1000 {
+		return fmt.Sprintf("%d", count)
+	}
+	thousands := float64(count) / 1000
+	// Round to 1 decimal, then strip trailing zero
+	rounded := math.Round(thousands*10) / 10
+	return fmt.Sprintf("%.1fk", rounded)
 }
 
 func (m model) pageLabel() string {
