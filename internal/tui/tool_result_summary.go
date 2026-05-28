@@ -102,6 +102,7 @@ type toolResultEnvelope struct {
 	data       map[string]any
 	metrics    map[string]any
 	payload    map[string]any
+	diagnosis  map[string]any
 	metadata   map[string]any
 }
 
@@ -110,10 +111,27 @@ func summarizeShellResult(env toolResultEnvelope, successBySignal bool) (string,
 	hasExitCode := hasInt(env.metrics["exit_code"])
 	duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
 	if env.status == "running" {
+		taskID := asString(env.payload["task_id"])
+		reason := shellDiagnosisLabel(asString(env.diagnosis["reason"]))
+		if taskID != "" {
+			if reason != "" && duration != "" {
+				return "result_running", reason + " · " + duration + " · " + taskID
+			}
+			if reason != "" {
+				return "result_running", reason + " · " + taskID
+			}
+			if duration != "" {
+				return "result_running", "running in background · " + duration + " · " + taskID
+			}
+			return "result_running", "running in background · " + taskID
+		}
 		if duration != "" {
 			return "result_running", "running · " + duration
 		}
 		return "result_running", "running"
+	}
+	if env.status == "cancelled" || env.status == "canceled" {
+		return "result_canceled", "CANCELED"
 	}
 
 	if !successBySignal {
@@ -151,6 +169,9 @@ func summarizeFailedShellResult(env toolResultEnvelope) (string, string) {
 	parts := []string{prefix}
 	if duration != "" {
 		parts = append(parts, duration)
+	}
+	if reason := shellDiagnosisLabel(asString(env.diagnosis["reason"])); reason != "" {
+		parts = append(parts, reason)
 	}
 	return "result_failed", strings.Join(parts, " · ") + "\n" + output
 }
@@ -239,6 +260,12 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 	case "approval_denied", "policy_denied", "permission_denied":
 		return "result_denied", "DENIED · " + detail
 	case "timeout":
+		if reason := shellDiagnosisLabel(asString(env.diagnosis["reason"])); reason != "" {
+			if duration != "" {
+				return "result_timeout", "TIMEOUT · " + duration + " · " + reason
+			}
+			return "result_timeout", "TIMEOUT · " + reason
+		}
 		if duration != "" {
 			return "result_timeout", "TIMEOUT · " + duration
 		}
@@ -269,6 +296,39 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 		return "result_failed", fmt.Sprintf("%s · %s · %s", prefix, duration, detail)
 	}
 	return "result_failed", fmt.Sprintf("%s · %s", prefix, detail)
+}
+
+func shellDiagnosisLabel(reason string) string {
+	switch reason {
+	case "build_test_long_running":
+		return "build/test running"
+	case "package_manager_long_running":
+		return "package manager running"
+	case "download_long_running":
+		return "download running"
+	case "watch_long_running":
+		return "watch running"
+	case "remote_command_long_running":
+		return "remote command running"
+	case "unknown_long_running":
+		return "running in background"
+	case "interactive_prompt":
+		return "waiting for input"
+	case "network_blocked":
+		return "network blocked"
+	case "foreground_timeout_too_short":
+		return "timeout too short"
+	case "build_or_test_timeout":
+		return "build/test timeout"
+	case "background_runtime_timeout":
+		return "background timeout"
+	case "interactive_or_auth":
+		return "interactive/auth"
+	case "ordinary_timeout":
+		return "ordinary timeout"
+	default:
+		return ""
+	}
 }
 
 func summarizeReplanRequired(env toolResultEnvelope) string {
