@@ -9906,6 +9906,22 @@ func TestSummarizeToolResultForChat_TimeoutDiagnosis(t *testing.T) {
 	}
 }
 
+func TestSummarizeToolResultForChat_TimeoutTooShortDiagnosis(t *testing.T) {
+	raw := `{"success":false,"code":"timeout","message":"command timed out","data":{"metrics":{"duration_ms":50},"diagnosis":{"reason":"foreground_timeout_too_short"}}}`
+	role, got := summarizeToolResultForChat("shell_run", raw)
+	if role != "result_timeout" || got != "TIMEOUT · 50ms · timeout too short" {
+		t.Fatalf("unexpected timeout-too-short summary: role=%q text=%q", role, got)
+	}
+}
+
+func TestSummarizeToolResultForChat_NetworkDiagnosis(t *testing.T) {
+	raw := `{"success":false,"code":"exec_failed","message":"command failed","data":{"status":"error","metrics":{"duration_ms":20,"exit_code":1},"payload":{"stderr":"curl: (6) Could not resolve host: example.invalid"},"diagnosis":{"reason":"network_blocked"}}}`
+	role, got := summarizeToolResultForChat("shell_run", raw)
+	if role != "result_failed" || !strings.Contains(got, "network blocked") {
+		t.Fatalf("unexpected network summary: role=%q text=%q", role, got)
+	}
+}
+
 func TestSummarizeToolResultForChat_Canceled(t *testing.T) {
 	raw := `{"success":false,"code":"cancelled","message":"context canceled"}`
 	role, got := summarizeToolResultForChat("shell_run", raw)

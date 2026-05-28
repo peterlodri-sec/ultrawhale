@@ -170,6 +170,9 @@ func summarizeFailedShellResult(env toolResultEnvelope) (string, string) {
 	if duration != "" {
 		parts = append(parts, duration)
 	}
+	if reason := shellDiagnosisLabel(asString(env.diagnosis["reason"])); reason != "" {
+		parts = append(parts, reason)
+	}
 	return "result_failed", strings.Join(parts, " · ") + "\n" + output
 }
 
@@ -313,6 +316,14 @@ func shellDiagnosisLabel(reason string) string {
 		return "waiting for input"
 	case "network_blocked":
 		return "network blocked"
+	case "foreground_timeout_too_short":
+		return "timeout too short"
+	case "build_or_test_timeout":
+		return "build/test timeout"
+	case "background_runtime_timeout":
+		return "background timeout"
+	case "interactive_or_auth":
+		return "interactive/auth"
 	case "ordinary_timeout":
 		return "ordinary timeout"
 	default:

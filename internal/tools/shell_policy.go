@@ -7,10 +7,6 @@ import (
 	"github.com/usewhale/whale/internal/shellsafe"
 )
 
-const (
-	defaultForegroundShellWaitMS = int((15 * time.Second) / time.Millisecond)
-)
-
 var shellStallThreshold = 45 * time.Second
 
 type shellContinuationPolicy struct {
@@ -25,6 +21,13 @@ type shellDiagnosis struct {
 	Reason              string
 	Hint                string
 	SuggestedNextAction string
+}
+
+type shellTimeoutContext struct {
+	Policy             shellContinuationPolicy
+	RequestedTimeoutMS int
+	EffectiveTimeoutMS int
+	BackgroundRuntime  bool
 }
 
 func (d shellDiagnosis) asMap() map[string]any {
@@ -117,13 +120,6 @@ func shellCommandPartPolicy(command string) shellDiagnosis {
 	case "sleep":
 		return shellDiagnosisForReason("idle_sleep")
 	}
-	for _, arg := range argv {
-		lower := strings.ToLower(arg)
-		if strings.Contains(lower, "login") || strings.Contains(lower, "auth") || strings.Contains(lower, "onboard") {
-			return shellDiagnosisForReason("interactive_or_auth")
-		}
-	}
-
 	switch base {
 	case "make":
 		for _, arg := range argv[1:] {
@@ -151,7 +147,25 @@ func shellCommandPartPolicy(command string) shellDiagnosis {
 			return shellDiagnosisForReason("remote_command_long_running")
 		}
 	}
+	for _, arg := range argv[1:] {
+		if shellArgLooksInteractiveAuth(arg) {
+			return shellDiagnosisForReason("interactive_or_auth")
+		}
+	}
 	return shellDiagnosis{}
+}
+
+func shellArgLooksInteractiveAuth(arg string) bool {
+	lower := strings.Trim(strings.ToLower(arg), "-")
+	if lower == "" || strings.ContainsAny(lower, `/\`) {
+		return false
+	}
+	switch lower {
+	case "login", "auth", "authenticate", "onboard":
+		return true
+	default:
+		return false
+	}
 }
 
 func shellPolicyParts(command string) []string {
@@ -220,19 +234,72 @@ func diagnoseShellTaskLocked(task *shellTask) shellDiagnosis {
 	if shellOutputLooksNetworkBlocked(text) {
 		return shellDiagnosisForReason("network_blocked")
 	}
-	if task.status == "running" && shellOutputLooksInteractivePrompt(text) {
-		last := task.lastOutput
-		if last == nil || time.Since(*last) >= shellStallThreshold {
+	if shellOutputLooksInteractivePrompt(text) {
+		if task.status != "running" {
+			return shellDiagnosisForReason("interactive_prompt")
+		}
+		if last := task.lastOutput; last == nil || time.Since(*last) >= shellStallThreshold {
 			return shellDiagnosisForReason("interactive_prompt")
 		}
 	}
 	if task.status == "timeout" {
-		return shellDiagnosisForReason("ordinary_timeout")
+		return task.timeoutDiagnosisLocked()
 	}
 	if task.status == "canceled" {
 		return shellDiagnosisForReason("cancelled")
 	}
 	return shellDiagnosis{}
+}
+
+func (t *shellTask) timeoutDiagnosisLocked() shellDiagnosis {
+	timeoutCtx := t.timeoutCtx
+	if timeoutCtx.Policy.Reason == "" {
+		timeoutCtx.Policy = shellPolicy(t.Command, 0)
+	}
+	return shellTimeoutDiagnosis(t.snapshotWithoutDiagnosisLocked(), timeoutCtx)
+}
+
+func (t *shellTask) snapshotWithoutDiagnosisLocked() shellTaskSnapshot {
+	return shellTaskSnapshot{
+		ID:         t.ID,
+		Command:    t.Command,
+		CWD:        t.CWD,
+		Status:     t.status,
+		ExitCode:   t.exitCode,
+		StartedAt:  t.StartedAt,
+		FinishedAt: t.finishedAt,
+		Stdout:     decodeShellOutput(t.stdout.Bytes()),
+		Stderr:     decodeShellOutput(t.stderr.Bytes()),
+		LastOutput: t.lastOutput,
+	}
+}
+
+func shellTimeoutDiagnosis(snap shellTaskSnapshot, timeoutCtx shellTimeoutContext) shellDiagnosis {
+	text := strings.TrimSpace(snap.Stderr + "\n" + snap.Stdout)
+	if shellOutputLooksNetworkBlocked(text) {
+		return shellDiagnosisForReason("network_blocked")
+	}
+	if shellOutputLooksInteractivePrompt(text) {
+		diagnosis := shellDiagnosisForReason("interactive_prompt")
+		diagnosis.SuggestedNextAction = "rerun_non_interactive"
+		return diagnosis
+	}
+	if timeoutCtx.BackgroundRuntime {
+		return shellDiagnosisForReason("background_runtime_timeout")
+	}
+	switch timeoutCtx.Policy.Reason {
+	case "interactive_or_auth":
+		return shellDiagnosisForReason("interactive_or_auth")
+	case "build_test_long_running":
+		return shellDiagnosisForReason("build_or_test_timeout")
+	}
+	if shellOutputLooksLikeProgress(text) || timeoutCtx.RequestedTimeoutMS > 0 && timeoutCtx.RequestedTimeoutMS <= 1000 {
+		return shellDiagnosisForReason("foreground_timeout_too_short")
+	}
+	if timeoutCtx.EffectiveTimeoutMS > 0 && timeoutCtx.EffectiveTimeoutMS < defaultForegroundShellWaitMS {
+		return shellDiagnosisForReason("foreground_timeout_too_short")
+	}
+	return shellDiagnosisForReason("ordinary_timeout")
 }
 
 func shellDiagnosisForReason(reason string) shellDiagnosis {
@@ -254,7 +321,13 @@ func shellDiagnosisForReason(reason string) shellDiagnosis {
 	case "interactive_prompt":
 		return shellDiagnosis{Reason: reason, Hint: "Command appears blocked on an interactive prompt. Cancel it and rerun with non-interactive flags or piped input.", SuggestedNextAction: "shell_cancel"}
 	case "network_blocked":
-		return shellDiagnosis{Reason: reason, Hint: "Output looks like a network or sandbox restriction. Check network access before retrying.", SuggestedNextAction: "ask_user"}
+		return shellDiagnosis{Reason: reason, Hint: "Output looks like a network or sandbox restriction. Check network access before retrying.", SuggestedNextAction: "check_network"}
+	case "foreground_timeout_too_short":
+		return shellDiagnosis{Reason: reason, Hint: "The foreground timeout was too short for this command. Rerun with a longer timeout instead of changing the command.", SuggestedNextAction: "rerun_with_longer_timeout"}
+	case "build_or_test_timeout":
+		return shellDiagnosis{Reason: reason, Hint: "Build or test command was stopped by timeout. Rerun with a longer timeout or let it continue in the background.", SuggestedNextAction: "rerun_with_longer_timeout"}
+	case "background_runtime_timeout":
+		return shellDiagnosis{Reason: reason, Hint: "Background task reached its runtime limit. Rerun with a larger timeout_ms or split the command into a shorter step.", SuggestedNextAction: "rerun_background_with_longer_timeout"}
 	case "idle_sleep":
 		return shellDiagnosis{Reason: reason, Hint: "Plain sleep commands are not useful to keep in the background.", SuggestedNextAction: "rerun_with_shorter_timeout"}
 	case "complex_shell":
@@ -307,4 +380,29 @@ func shellOutputLooksNetworkBlocked(text string) bool {
 		}
 	}
 	return false
+}
+
+func shellOutputLooksLikeProgress(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	lower := strings.ToLower(trimmed)
+	patterns := []string{
+		"downloading",
+		"building",
+		"compiling",
+		"running",
+		"fetching",
+		"installing",
+		"extracting",
+		"resolving",
+		"progress",
+	}
+	for _, pattern := range patterns {
+		if strings.Contains(lower, pattern) {
+			return true
+		}
+	}
+	return strings.Contains(trimmed, "%") || strings.Contains(trimmed, "...") || strings.Contains(trimmed, "=>")
 }

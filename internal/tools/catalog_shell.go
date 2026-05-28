@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/usewhale/whale/internal/core"
@@ -19,8 +20,8 @@ func (b *Toolset) shellTools() []core.Tool {
 				"additionalProperties": false,
 				"properties": map[string]any{
 					"command":    map[string]any{"type": "string", "description": "Shell command to execute"},
-					"timeout_ms": map[string]any{"type": "integer", "minimum": 1, "maximum": maxBackgroundShellTimeoutMS, "description": "Foreground wait in milliseconds. Long-running commands may return a background task_id when the foreground wait expires; use shell_wait instead of rerunning."},
-					"background": map[string]any{"type": "boolean", "description": "When true, return immediately with task_id"},
+					"timeout_ms": map[string]any{"type": "integer", "minimum": 1, "maximum": maxBackgroundShellTimeoutMS, "description": shellRunTimeoutDescription()},
+					"background": map[string]any{"type": "boolean", "description": fmt.Sprintf("When true, return immediately with task_id. The task runtime defaults to %dms.", defaultBackgroundShellTimeoutMS)},
 					"cwd":        map[string]any{"type": "string", "description": "Optional working directory relative to the workspace root. Must stay inside the workspace. Use this for subdirectory commands instead of cd."},
 				},
 				"required": []string{"command"},
@@ -36,7 +37,7 @@ func (b *Toolset) shellTools() []core.Tool {
 				"additionalProperties": false,
 				"properties": map[string]any{
 					"task_id":    map[string]any{"type": "string"},
-					"timeout_ms": map[string]any{"type": "integer", "minimum": 1, "maximum": 120000},
+					"timeout_ms": map[string]any{"type": "integer", "minimum": 1, "maximum": maxShellWaitTimeoutMS, "description": shellWaitTimeoutDescription()},
 				},
 				"required": []string{"task_id"},
 			},
@@ -65,11 +66,19 @@ func shellRunDescription() string {
 }
 
 func shellRunDescriptionFor(rt shell.RuntimeDescription) string {
-	base := "Run a shell command from the current Whale workspace. Commands default to the workspace root; do not assume synthetic paths like /workspace. Use relative paths, or set cwd to a subdirectory inside the workspace, instead of prefixing commands with cd. Long-running commands can return a background task_id when the foreground wait expires; continue with shell_wait instead of rerunning the same command."
+	base := fmt.Sprintf("Run a shell command from the current Whale workspace. Commands default to the workspace root; do not assume synthetic paths like /workspace. Use relative paths, or set cwd to a subdirectory inside the workspace, instead of prefixing commands with cd. Foreground wait defaults to %dms and clamps at %dms; long-running commands can return a background task_id when the foreground wait expires. Continue with shell_wait instead of rerunning the same command.", defaultForegroundShellWaitMS, maxForegroundShellWaitMS)
 	if guidance := rt.ToolGuidance(); strings.TrimSpace(guidance) != "" {
 		return base + " " + strings.TrimSpace(guidance)
 	}
 	return base
+}
+
+func shellRunTimeoutDescription() string {
+	return fmt.Sprintf("Foreground wait in milliseconds for normal shell_run calls; defaults to %d and clamps at %d. Long-running commands may return a background task_id when the foreground wait expires. With background=true, this is the task runtime limit; defaults to %d and clamps at %d.", defaultForegroundShellWaitMS, maxForegroundShellWaitMS, defaultBackgroundShellTimeoutMS, maxBackgroundShellTimeoutMS)
+}
+
+func shellWaitTimeoutDescription() string {
+	return fmt.Sprintf("How long to wait for completion in milliseconds; defaults to %d and clamps at %d.", defaultShellWaitTimeoutMS, maxShellWaitTimeoutMS)
 }
 
 func shellReadOnlyCheck(args map[string]any) bool {

@@ -10,8 +10,6 @@ import (
 	"github.com/usewhale/whale/internal/shellsafe"
 )
 
-const maxForegroundShellWaitMS = 120000
-
 func (b *Toolset) shellRun(ctx context.Context, call core.ToolCall) (core.ToolResult, error) {
 	var in struct {
 		Command    string `json:"command"`
@@ -31,15 +29,22 @@ func (b *Toolset) shellRun(ctx context.Context, call core.ToolCall) (core.ToolRe
 	}
 	warnings := b.shellRunWarnings(in.Command)
 	if in.Background {
-		timeout := 5 * time.Minute
-		if in.TimeoutMS > 0 {
-			if in.TimeoutMS > maxBackgroundShellTimeoutMS {
-				in.TimeoutMS = maxBackgroundShellTimeoutMS
+		requestedTimeoutMS := in.TimeoutMS
+		effectiveTimeoutMS := defaultBackgroundShellTimeoutMS
+		if requestedTimeoutMS > 0 {
+			effectiveTimeoutMS = requestedTimeoutMS
+			if effectiveTimeoutMS > maxBackgroundShellTimeoutMS {
+				effectiveTimeoutMS = maxBackgroundShellTimeoutMS
 			}
-			timeout = time.Duration(in.TimeoutMS) * time.Millisecond
 		}
 		task := b.tasks.create(in.Command, relCWD)
-		cctx, cancel := context.WithTimeout(context.Background(), timeout)
+		task.setTimeoutContext(shellTimeoutContext{
+			Policy:             shellPolicy(in.Command, 0),
+			RequestedTimeoutMS: requestedTimeoutMS,
+			EffectiveTimeoutMS: effectiveTimeoutMS,
+			BackgroundRuntime:  true,
+		})
+		cctx, cancel := context.WithTimeout(context.Background(), time.Duration(effectiveTimeoutMS)*time.Millisecond)
 		task.setCancel(cancel)
 		go func() {
 			defer b.tasks.completed(task.ID)
@@ -53,6 +58,11 @@ func (b *Toolset) shellRun(ctx context.Context, call core.ToolCall) (core.ToolRe
 				"command": in.Command,
 				"cwd":     relCWD,
 			},
+			"metrics": map[string]any{
+				"requested_timeout_ms": requestedTimeoutMS,
+				"effective_timeout_ms": effectiveTimeoutMS,
+				"timeout_clamped":      requestedTimeoutMS > 0 && requestedTimeoutMS != effectiveTimeoutMS,
+			},
 			"warnings": warnings,
 			"summary":  "background shell task started",
 		})
@@ -62,6 +72,11 @@ func (b *Toolset) shellRun(ctx context.Context, call core.ToolCall) (core.ToolRe
 	policy := shellPolicy(in.Command, requestedTimeoutMS)
 	effectiveTimeoutMS := policy.ForegroundWaitMS
 	task := b.tasks.create(in.Command, relCWD)
+	task.setTimeoutContext(shellTimeoutContext{
+		Policy:             policy,
+		RequestedTimeoutMS: requestedTimeoutMS,
+		EffectiveTimeoutMS: effectiveTimeoutMS,
+	})
 	cctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxBackgroundShellTimeoutMS)*time.Millisecond)
 	task.setCancel(cancel)
 	go func() {
@@ -88,6 +103,12 @@ func (b *Toolset) shellRun(ctx context.Context, call core.ToolCall) (core.ToolRe
 			return shellRunForegroundFinalResult(call, snap, requestedTimeoutMS, effectiveTimeoutMS, warnings)
 		}
 		if policy.AutoBackground {
+			task.setTimeoutContext(shellTimeoutContext{
+				Policy:             policy,
+				RequestedTimeoutMS: 0,
+				EffectiveTimeoutMS: maxBackgroundShellTimeoutMS,
+				BackgroundRuntime:  true,
+			})
 			return marshalToolResult(call, shellRunBackgroundedResult(task.snapshot(), requestedTimeoutMS, effectiveTimeoutMS, warnings, shellDiagnosis{
 				Reason:              policy.Reason,
 				Hint:                policy.Hint,
@@ -97,6 +118,12 @@ func (b *Toolset) shellRun(ctx context.Context, call core.ToolCall) (core.ToolRe
 		task.cancelRun()
 		task.waitDone()
 		snap := task.snapshot()
+		task.setDiagnosis(shellTimeoutDiagnosis(snap, shellTimeoutContext{
+			Policy:             policy,
+			RequestedTimeoutMS: requestedTimeoutMS,
+			EffectiveTimeoutMS: effectiveTimeoutMS,
+		}))
+		snap = task.snapshot()
 		b.tasks.release(task.ID)
 		return shellRunForegroundTimeoutResult(call, snap, requestedTimeoutMS, effectiveTimeoutMS, warnings)
 	}
@@ -385,10 +412,10 @@ func (b *Toolset) shellWait(ctx context.Context, call core.ToolCall) (core.ToolR
 	if !ok {
 		return marshalToolError(call, "not_found", "task not found"), nil
 	}
-	deadline := 20 * time.Second
+	deadline := time.Duration(defaultShellWaitTimeoutMS) * time.Millisecond
 	if in.TimeoutMS > 0 {
-		if in.TimeoutMS > 120000 {
-			in.TimeoutMS = 120000
+		if in.TimeoutMS > maxShellWaitTimeoutMS {
+			in.TimeoutMS = maxShellWaitTimeoutMS
 		}
 		deadline = time.Duration(in.TimeoutMS) * time.Millisecond
 	}

@@ -28,6 +28,7 @@ type shellTask struct {
 	stderr     bytes.Buffer
 	lastOutput *time.Time
 	diagnosis  shellDiagnosis
+	timeoutCtx shellTimeoutContext
 	cancel     context.CancelFunc
 	done       chan struct{}
 	doneOnce   sync.Once
@@ -132,6 +133,24 @@ func (t *shellTask) cancelRun() {
 	if cancel != nil {
 		cancel()
 	}
+}
+
+func (t *shellTask) setDiagnosis(diagnosis shellDiagnosis) {
+	if t == nil || diagnosis.Reason == "" {
+		return
+	}
+	t.mu.Lock()
+	t.diagnosis = diagnosis
+	t.mu.Unlock()
+}
+
+func (t *shellTask) setTimeoutContext(timeoutCtx shellTimeoutContext) {
+	if t == nil {
+		return
+	}
+	t.mu.Lock()
+	t.timeoutCtx = timeoutCtx
+	t.mu.Unlock()
 }
 
 func (t *shellTask) waitDone() {
@@ -264,13 +283,15 @@ func runShellBackground(ctx context.Context, dir, command string, task *shellTas
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			task.status = "timeout"
 			task.exitCode = nil
-			task.diagnosis = shellDiagnosisForReason("ordinary_timeout")
+			task.diagnosis = task.timeoutDiagnosisLocked()
 			return
 		}
 		if errors.Is(ctx.Err(), context.Canceled) {
 			task.status = "canceled"
 			task.exitCode = nil
-			task.diagnosis = shellDiagnosisForReason("cancelled")
+			if task.diagnosis.Reason == "" {
+				task.diagnosis = shellDiagnosisForReason("cancelled")
+			}
 			return
 		}
 		var ex *exec.ExitError

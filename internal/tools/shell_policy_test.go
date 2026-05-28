@@ -10,6 +10,8 @@ func TestShellPolicyClassifiesLongRunningCommands(t *testing.T) {
 		reason         string
 	}{
 		{name: "go test", command: "go test ./internal/tui", autoBackground: true, reason: "build_test_long_running"},
+		{name: "go test auth package path", command: "go test ./internal/auth", autoBackground: true, reason: "build_test_long_running"},
+		{name: "go test authorizer package path", command: "go test ./pkg/authorizer", autoBackground: true, reason: "build_test_long_running"},
 		{name: "go test pipeline", command: "go test -c -o /tmp/testbin ./internal/tui 2>&1 | head -20", autoBackground: true, reason: "build_test_long_running"},
 		{name: "make build", command: "make build", autoBackground: true, reason: "build_test_long_running"},
 		{name: "download", command: "curl https://example.com/file", autoBackground: true, reason: "download_long_running"},
@@ -37,5 +39,22 @@ func TestShellOutputDiagnosis(t *testing.T) {
 	}
 	if !shellOutputLooksNetworkBlocked("curl: (6) Could not resolve host: example.invalid") {
 		t.Fatal("expected network failure to be detected")
+	}
+	if shellOutputLooksLikeProgress("fatal: locked") {
+		t.Fatal("ordinary output should not be treated as progress")
+	}
+	if !shellOutputLooksLikeProgress("Downloading modules...") {
+		t.Fatal("expected explicit progress output to be detected")
+	}
+	diagnosis := shellTimeoutDiagnosis(shellTaskSnapshot{Stderr: "fatal: locked"}, shellTimeoutContext{
+		Policy:             shellContinuationPolicy{Reason: "complex_shell"},
+		RequestedTimeoutMS: defaultForegroundShellWaitMS,
+		EffectiveTimeoutMS: defaultForegroundShellWaitMS,
+	})
+	if diagnosis.Reason == "foreground_timeout_too_short" {
+		t.Fatalf("ordinary output should not produce timeout-too-short diagnosis: %#v", diagnosis)
+	}
+	if diagnosis.Reason != "ordinary_timeout" {
+		t.Fatalf("unexpected diagnosis: %#v", diagnosis)
 	}
 }
