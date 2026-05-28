@@ -399,7 +399,7 @@ func summarizeEditResult(toolName string, env toolResultEnvelope, successBySigna
 		}
 	case "edit_file", "edit":
 		if n := asInt(firstNonEmptyAny(env.payload["replacements"], env.data["replacements"])); n > 0 {
-			return "result_ok", fmt.Sprintf("✓ · %d replacements", n)
+			return "result_ok", fmt.Sprintf("✓ · %d %s", n, pluralize(n, "replacement", "replacements"))
 		}
 	case "apply_patch":
 		additions := asInt(firstNonEmptyAny(env.payload["additions"], env.data["additions"]))

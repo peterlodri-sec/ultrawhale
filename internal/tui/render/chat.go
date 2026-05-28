@@ -762,7 +762,7 @@ func focusSummaryKindColor(kind string) lipgloss.Color {
 		return tuitheme.Default.Tool
 	case "search":
 		return tuitheme.Default.Palette
-	case "read", "list":
+	case "read", "web", "list":
 		return tuitheme.Default.Info
 	case "edit":
 		return tuitheme.Default.Warn
@@ -816,6 +816,9 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 	if isShellToolEvent(m) {
 		return renderShellToolEvent(m, header, rawLines[1:], width, contentWidth)
 	}
+	if isEditToolEvent(m) {
+		return renderEditToolEvent(m, header, rawLines[1:], width, contentWidth)
+	}
 	if isExplorationGroupEvent(m) {
 		return renderExplorationGroupEvent(m, header, rawLines[1:], width, contentWidth)
 	}
@@ -828,6 +831,25 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 			continue
 		}
 		out = append(out, renderToolEventChild(line, contentWidth)...)
+	}
+	return out
+}
+
+func renderEditToolEvent(m UIMessage, header string, rawLines []string, width, contentWidth int) []string {
+	status := ""
+	if len(rawLines) > 0 && isToolStatusLine(rawLines[0]) {
+		status = strings.TrimSpace(rawLines[0])
+		rawLines = rawLines[1:]
+	}
+	out := make([]string, 0, len(rawLines)+1)
+	out = append(out, renderToolEventHeaderWithStatus(m, header, status, width)...)
+	for _, raw := range rawLines {
+		line := strings.TrimRight(raw, "\n")
+		if strings.TrimSpace(line) == "" {
+			out = append(out, "")
+			continue
+		}
+		out = append(out, wrapWithPrefixes(line, "  ", "  ", contentWidth)...)
 	}
 	return out
 }
@@ -940,6 +962,15 @@ func hasLeadingCommandSpace(text string) bool {
 
 func isShellToolEvent(m UIMessage) bool {
 	return strings.HasPrefix(m.Role, "shell_result_")
+}
+
+func isEditToolEvent(m UIMessage) bool {
+	switch strings.TrimSpace(m.ToolName) {
+	case "write_file", "edit_file", "apply_patch", "write", "edit":
+		return true
+	default:
+		return false
+	}
 }
 
 func isToolStatusLine(line string) bool {

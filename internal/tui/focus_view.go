@@ -83,7 +83,12 @@ func projectFocusMessages(messages []tuirender.UIMessage) []tuirender.UIMessage 
 	}
 	for _, msg := range messages {
 		if isFocusHiddenToolMessage(msg) {
-			tools.add(msg)
+			item := focusSummarizeToolMessage(msg)
+			state := focusToolState(msg)
+			if tools.shouldSplitBefore(item.Kind, state) {
+				flushTools()
+			}
+			tools.addItemWithState(state, item)
 			continue
 		}
 		if isFocusHiddenMessage(msg) {
@@ -138,6 +143,7 @@ type focusToolSummary struct {
 	shell  focusSummaryBucket
 	search focusSummaryBucket
 	read   focusSummaryBucket
+	web    focusSummaryBucket
 	list   focusSummaryBucket
 	edit   focusSummaryBucket
 	task   focusSummaryBucket
@@ -166,6 +172,26 @@ func (s *focusToolSummary) add(msg tuirender.UIMessage) {
 	s.used = true
 	state := focusToolState(msg)
 	item := focusSummarizeToolMessage(msg)
+	s.addItemWithState(state, item)
+}
+
+func (s focusToolSummary) shouldSplitBefore(kind, state string) bool {
+	if !s.used {
+		return false
+	}
+	if kind != "edit" && s.edit.count > 0 && s.edit.succeeded() == 0 && s.edit.running == 0 {
+		return false
+	}
+	if kind == "edit" && state != "done" && state != "running" {
+		return false
+	}
+	hasEdit := s.edit.count > 0
+	isEdit := kind == "edit"
+	return hasEdit != isEdit
+}
+
+func (s *focusToolSummary) addItemWithState(state string, item focusToolSummaryItem) {
+	s.used = true
 	switch item.Kind {
 	case "shell":
 		s.shell.add(state, item.Detail, item.Identity)
@@ -173,6 +199,8 @@ func (s *focusToolSummary) add(msg tuirender.UIMessage) {
 		s.search.add(state, item.Detail, "")
 	case "read":
 		s.read.add(state, item.Detail, "")
+	case "web":
+		s.web.add(state, item.Detail, "")
 	case "list":
 		s.list.add(state, item.Detail, "")
 	case "edit":
@@ -203,6 +231,7 @@ func (s focusToolSummary) summary() *tuirender.FocusSummary {
 	for _, state := range []string{"denied", "failed", "running", "done"} {
 		add(focusStateHintSummaryPart("search", s.search, state, "Searching for", "Searched for", "Denied", "Failed", "pattern", "patterns", focusQuoteHint))
 		add(focusStateHintSummaryPart("read", s.read, state, "Reading", "Read", "Denied", "Failed", "file", "files", focusPlainHint))
+		add(focusStateHintSummaryPart("web", s.web, state, "Fetching", "Fetched", "Denied", "Failed", "URL", "URLs", focusPlainHint))
 		add(focusStateHintSummaryPart("list", s.list, state, "Listing", "Listed", "Denied", "Failed", "directory", "directories", focusPlainHint))
 		if state == "done" {
 			add(focusRecoveredShellSummaryPart(recoveredShell))

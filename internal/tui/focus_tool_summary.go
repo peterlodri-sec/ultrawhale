@@ -3,6 +3,8 @@ package tui
 import (
 	"strings"
 
+	xansi "github.com/charmbracelet/x/ansi"
+
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
 
@@ -92,12 +94,12 @@ func (focusMCPSummaryProvider) Summarize(input focusToolSummaryInput) focusToolS
 
 func (focusExploreSummaryProvider) Match(input focusToolSummaryInput) bool {
 	switch focusToolKindFromName(input.ToolName) {
-	case "read", "search", "list":
+	case "read", "web", "search", "list":
 		return true
 	}
 	if strings.HasPrefix(input.Text, "Exploring") || strings.HasPrefix(input.Text, "Explored") {
 		switch focusExploreKindFromAction(focusActionLine(input.Text)) {
-		case "read", "search", "list":
+		case "read", "web", "search", "list":
 			return true
 		}
 	}
@@ -106,7 +108,7 @@ func (focusExploreSummaryProvider) Match(input focusToolSummaryInput) bool {
 
 func (focusExploreSummaryProvider) Summarize(input focusToolSummaryInput) focusToolSummaryItem {
 	kind := focusToolKindFromName(input.ToolName)
-	if kind != "read" && kind != "search" && kind != "list" {
+	if kind != "read" && kind != "web" && kind != "search" && kind != "list" {
 		kind = focusExploreKindFromAction(focusActionLine(input.Text))
 	}
 	return focusToolSummaryItem{Kind: kind, Detail: focusStandardDetail(input)}
@@ -125,7 +127,7 @@ func (focusEditSummaryProvider) Match(input focusToolSummaryInput) bool {
 }
 
 func (focusEditSummaryProvider) Summarize(input focusToolSummaryInput) focusToolSummaryItem {
-	return focusToolSummaryItem{Kind: "edit", Detail: focusStandardDetail(input)}
+	return focusToolSummaryItem{Kind: "edit", Detail: focusEditDetail(input)}
 }
 
 type focusTaskSummaryProvider struct{}
@@ -171,6 +173,85 @@ func focusStandardDetail(input focusToolSummaryInput) string {
 	}
 	if detail := focusRunningDetail(input.Text, input.ToolName); detail != "" {
 		return truncateFocusToolDetail(detail)
+	}
+	return ""
+}
+
+func focusEditDetail(input focusToolSummaryInput) string {
+	if detail := focusEditDiffHeaderDetail(input.Text); detail != "" {
+		return truncateFocusToolDetail(detail)
+	}
+	if detail := focusEditActionDetail(input.Text); detail != "" {
+		return truncateFocusToolDetail(detail)
+	}
+	return focusStandardDetail(input)
+}
+
+func focusEditDiffHeaderDetail(text string) string {
+	headers := make([]string, 0, 2)
+	seen := map[string]struct{}{}
+	for _, raw := range strings.Split(strings.TrimSpace(text), "\n") {
+		line := strings.TrimSpace(xansi.Strip(raw))
+		if !looksLikeFocusEditDiffHeader(line) {
+			continue
+		}
+		if _, ok := seen[line]; ok {
+			continue
+		}
+		seen[line] = struct{}{}
+		headers = append(headers, line)
+		if len(headers) == 2 {
+			break
+		}
+	}
+	if len(headers) == 0 {
+		return ""
+	}
+	return strings.Join(headers, "; ")
+}
+
+func looksLikeFocusEditDiffHeader(line string) bool {
+	if line == "" || strings.HasPrefix(line, " ") || strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") {
+		return false
+	}
+	open := strings.LastIndex(line, " (+")
+	close := strings.LastIndex(line, ")")
+	if open <= 0 || close != len(line)-1 {
+		return false
+	}
+	stats := strings.TrimSuffix(strings.TrimPrefix(line[open:], " ("), ")")
+	parts := strings.Fields(stats)
+	if len(parts) != 2 || !strings.HasPrefix(parts[0], "+") || !strings.HasPrefix(parts[1], "-") {
+		return false
+	}
+	return focusUnsignedNumber(parts[0][1:]) && focusUnsignedNumber(parts[1][1:])
+}
+
+func focusUnsignedNumber(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func focusEditActionDetail(text string) string {
+	for _, raw := range strings.Split(strings.TrimSpace(text), "\n") {
+		line := strings.TrimSpace(xansi.Strip(raw))
+		switch {
+		case strings.HasPrefix(line, "Edited "):
+			return strings.TrimSpace(strings.TrimPrefix(line, "Edited "))
+		case strings.HasPrefix(line, "Created "):
+			return strings.TrimSpace(strings.TrimPrefix(line, "Created "))
+		case strings.HasPrefix(line, "Deleted "):
+			return strings.TrimSpace(strings.TrimPrefix(line, "Deleted "))
+		case strings.HasPrefix(line, "Wrote "):
+			return strings.TrimSpace(strings.TrimPrefix(line, "Wrote "))
+		}
 	}
 	return ""
 }
@@ -237,8 +318,10 @@ func focusToolKindFromName(toolName string) string {
 	switch name {
 	case "shell_run", "shell_wait", "shell_cancel":
 		return "shell"
-	case "read_file", "fetch", "web_fetch":
+	case "read_file":
 		return "read"
+	case "fetch", "web_fetch":
+		return "web"
 	case "list_dir":
 		return "list"
 	case "search_files", "grep", "search_content", "web_search":
@@ -254,7 +337,9 @@ func focusToolKindFromName(toolName string) string {
 	}
 	name = strings.ToLower(name)
 	switch {
-	case strings.Contains(name, "read_text_file"), strings.Contains(name, "read_file"), strings.Contains(name, "fetch"):
+	case strings.Contains(name, "fetch"):
+		return "web"
+	case strings.Contains(name, "read_text_file"), strings.Contains(name, "read_file"):
 		return "read"
 	case strings.Contains(name, "list_directory"), strings.Contains(name, "list_dir"):
 		return "list"
@@ -270,8 +355,10 @@ func focusToolKindFromName(toolName string) string {
 func focusExploreKindFromAction(action string) string {
 	action = strings.TrimSpace(action)
 	switch {
-	case strings.HasPrefix(action, "Read "), strings.HasPrefix(action, "Fetch "):
+	case strings.HasPrefix(action, "Read "):
 		return "read"
+	case strings.HasPrefix(action, "Fetch "):
+		return "web"
 	case strings.HasPrefix(action, "List "):
 		return "list"
 	case strings.HasPrefix(action, "Search "):

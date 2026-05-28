@@ -42,6 +42,11 @@ func TestFocusSummarizeToolMessageProviders(t *testing.T) {
 			want: focusToolSummaryItem{Kind: "read", Detail: "internal/tui/model.go"},
 		},
 		{
+			name: "web fetch action",
+			msg:  tuirender.UIMessage{ToolName: "web_fetch", Text: "Explored\nFetch https://whale-site.pages.dev"},
+			want: focusToolSummaryItem{Kind: "web", Detail: "https://whale-site.pages.dev"},
+		},
+		{
 			name: "search action",
 			msg:  tuirender.UIMessage{ToolName: "grep", Text: "Explored\nSearch focus summary"},
 			want: focusToolSummaryItem{Kind: "search", Detail: "focus summary"},
@@ -65,6 +70,14 @@ func TestFocusSummarizeToolMessageProviders(t *testing.T) {
 			name: "edit action",
 			msg:  tuirender.UIMessage{ToolName: "edit_file", Text: "Edited internal/tui/focus_view.go"},
 			want: focusToolSummaryItem{Kind: "edit", Detail: "internal/tui/focus_view.go"},
+		},
+		{
+			name: "edit action with diff stats",
+			msg: tuirender.UIMessage{
+				ToolName: "edit_file",
+				Text:     "Edited internal/tui/focus_view.go\n✓ · 1 replacement\n\ninternal/tui/focus_view.go (+1 -1)\n   10 -old\n   10 +new",
+			},
+			want: focusToolSummaryItem{Kind: "edit", Detail: "internal/tui/focus_view.go (+1 -1)"},
 		},
 		{
 			name: "subagent task",
