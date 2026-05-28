@@ -9421,8 +9421,23 @@ func TestToolResultShowsDiffMetadata(t *testing.T) {
 	if len(snap) != 0 {
 		t.Fatalf("expected completed tool cell to leave live assembler empty, got %+v", snap)
 	}
-	if got := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n"); !strings.Contains(got, "Edited a.txt") {
+	got := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	plain := xansi.Strip(got)
+	if !strings.Contains(plain, "Edited a.txt") {
 		t.Fatalf("expected completed tool cell in transcript:\n%s", got)
+	}
+	if !strings.Contains(plain, "✓ · 1 replacement") {
+		t.Fatalf("expected edit status inline with singular wording:\n%s", got)
+	}
+	for _, bad := range []string{"```diff", "  └ ✓", "  └ ---"} {
+		if strings.Contains(plain, bad) {
+			t.Fatalf("tool diff/status should not render as nested markdown child %q:\n%s", bad, got)
+		}
+	}
+	for _, want := range []string{"a.txt (+1 -1)", "+whale"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected structured diff preview to contain %q:\n%s", want, got)
+		}
 	}
 	if got := strings.Join(m.renderDiffs(), "\n"); !strings.Contains(got, "+whale") {
 		t.Fatalf("expected /diff content from metadata:\n%s", got)
@@ -9452,13 +9467,17 @@ func TestToolResultShowsLargeTranslationDiffTailInChat(t *testing.T) {
 		t.Fatal("expected wait-event command")
 	}
 	got := strings.Join(tuirender.ChatLines(m.transcript, 120), "\n")
-	if !strings.Contains(got, "Edited roadmap.md") {
+	plain := xansi.Strip(got)
+	if !strings.Contains(plain, "Edited roadmap.md") {
 		t.Fatalf("expected completed tool cell in transcript:\n%s", got)
 	}
-	if !strings.Contains(got, "+English 189") {
+	if !strings.Contains(plain, "+English 189") {
 		t.Fatalf("expected output box diff preview to include translated additions:\n%s", got)
 	}
-	if strings.Contains(got, "... diff truncated (") {
+	if strings.Contains(plain, "```diff") || strings.Contains(plain, "  └ ---") {
+		t.Fatalf("expected output box diff preview to use structured diff styling:\n%s", got)
+	}
+	if strings.Contains(plain, "... diff truncated (") {
 		t.Fatalf("expected translation-size diff to fit in output preview:\n%s", got)
 	}
 }
