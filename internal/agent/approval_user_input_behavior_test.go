@@ -99,6 +99,7 @@ func TestApprovalRequiredAndDenied(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			return ApprovalDeny
@@ -234,6 +235,7 @@ func TestApprovalCancelDoesNotPersistDeniedMarker(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			return ApprovalCancel
@@ -291,6 +293,7 @@ func TestApprovalDeniedMarkerIsVisibleToNextTurn(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			return ApprovalDeny
 		}),
@@ -355,6 +358,7 @@ func TestApprovalDeniedSkipsRemainingToolCalls(t *testing.T) {
 		&multiToolApprovalProvider{},
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}, counting}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			return ApprovalDeny
 		}),
@@ -456,6 +460,7 @@ func TestApprovalAllowOnceDoesNotCacheBySessionKey(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			return ApprovalAllow
@@ -478,6 +483,7 @@ func TestApprovalAllowForSessionCachesBySessionKey(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{writeLikeTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			return ApprovalAllowForSession
@@ -589,6 +595,7 @@ func TestApprovalAllowForSessionCachesEditAndWriteByFile(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{namedNoopTool("edit"), namedNoopTool("write")}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			if got, want := req.Keys, []string{"file:a.txt"}; !reflect.DeepEqual(got, want) {
@@ -633,6 +640,7 @@ func TestApprovalAllowForSessionDoesNotCacheFailedFileMutation(t *testing.T) {
 		prov,
 		store,
 		NewToolRegistry([]Tool{failingNamedTool("apply_patch"), namedNoopTool("write")}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			return ApprovalAllowForSession
@@ -671,6 +679,7 @@ func TestApprovalAllowForSessionDoesNotCacheUnclassifiedFailedFileMutation(t *te
 		prov,
 		store,
 		NewToolRegistry([]Tool{notFoundEditTool{}, namedNoopTool("write")}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			return ApprovalAllowForSession
@@ -705,6 +714,7 @@ func TestApprovalAllowForSessionDoesNotCacheRecoveredReadonlyFallback(t *testing
 		prov,
 		store,
 		NewToolRegistry([]Tool{failWriteTool{}, readOnlyViewTool{}}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithRecoveryPolicy(RecoveryPolicy{
 			Enabled: true,
 			Rules: map[FailureClass]RecoveryRule{
@@ -751,6 +761,7 @@ func TestApprovalAllowForSessionCachesApplyPatchByIndividualFiles(t *testing.T) 
 		prov,
 		store,
 		NewToolRegistry([]Tool{namedNoopTool("apply_patch")}),
+		WithToolPolicy(editApprovalPolicy()),
 		WithApprovalFunc(func(req ApprovalRequest) ApprovalDecision {
 			asked++
 			switch req.ToolCall.ID {

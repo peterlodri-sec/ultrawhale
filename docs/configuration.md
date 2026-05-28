@@ -85,7 +85,7 @@ auto_accept = false
 "*.env.example" = "allow"
 
 [permissions.edit]
-"*" = "ask"
+"*" = "allow"
 
 [permissions.shell]
 "*" = "allow"
@@ -242,12 +242,11 @@ For common file commands such as `cat`, `ls`, `cp`, `mv`, `rm`, `stat`, and
 point outside the workspace or temp directories. Shell redirections are not
 treated as external directory operands.
 
-File edits (`edit`, `write`, `apply_patch`) ask for approval by default; set
-`[permissions.edit]` to `"allow"` to apply edits without prompting, or to
-`"deny"` to block them. Reading files is allowed by default except for `.env`
-files, which ask. Custom or plugin tools that advertise a `mutates_state`
-capability are evaluated under `[permissions.mutating_tool]` and ask by
-default.
+File edits (`edit`, `write`, `apply_patch`) inside the workspace are allowed by
+default; set `[permissions.edit]` to `"ask"` to review edits before they apply,
+or to `"deny"` to block them. Reading files is allowed by default except for
+`.env` files, which ask. Custom or plugin tools that advertise a `mutates_state`
+capability are evaluated under `[permissions.mutating_tool]` and ask by default.
 
 MCP rules match the registered MCP tool name, such as
 `mcp__server__tool`. Whale does not inspect MCP tool arguments for filesystem
