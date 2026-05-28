@@ -67,6 +67,14 @@ func TestFocusSummarizeToolMessageProviders(t *testing.T) {
 			want: focusToolSummaryItem{Kind: "edit", Detail: "internal/tui/focus_view.go"},
 		},
 		{
+			name: "edit action with diff stats",
+			msg: tuirender.UIMessage{
+				ToolName: "edit_file",
+				Text:     "Edited internal/tui/focus_view.go\n✓ · 1 replacement\n\ninternal/tui/focus_view.go (+1 -1)\n   10 -old\n   10 +new",
+			},
+			want: focusToolSummaryItem{Kind: "edit", Detail: "internal/tui/focus_view.go (+1 -1)"},
+		},
+		{
 			name: "subagent task",
 			msg:  tuirender.UIMessage{Kind: tuirender.KindSubagent, ToolName: "spawn_subagent", Text: "Subagent review running\nsession: child"},
 			want: focusToolSummaryItem{Kind: "task", Detail: "Subagent review running"},

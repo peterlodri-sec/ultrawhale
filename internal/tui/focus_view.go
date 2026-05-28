@@ -83,7 +83,12 @@ func projectFocusMessages(messages []tuirender.UIMessage) []tuirender.UIMessage 
 	}
 	for _, msg := range messages {
 		if isFocusHiddenToolMessage(msg) {
-			tools.add(msg)
+			item := focusSummarizeToolMessage(msg)
+			state := focusToolState(msg)
+			if tools.shouldSplitBefore(item.Kind, state) {
+				flushTools()
+			}
+			tools.addItemWithState(state, item)
 			continue
 		}
 		if isFocusHiddenMessage(msg) {
@@ -166,6 +171,26 @@ func (s *focusToolSummary) add(msg tuirender.UIMessage) {
 	s.used = true
 	state := focusToolState(msg)
 	item := focusSummarizeToolMessage(msg)
+	s.addItemWithState(state, item)
+}
+
+func (s focusToolSummary) shouldSplitBefore(kind, state string) bool {
+	if !s.used {
+		return false
+	}
+	if kind != "edit" && s.edit.count > 0 && s.edit.succeeded() == 0 && s.edit.running == 0 {
+		return false
+	}
+	if kind == "edit" && state != "done" && state != "running" {
+		return false
+	}
+	hasEdit := s.edit.count > 0
+	isEdit := kind == "edit"
+	return hasEdit != isEdit
+}
+
+func (s *focusToolSummary) addItemWithState(state string, item focusToolSummaryItem) {
+	s.used = true
 	switch item.Kind {
 	case "shell":
 		s.shell.add(state, item.Detail, item.Identity)

@@ -610,12 +610,69 @@ func TestProjectFocusMessagesUsesStableSemanticSummaryOrder(t *testing.T) {
 	}
 
 	projected := projectFocusMessages(messages)
+	if len(projected) != 2 {
+		t.Fatalf("expected edit to break focus summaries, got %d: %+v", len(projected), projected)
+	}
+	wants := []string{
+		"Edited 1 file: internal/tui/focus_view.go (ctrl+o to expand)",
+		"Read 1 file: internal/tui/model.go, Ran shell: go test ./internal/tui (ctrl+o to expand)",
+	}
+	for i, want := range wants {
+		if got := projected[i].Text; got != want {
+			t.Fatalf("unexpected ordered semantic summary %d:\nwant: %q\n got: %q", i, want, got)
+		}
+	}
+}
+
+func TestProjectFocusMessagesShowsCondensedEditStats(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{
+			Role:     "result_ok",
+			Kind:     tuirender.KindToolCall,
+			ToolName: "edit_file",
+			Text:     "Edited internal/tui/focus_view.go\n✓ · 1 replacement\n\ninternal/tui/focus_view.go (+1 -1)\n   10 -old\n   10 +new",
+		},
+	}
+
+	projected := projectFocusMessages(messages)
 	if len(projected) != 1 {
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
-	want := "Read 1 file: internal/tui/model.go, Ran shell: go test ./internal/tui, Edited 1 file: internal/tui/focus_view.go (ctrl+o to expand)"
+	want := "Edited 1 file: internal/tui/focus_view.go (+1 -1) (ctrl+o to expand)"
 	if got := projected[0].Text; got != want {
-		t.Fatalf("unexpected ordered semantic summary:\nwant: %q\n got: %q", want, got)
+		t.Fatalf("unexpected condensed edit summary:\nwant: %q\n got: %q", want, got)
+	}
+	for _, hidden := range []string{"10 -old", "10 +new", "✓ · 1 replacement"} {
+		if strings.Contains(projected[0].Text, hidden) {
+			t.Fatalf("focus summary leaked expanded edit detail %q:\n%s", hidden, projected[0].Text)
+		}
+	}
+}
+
+func TestProjectFocusMessagesSeparatesExplorationAndEditSummaries(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch //. (internal/tui/model_test.go)"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/model_test.go"},
+		{
+			Role:     "result_ok",
+			Kind:     tuirender.KindToolCall,
+			ToolName: "edit_file",
+			Text:     "Edited internal/tui/model_test.go\n✓ · 1 replacement\n\ninternal/tui/model_test.go (+1 -1)\n  501 -old\n  501 +new",
+		},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 2 {
+		t.Fatalf("expected exploration and edit summaries to be separate, got %d: %+v", len(projected), projected)
+	}
+	wants := []string{
+		`Searched for 1 pattern: "//. (internal/tui/model_test.go)", Read 1 file: internal/tui/model_test.go (ctrl+o to expand)`,
+		"Edited 1 file: internal/tui/model_test.go (+1 -1) (ctrl+o to expand)",
+	}
+	for i, want := range wants {
+		if got := projected[i].Text; got != want {
+			t.Fatalf("unexpected focus summary %d:\nwant: %q\n got: %q", i, want, got)
+		}
 	}
 }
 
