@@ -31,7 +31,7 @@ type toolDispatchOutcome struct {
 	PrimarySucceeded bool
 }
 
-func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history []core.Message, rt *memory.RuntimeState, events chan<- AgentEvent, toolPolicy policy.ToolPolicy) (core.Message, *core.Message, llm.Usage, string, bool, error) {
+func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history []core.Message, rt *memory.RuntimeState, events chan<- AgentEvent, toolPolicy policy.ToolPolicy, tools *core.ToolRegistry) (core.Message, *core.Message, llm.Usage, string, bool, error) {
 	assistant, err := a.store.Create(ctx, core.Message{SessionID: sessionID, Role: core.RoleAssistant})
 	if err != nil {
 		return core.Message{}, nil, llm.Usage{}, "", false, fmt.Errorf("create assistant message: %w", err)
@@ -48,7 +48,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		return sendAgentEvent(ctx, events, ev)
 	}
 
-	ch := a.provider.StreamResponse(ctx, a.buildTurnProviderHistory(sessionID, rt), a.tools.Tools())
+	ch := a.provider.StreamResponse(ctx, a.buildTurnProviderHistory(sessionID, rt), tools.Tools())
 	for ev := range ch {
 		switch ev.Type {
 		case llm.EventContentDelta:
@@ -184,11 +184,11 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 	blocked := []core.ToolResult{}
 	if a.repairer != nil {
 		allowed := map[string]bool{}
-		for _, spec := range a.tools.Specs() {
+		for _, spec := range tools.Specs() {
 			allowed[spec.Name] = true
 		}
 		isMutating := func(c core.ToolCall) bool {
-			spec, ok := a.tools.Spec(c.Name)
+			spec, ok := tools.Spec(c.Name)
 			if !ok {
 				return true
 			}
@@ -244,7 +244,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		}
 		pending := append([]preparedToolDispatch(nil), pendingParallelSubagents...)
 		pendingParallelSubagents = pendingParallelSubagents[:0]
-		return a.flushPendingParallelSubagents(ctx, sessionID, assistant.ID, lastModel, pending, events, &results)
+		return a.flushPendingParallelSubagents(ctx, sessionID, assistant.ID, lastModel, pending, events, &results, tools)
 	}
 	for i, call := range dispatchCalls {
 		if call.Name != parallelSubagentToolName {
@@ -252,7 +252,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 				return core.Message{}, nil, llm.Usage{}, "", false, err
 			}
 		}
-		if spec, ok := a.tools.Spec(call.Name); ok {
+		if spec, ok := tools.Spec(call.Name); ok {
 			if fixed, changed := core.RenestFlatInputForSpec(spec, call.Input); changed {
 				call.Input = fixed
 				a.recordToolInputRepair(sessionID, lastModel, assistant.ID, call, "renest_flat_input")
@@ -284,7 +284,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		}
 		var preHookContext string
 		a.ensureApprovalCacheLoaded(ctx, sessionID)
-		spec, ok := a.tools.Spec(call.Name)
+		spec, ok := tools.Spec(call.Name)
 		if !ok {
 			spec = core.ToolSpec{Name: call.Name}
 		}
@@ -476,7 +476,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 				a.recordApprovalForCall(sessionID, lastModel, assistant.ID, approvalEventCachedAllowed, call, decision, key, keys, policy.ApprovalScope(call))
 			}
 			if !approved {
-				metadata := a.previewTool(ctx, call)
+				metadata := a.previewTool(ctx, tools, call)
 				metadata = addPolicyApprovalMetadata(metadata, decision)
 				metadata = policy.ApprovalMetadata(call, keys, metadata)
 				a.recordApprovalForCall(sessionID, lastModel, assistant.ID, approvalEventRequired, call, decision, key, keys, policy.ApprovalScope(call))
@@ -597,7 +597,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 			continue
 		}
 
-		finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistant.ID, lastModel, call, events)
+		finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistant.ID, lastModel, call, events, tools)
 		if err := ctx.Err(); err != nil {
 			return core.Message{}, nil, llm.Usage{}, "", false, err
 		}
@@ -618,7 +618,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 	return assistant, &toolMsg, lastUsage, lastModel, false, nil
 }
 
-func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, results *[]core.ToolResult) error {
+func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, results *[]core.ToolResult, tools *core.ToolRegistry) error {
 	ready := make([]readyParallelSubagentCall, 0, len(pending))
 	for _, prepared := range pending {
 		ready = append(ready, readyParallelSubagentCall{Index: prepared.Index, Call: prepared.Call})
@@ -628,7 +628,7 @@ func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, as
 	var outcomes []toolDispatchOutcome
 	if len(groups) != 1 || groups[0].Start != pending[0].Index || len(groups[0].Calls) != len(pending) {
 		for _, prepared := range pending {
-			finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events)
+			finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events, tools)
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -641,7 +641,7 @@ func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, as
 		}
 	} else {
 		var err error
-		outcomes, err = a.dispatchParallelSubagentsWithRecovery(ctx, sessionID, assistantMessageID, model, pending, events)
+		outcomes, err = a.dispatchParallelSubagentsWithRecovery(ctx, sessionID, assistantMessageID, model, pending, events, tools)
 		if err != nil {
 			return err
 		}
@@ -657,7 +657,7 @@ func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, as
 	return nil
 }
 
-func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent) ([]toolDispatchOutcome, error) {
+func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, tools *core.ToolRegistry) ([]toolDispatchOutcome, error) {
 	limit := a.maxParallelSubagents
 	if limit <= 0 {
 		limit = defaultMaxParallelSubagents()
@@ -670,7 +670,7 @@ func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessi
 	for i := 0; i < limit; i++ {
 		go func() {
 			for prepared := range workCh {
-				finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events)
+				finalRes, ok, primarySucceeded := a.dispatchWithRecovery(ctx, sessionID, assistantMessageID, model, prepared.Call, events, tools)
 				// outcomeCh is buffered for every pending call so a worker that
 				// already started can report without blocking after parent
 				// cancellation. The actual stop still depends on
