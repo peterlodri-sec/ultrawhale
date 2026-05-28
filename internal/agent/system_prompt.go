@@ -18,6 +18,10 @@ func (a *Agent) buildTurnProviderHistory(sessionID string, rt *memory.RuntimeSta
 }
 
 func (a *Agent) buildImmutableSystemBlocks(opts ...RunOptions) []string {
+	return a.buildImmutableSystemBlocksWithTools(a.tools, opts...)
+}
+
+func (a *Agent) buildImmutableSystemBlocksWithTools(tools *core.ToolRegistry, opts ...RunOptions) []string {
 	systemBlocks := make([]string, 0, len(a.extraSystemBlocks)+2)
 	var turnOpts RunOptions
 	if len(opts) > 0 {
@@ -57,7 +61,7 @@ Ask mode is active.
 	systemBlocks = append(systemBlocks, renderDelegationPolicyBlock())
 	systemBlocks = append(systemBlocks, renderRuntimeBlock(a.workspaceRoot, runtimeWorktreeContext{WorktreeRoot: a.worktreeRoot, OriginalWorkspace: a.originalWorkspace}, shell.DescribeRuntime()))
 	systemBlocks = append(systemBlocks, "For questions about the current date or time, use an available read-only shell/time command to verify the answer instead of guessing from model memory.")
-	systemBlocks = append(systemBlocks, renderToolSpecsBlock(a.tools.Specs()))
+	systemBlocks = append(systemBlocks, renderToolSpecsBlock(tools.Specs()))
 	if strings.TrimSpace(a.workspaceRoot) != "" {
 		discovered := skills.Filter(skills.Discover(skills.DefaultRoots(a.workspaceRoot)), a.disabledSkills)
 		discovered = append(discovered, skills.Filter(a.extraSkills, a.disabledSkills)...)
