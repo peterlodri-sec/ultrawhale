@@ -21,7 +21,7 @@ func (m model) focusMessages(messages []tuirender.UIMessage) []tuirender.UIMessa
 	if m.focusEnabled() {
 		return projectFocusMessages(messages)
 	}
-	return projectExpandedFocusMessages(messages, m.showReasoning)
+	return projectNormalMessages(messages, m.showReasoning)
 }
 
 func (m *model) toggleFocusView() bool {
@@ -108,6 +108,10 @@ func projectExpandedFocusMessages(messages []tuirender.UIMessage, showReasoning 
 		out = append(out, msg)
 	}
 	return out
+}
+
+func projectNormalMessages(messages []tuirender.UIMessage, showReasoning bool) []tuirender.UIMessage {
+	return projectExplorationMessages(projectExpandedFocusMessages(messages, showReasoning))
 }
 
 func appendFocusToggleHint(text, action string) string {

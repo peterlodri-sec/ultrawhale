@@ -781,6 +781,9 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 	if header == "" {
 		return nil
 	}
+	if isExplorationGroupEvent(m) {
+		return renderExplorationGroupEvent(m, header, rawLines[1:], width, contentWidth)
+	}
 	out := make([]string, 0, len(rawLines)+2)
 	out = append(out, renderToolEventHeader(m, header, width)...)
 	for _, raw := range rawLines[1:] {
@@ -790,6 +793,26 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 			continue
 		}
 		out = append(out, renderToolEventChild(line, contentWidth)...)
+	}
+	return out
+}
+
+func renderExplorationGroupEvent(m UIMessage, header string, rawLines []string, width, contentWidth int) []string {
+	out := make([]string, 0, len(rawLines)+1)
+	out = append(out, renderToolEventHeader(m, header, width)...)
+	first := true
+	for _, raw := range rawLines {
+		line := strings.TrimRight(raw, "\n")
+		if strings.TrimSpace(line) == "" {
+			out = append(out, "")
+			continue
+		}
+		firstPrefix := "    "
+		if first {
+			firstPrefix = tuitheme.MutedStyle().Render("  └ ")
+			first = false
+		}
+		out = append(out, wrapWithPrefixes(line, firstPrefix, "    ", contentWidth)...)
 	}
 	return out
 }
@@ -1046,10 +1069,14 @@ func isShellOperator(token string) bool {
 	}
 }
 
+func isExplorationGroupEvent(m UIMessage) bool {
+	return m.Role == "exploration_group" || m.Role == "exploration_group_running"
+}
+
 func toolEventBulletStyle(m UIMessage) lipgloss.Style {
 	style := lipgloss.NewStyle().Foreground(tuitheme.Default.Muted).Bold(true)
 	switch m.Role {
-	case "result_ok", "shell_result_ok":
+	case "result_ok", "shell_result_ok", "exploration_group":
 		return style.Foreground(tuitheme.Default.Success)
 	case "result_denied", "shell_result_denied":
 		return style.Foreground(tuitheme.Default.ResultDenied)
@@ -1059,7 +1086,7 @@ func toolEventBulletStyle(m UIMessage) lipgloss.Style {
 		return style.Foreground(tuitheme.Default.ResultTimeout)
 	case "result_canceled", "shell_result_canceled":
 		return style.Foreground(tuitheme.Default.Muted)
-	case "result_running", "shell_result_running", "tool":
+	case "result_running", "shell_result_running", "tool", "exploration_group_running":
 		return style.Foreground(tuitheme.Default.Tool)
 	default:
 		return style
@@ -1068,7 +1095,7 @@ func toolEventBulletStyle(m UIMessage) lipgloss.Style {
 
 func toolEventVerbColor(m UIMessage) lipgloss.Color {
 	switch m.Role {
-	case "result_ok", "shell_result_ok":
+	case "result_ok", "shell_result_ok", "exploration_group":
 		return tuitheme.Default.Success
 	case "result_denied", "shell_result_denied":
 		return tuitheme.Default.ResultDenied
@@ -1078,7 +1105,7 @@ func toolEventVerbColor(m UIMessage) lipgloss.Color {
 		return tuitheme.Default.ResultTimeout
 	case "result_canceled", "shell_result_canceled":
 		return tuitheme.Default.Muted
-	case "result_running", "shell_result_running", "tool":
+	case "result_running", "shell_result_running", "tool", "exploration_group_running":
 		return tuitheme.Default.Tool
 	default:
 		return tuitheme.Default.Text

@@ -384,6 +384,76 @@ func TestProjectFocusMessagesExpandedCanShowFullReasoning(t *testing.T) {
 	}
 }
 
+func TestProjectNormalMessagesGroupsConsecutiveExploration(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch focus in internal/tui"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/focus_view.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/chat_tools.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "list_dir", Text: "Explored\nList internal/tui"},
+	}
+
+	rendered := strings.Join(tuirender.ChatLines(projectNormalMessages(messages, false), 100), "\n")
+	for _, want := range []string{
+		"• Explored",
+		"  └ Search focus in internal/tui",
+		"    Read internal/tui/focus_view.go, internal/tui/chat_tools.go",
+		"    List internal/tui",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("normal exploration group missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "ctrl+o") {
+		t.Fatalf("normal exploration group should not add focus toggle hints:\n%s", rendered)
+	}
+}
+
+func TestProjectNormalMessagesShowsRunningExploration(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_running", Kind: tuirender.KindToolCall, ToolName: "mcp__fs__read_text_file", Text: "Running internal/tui/focus_view.go"},
+	}
+
+	rendered := strings.Join(tuirender.ChatLines(projectNormalMessages(messages, false), 100), "\n")
+	for _, want := range []string{"• Exploring", "Read internal/tui/focus_view.go"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("normal exploration group missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestProjectNormalMessagesFlushesExplorationBeforeNonExplore(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/model.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "edit_file", Text: "Edited internal/tui/model.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/render/chat.go"},
+	}
+
+	projected := projectNormalMessages(messages, false)
+	if len(projected) != 3 {
+		t.Fatalf("expected exploration/edit/exploration cells, got %d: %+v", len(projected), projected)
+	}
+	if projected[0].Role != "exploration_group" || projected[1].ToolName != "edit_file" || projected[2].Role != "exploration_group" {
+		t.Fatalf("unexpected normal projection: %+v", projected)
+	}
+}
+
+func TestProjectNormalMessagesDoesNotGroupGitStatusOrDiff(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran git status\nclean"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran git diff\n(no output)"},
+	}
+
+	rendered := strings.Join(tuirender.ChatLines(projectNormalMessages(messages, false), 100), "\n")
+	if strings.Contains(rendered, "Explored") || strings.Contains(rendered, "Exploring") {
+		t.Fatalf("git shell commands should not be grouped as exploration:\n%s", rendered)
+	}
+	for _, want := range []string{"Ran git status", "Ran git diff", "(ctrl+o to collapse)"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("normal shell rendering missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestModelChatMessagesApplyFocusView(t *testing.T) {
 	m := newModel(nil, "deepseek-v4-pro", "high", "on")
 	m.viewMode = app.ViewModeFocus
