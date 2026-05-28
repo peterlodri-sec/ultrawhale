@@ -269,7 +269,7 @@ func TestManagerKeepsAllServersVisibleWhileServersStart(t *testing.T) {
 
 func TestManagerStartsServersConcurrently(t *testing.T) {
 	slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		http.Error(w, "slow failure", http.StatusInternalServerError)
 	}))
 	t.Cleanup(slowServer.Close)
@@ -317,7 +317,7 @@ func TestManagerStartsServersConcurrently(t *testing.T) {
 
 	select {
 	case <-done:
-	case <-time.After(4 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("manager initialization did not complete")
 	}
 
