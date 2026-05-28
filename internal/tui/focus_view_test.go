@@ -27,7 +27,7 @@ func TestProjectFocusMessagesHidesThinkingAndToolDetails(t *testing.T) {
 			t.Fatalf("focus view leaked %q:\n%s", hidden, rendered)
 		}
 	}
-	for _, want := range []string{"inspect this", "Read 1 file, Ran shell: go test", "(ctrl+o to expand)", "done"} {
+	for _, want := range []string{"inspect this", "Read 1 file: internal/tui/model.go, Ran shell: go test", "(ctrl+o to expand)", "done"} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("focus view missing %q:\n%s", want, rendered)
 		}
@@ -49,8 +49,269 @@ func TestProjectFocusMessagesKeepsSingleShellCommandVisible(t *testing.T) {
 			t.Fatalf("focus view missing shell command %q:\n%s", want, rendered)
 		}
 	}
+	if projected[0].FocusSummary == nil {
+		t.Fatalf("expected structured focus summary")
+	}
+	if got := projected[0].FocusSummary.Parts; len(got) != 1 || got[0].Kind != "shell" || got[0].Action != "Ran shell" || got[0].Detail != "git status" {
+		t.Fatalf("unexpected focus summary parts: %+v", got)
+	}
 	if strings.Contains(rendered, "On branch main") {
 		t.Fatalf("focus view should still hide shell output:\n%s", rendered)
+	}
+}
+
+func TestProjectFocusMessagesShowsRecoveredShellRetryCost(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := "Retried shell: gh pr create (1 failed, 1 succeeded) (ctrl+o to expand)"
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected recovered shell summary:\nwant: %q\n got: %q", want, got)
+	}
+	part := projected[0].FocusSummary.Parts[0]
+	if part.Kind != "shell" || part.State != "done" || part.Action != "Retried shell" || part.Detail != "gh pr create" || part.Status != "(1 failed, 1 succeeded)" {
+		t.Fatalf("unexpected recovered shell part: %+v", part)
+	}
+}
+
+func TestProjectFocusMessagesRecoversShellRetryWithResultOutput(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✗ · 1.2s\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✓ · 1.1s\nok"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := "Retried shell: make test (1 failed, 1 succeeded) (ctrl+o to expand)"
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected recovered shell summary with output:\nwant: %q\n got: %q", want, got)
+	}
+}
+
+func TestProjectFocusMessagesRecoversMultipleFailedShellAttempts(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✗ · 1.2s\nFAIL"},
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✗ · 1.1s\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✓ · 1s\nok"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := "Retried shell: make test (2 failed, 1 succeeded) (ctrl+o to expand)"
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected recovered shell summary:\nwant: %q\n got: %q", want, got)
+	}
+	if strings.Contains(projected[0].Text, "Failed shell") {
+		t.Fatalf("recovered repeated retry should not leave a failed shell part:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesKeepsFailureAfterRecoveredShellRetry(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✗ · 1.2s\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✓ · 1s\nok"},
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test", Text: "Ran make test\n✗ · 1.1s\nFAIL"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{
+		"Failed shell: make test",
+		"Retried shell: make test (1 failed, 1 succeeded)",
+	} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+}
+
+func TestProjectFocusMessagesKeepsUnrelatedShellFailureVisible(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran go test ./internal/tui\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran git status\nclean"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{
+		"Failed shell: go test ./internal/tui",
+		"Ran shell: git status",
+		"(1 failed)",
+	} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+	if strings.Contains(projected[0].Text, "Retried shell") || strings.Contains(projected[0].Text, "1 succeeded") {
+		t.Fatalf("unrelated shell success should not be marked recovered:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesKeepsUnrecoveredShellFailureVisible(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran go test ./internal/tui\nFAIL"},
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{
+		"Retried shell: gh pr create (1 failed, 1 succeeded)",
+		"Failed shell: go test ./internal/tui",
+	} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+	if strings.Contains(projected[0].Text, "Failed 2 shell commands") {
+		t.Fatalf("recovered retry should be split from unresolved shell failure:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesKeepsUnrelatedSuccessfulShellVisibleWithRecoveredRetry(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran git status\nclean"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{
+		"Retried shell: gh pr create (1 failed, 1 succeeded)",
+		"Ran shell: git status",
+	} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+}
+
+func TestProjectFocusMessagesDoesNotRecoverShellByTruncatedPrefix(t *testing.T) {
+	prefix := "go test ./internal/tui -run TestProjectFocusMessagesDoesNotRecoverShellByTruncatedPrefix"
+	failedCommand := prefix + "A -count=1"
+	successCommand := prefix + "B -count=1"
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran " + failedCommand + "\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran " + successCommand + "\nok"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{"Failed shell:", "Ran shell:"} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+	if strings.Contains(projected[0].Text, "Retried shell") || strings.Contains(projected[0].Text, "1 succeeded") {
+		t.Fatalf("commands with only matching truncated display should not be recovered:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesDoesNotRecoverShellBySignificantWhitespace(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran printf 'a  b'"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran printf 'a b'"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{"Failed shell: printf 'a b'", "Ran shell: printf 'a b'"} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+	if strings.Contains(projected[0].Text, "Retried shell") || strings.Contains(projected[0].Text, "1 succeeded") {
+		t.Fatalf("commands that differ by shell-significant whitespace should not be recovered:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesDoesNotRecoverShellByFirstLineOnly(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "printf setup\nfalse", Text: "Ran printf setup\n✗ · 1ms\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "printf setup\ntrue", Text: "Ran printf setup\n✓ · 1ms\nok"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{"Failed shell: printf setup", "Ran shell: printf setup"} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+	if strings.Contains(projected[0].Text, "Retried shell") || strings.Contains(projected[0].Text, "1 succeeded") {
+		t.Fatalf("multi-line commands that differ after the first line should not be recovered:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesDoesNotRecoverShellAcrossCWD(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test\x00cwd=internal/tui", Text: "Ran make test\nFAIL"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", ToolIdentity: "make test\x00cwd=internal/app", Text: "Ran make test\nok"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	for _, want := range []string{"Failed shell: make test", "Ran shell: make test"} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary missing %q:\n%s", want, projected[0].Text)
+		}
+	}
+	for _, want := range []string{"(cwd: internal/tui)", "(cwd: internal/app)"} {
+		if !strings.Contains(projected[0].Text, want) {
+			t.Fatalf("focus summary should disambiguate cwd with %q:\n%s", want, projected[0].Text)
+		}
+	}
+	if strings.Contains(projected[0].Text, "Retried shell") || strings.Contains(projected[0].Text, "1 succeeded") {
+		t.Fatalf("same command in different cwd should not be recovered:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesKeepsDeniedBeforeRecoveredShellRetry(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_denied", Kind: tuirender.KindToolCall, ToolName: "edit_file", Text: "Edited internal/tui/focus_view.go"},
+		{Role: "shell_result_failed", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr create"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	deniedAt := strings.Index(projected[0].Text, "Denied 1 file")
+	retriedAt := strings.Index(projected[0].Text, "Retried shell")
+	if deniedAt < 0 || retriedAt < 0 {
+		t.Fatalf("focus summary missing denied or retried part:\n%s", projected[0].Text)
+	}
+	if deniedAt > retriedAt {
+		t.Fatalf("denied work should remain before recovered retry:\n%s", projected[0].Text)
 	}
 }
 
@@ -125,9 +386,16 @@ func TestProjectFocusMessagesKeepsRunningHintVisible(t *testing.T) {
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected running focus summary:\nwant: %q\n got: %q", want, got)
 	}
+	if projected[0].FocusSummary == nil || len(projected[0].FocusSummary.Parts) != 1 {
+		t.Fatalf("expected one structured running summary part: %+v", projected[0].FocusSummary)
+	}
+	part := projected[0].FocusSummary.Parts[0]
+	if part.Kind != "read" || part.Action != "Reading 1 file" || part.Detail != "internal/tui/focus_view.go" || part.Status != "(1 running)" {
+		t.Fatalf("unexpected running summary part: %+v", part)
+	}
 }
 
-func TestProjectFocusMessagesOmitsCompletedHints(t *testing.T) {
+func TestProjectFocusMessagesKeepsCompletedHints(t *testing.T) {
 	messages := []tuirender.UIMessage{
 		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/model.go"},
 		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch focus"},
@@ -138,7 +406,7 @@ func TestProjectFocusMessagesOmitsCompletedHints(t *testing.T) {
 	if len(projected) != 1 {
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
-	want := "Searched for 1 pattern, Read 1 file, Listed 1 directory (ctrl+o to expand)"
+	want := `Searched for 1 pattern: "focus", Read 1 file: internal/tui/model.go, Listed 1 directory: internal/tui (ctrl+o to expand)`
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected completed focus summary:\nwant: %q\n got: %q", want, got)
 	}
@@ -155,7 +423,7 @@ func TestProjectFocusMessagesUsesStableSemanticSummaryOrder(t *testing.T) {
 	if len(projected) != 1 {
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
-	want := "Read 1 file, Ran shell: go test ./internal/tui, Edited 1 file (ctrl+o to expand)"
+	want := "Read 1 file: internal/tui/model.go, Ran shell: go test ./internal/tui, Edited 1 file: internal/tui/focus_view.go (ctrl+o to expand)"
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected ordered semantic summary:\nwant: %q\n got: %q", want, got)
 	}
@@ -174,7 +442,7 @@ func TestProjectFocusMessagesDoesNotSplitToolSummaryOnHiddenThinking(t *testing.
 	if len(projected) != 1 {
 		t.Fatalf("expected one merged focus summary, got %d: %+v", len(projected), projected)
 	}
-	want := `Searched for 1 pattern, Read 2 files (ctrl+o to expand)`
+	want := `Searched for 1 pattern: "focus in internal/tui", Read 2 files: internal/tui/model.go; internal/tui/render/chat.go (ctrl+o to expand)`
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected merged focus summary: %q", got)
 	}
@@ -195,7 +463,7 @@ func TestProjectFocusMessagesMergesHydratedToolDenseSequence(t *testing.T) {
 	if len(projected) != 2 {
 		t.Fatalf("expected merged summary plus answer, got %d: %+v", len(projected), projected)
 	}
-	want := `Searched for 1 pattern, Read 2 files (ctrl+o to expand)`
+	want := `Searched for 1 pattern: "projectFocusMessages", Read 2 files: internal/tui/focus_view.go; internal/tui/hydration.go (ctrl+o to expand)`
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected merged focus summary: %q", got)
 	}
@@ -212,9 +480,75 @@ func TestProjectFocusMessagesSeparatesSearchReadAndList(t *testing.T) {
 	if len(projected) != 1 {
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
-	want := `Searched for 1 pattern, Read 1 file, Listed 1 directory (ctrl+o to expand)`
+	want := `Searched for 1 pattern: "focus", Read 1 file: internal/tui/model.go, Listed 1 directory: internal/tui (ctrl+o to expand)`
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected search/read/list summary:\nwant: %q\n got: %q", want, got)
+	}
+}
+
+func TestProjectFocusMessagesSummarizesMultipleCompletedDetails(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/model.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/focus_view.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/render/chat.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch focus"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch summary"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch render"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := `Searched for 3 patterns: "focus"; "summary" (+1), Read 3 files: internal/tui/model.go; internal/tui/focus_view.go (+1) (ctrl+o to expand)`
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected multi-detail summary:\nwant: %q\n got: %q", want, got)
+	}
+}
+
+func TestProjectFocusMessagesDeduplicatesRepeatedDetails(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/focus_view.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/focus_view.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead internal/tui/focus_view.go"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch focus"},
+		{Role: "result_ok", Kind: tuirender.KindToolCall, ToolName: "grep", Text: "Explored\nSearch focus"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := `Searched for 2 patterns: "focus" (+1), Read 3 files: internal/tui/focus_view.go (+2) (ctrl+o to expand)`
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected deduped summary:\nwant: %q\n got: %q", want, got)
+	}
+	parts := projected[0].FocusSummary.Parts
+	if len(parts) != 2 {
+		t.Fatalf("expected search/read parts, got %+v", parts)
+	}
+	if parts[0].Kind != "search" || parts[0].State != "done" || parts[0].Count != 2 {
+		t.Fatalf("unexpected search part metadata: %+v", parts[0])
+	}
+	if parts[1].Kind != "read" || parts[1].State != "done" || parts[1].Count != 3 {
+		t.Fatalf("unexpected read part metadata: %+v", parts[1])
+	}
+}
+
+func TestProjectFocusMessagesSummarizesMultipleShellCommandsWithSamples(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran git status\nclean"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran gh pr view\nopen"},
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran make test-tui\nok"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := "Ran 3 shell commands: git status; gh pr view (+1) (ctrl+o to expand)"
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected multi-shell summary:\nwant: %q\n got: %q", want, got)
 	}
 }
 
@@ -282,9 +616,9 @@ func TestProjectFocusMessagesKeepsAssistantTextAsGroupBreaker(t *testing.T) {
 		t.Fatalf("expected read summary, assistant text, and search summary, got %d: %+v", len(projected), projected)
 	}
 	want := []string{
-		"Read 1 file (ctrl+o to expand)",
+		"Read 1 file: internal/tui/model.go (ctrl+o to expand)",
 		"checkpoint",
-		`Searched for 1 pattern (ctrl+o to expand)`,
+		`Searched for 1 pattern: "focus" (ctrl+o to expand)`,
 	}
 	for i := range want {
 		if projected[i].Text != want[i] {
@@ -305,13 +639,42 @@ func TestProjectFocusMessagesKeepsStatusAndTruncatesLongShellDetail(t *testing.T
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
 	rendered := projected[0].Text
-	for _, want := range []string{"Ran shell: go test ./internal/tui -run", "...", "Denied 1 file", "(1 failed)", "(1 denied/canceled)"} {
+	for _, want := range []string{"Denied 1 file", "Failed shell: go test ./internal/tui -run", "...", "(1 failed)", "(1 denied/canceled)"} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("focus view missing %q:\n%s", want, rendered)
 		}
 	}
+	if strings.Index(rendered, "Denied 1 file") > strings.Index(rendered, "Failed shell") {
+		t.Fatalf("denied summary should be prioritized before failed work:\n%s", rendered)
+	}
 	if strings.Contains(rendered, " -count=1 -v") {
 		t.Fatalf("focus view should truncate long shell detail:\n%s", rendered)
+	}
+}
+
+func TestProjectFocusMessagesSeparatesDeniedShellFromCompletedShell(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "shell_result_ok", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran git status\nclean"},
+		{Role: "shell_result_denied", Kind: tuirender.KindToolCall, ToolName: "shell_run", Text: "Ran go build ./...\nDENIED"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := "Denied 1 shell command (1 denied/canceled), Ran shell: git status (ctrl+o to expand)"
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected mixed shell summary:\nwant: %q\n got: %q", want, got)
+	}
+	parts := projected[0].FocusSummary.Parts
+	if len(parts) != 2 {
+		t.Fatalf("expected denied/done shell parts, got %+v", parts)
+	}
+	if parts[0].Kind != "shell" || parts[0].State != "denied" || parts[0].Count != 1 {
+		t.Fatalf("unexpected denied shell part metadata: %+v", parts[0])
+	}
+	if parts[1].Kind != "shell" || parts[1].State != "done" || parts[1].Count != 1 {
+		t.Fatalf("unexpected completed shell part metadata: %+v", parts[1])
 	}
 }
 
@@ -346,7 +709,7 @@ func TestProjectFocusMessagesSummarizesMultipleSimpleUpdates(t *testing.T) {
 	if len(projected) != 1 {
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
-	want := "Updating plan: 2 plan updates (1 running), Updated todos: 2 todo updates (ctrl+o to expand)"
+	want := "Updating plan (1 running), Updated plan, Updated todos: 2 todo updates (ctrl+o to expand)"
 	if got := projected[0].Text; got != want {
 		t.Fatalf("unexpected simple update summary:\nwant: %q\n got: %q", want, got)
 	}
@@ -395,7 +758,7 @@ func TestFocusNativeScrollbackDefersToolOnlySummaries(t *testing.T) {
 		t.Fatal("expected visible answer to flush delayed focus summaries")
 	}
 	printed := fmt.Sprintf("%#v", cmd())
-	if !strings.Contains(printed, `Searched for 1 pattern, Read 1 file`) || strings.Contains(printed, "Read 1 file (ctrl+o to expand)\\n\\n┃") {
+	if !strings.Contains(printed, `Searched for 1 pattern: \"focus\", Read 1 file: internal/tui/focus_view.go`) || strings.Contains(printed, "Read 1 file: internal/tui/focus_view.go (ctrl+o to expand)\\n\\n┃") {
 		t.Fatalf("expected delayed native scrollback to print one merged summary, got %s", printed)
 	}
 }
@@ -436,7 +799,7 @@ func TestFocusNativeScrollbackFlushesDeferredToolSummaryBeforeNextVisibleMessage
 		t.Fatal("expected next visible message to flush delayed tool summary")
 	}
 	printed := fmt.Sprintf("%#v", cmd())
-	for _, want := range []string{"Read 1 file", "next prompt"} {
+	for _, want := range []string{"Read 1 file: internal/tui/focus_view.go", "next prompt"} {
 		if !strings.Contains(printed, want) {
 			t.Fatalf("expected delayed flush to include %q, got %s", want, printed)
 		}

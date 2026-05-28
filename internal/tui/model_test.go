@@ -5268,17 +5268,71 @@ func TestRenderQueuedPromptsShowsPreviewLimit(t *testing.T) {
 func TestApprovalNoticeTextUsesDecisionAndSummary(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.approval.reason = "shell_run: go test ./..."
-	if got := m.approvalNoticeText("allow"); !strings.Contains(got, "You approved whale to run go test ./... this time") {
+	if got := m.approvalNoticeText("allow"); got != "Approved to run go test ./... · this time" {
 		t.Fatalf("unexpected allow notice: %q", got)
 	}
-	if got := m.approvalNoticeText("allow_session"); !strings.Contains(got, "for this session") {
+	if got := m.approvalNoticeText("allow_session"); got != "Approved to run go test ./... · for this session" {
 		t.Fatalf("unexpected session notice: %q", got)
 	}
-	if got := m.approvalNoticeText("deny"); !strings.Contains(got, "You canceled the request to run go test ./...") {
+	if got := m.approvalNoticeText("deny"); got != "Denied request to run go test ./..." {
 		t.Fatalf("unexpected deny notice: %q", got)
 	}
-	if got := m.approvalNoticeText("cancel"); !strings.Contains(got, "You canceled the request to run go test ./...") {
+	if got := m.approvalNoticeText("cancel"); got != "Canceled request to run go test ./..." {
 		t.Fatalf("unexpected cancel notice: %q", got)
+	}
+}
+
+func TestApprovalDecisionAppendsStructuredNotice(t *testing.T) {
+	m, intents := newModelWithDispatchSpy()
+	m.mode = modeApproval
+	m.approval.toolCallID = "tool-1"
+	m.approval.toolName = "shell_run"
+	m.approval.reason = "shell_run: git status"
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m = next.(model)
+	if len(*intents) != 1 || (*intents)[0].Kind != service.IntentAllowTool || (*intents)[0].ToolCallID != "tool-1" {
+		t.Fatalf("unexpected approval intent: %+v", *intents)
+	}
+	if m.assembler == nil {
+		t.Fatal("expected assembler with approval notice")
+	}
+	snap := m.assembler.Snapshot()
+	if len(snap) == 0 {
+		t.Fatal("expected approval notice message")
+	}
+	got := snap[len(snap)-1]
+	if got.Kind != tuirender.KindNotice || got.Notice == nil {
+		t.Fatalf("expected structured notice, got: %+v", got)
+	}
+	if got.Text != "Approved to run git status · this time" {
+		t.Fatalf("unexpected notice text: %q", got.Text)
+	}
+	if got.Notice.Kind != "approval_allowed" || got.Notice.Command != "git status" || got.Notice.Scope != "this time" {
+		t.Fatalf("unexpected notice metadata: %+v", got.Notice)
+	}
+}
+
+func TestAutoAcceptInfoAppendsStructuredNotice(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	next, _ := m.Update(svcMsg(service.Event{Kind: service.EventInfo, Text: "Session auto-accept enabled", AutoAccept: true, AutoAcceptKnown: true}))
+	m = next.(model)
+	if !m.autoAccept {
+		t.Fatal("expected auto-accept state to update")
+	}
+	if m.assembler == nil {
+		t.Fatal("expected assembler with permission notice")
+	}
+	snap := m.assembler.Snapshot()
+	if len(snap) == 0 {
+		t.Fatal("expected permission notice message")
+	}
+	got := snap[len(snap)-1]
+	if got.Kind != tuirender.KindNotice || got.Notice == nil {
+		t.Fatalf("expected structured permission notice, got: %+v", got)
+	}
+	if got.Text != "Session auto-accept enabled" || got.Notice.Kind != "permission_auto_accept_enabled" {
+		t.Fatalf("unexpected permission notice: text=%q notice=%+v", got.Text, got.Notice)
 	}
 }
 
@@ -5339,7 +5393,7 @@ func TestApprovalEscRemovesPendingToolCallBeforeTurnDone(t *testing.T) {
 	if strings.Contains(rendered, "Reasoning only") || strings.Contains(rendered, "did not produce a visible answer") {
 		t.Fatalf("approval cancel should suppress reasoning-only fallback:\n%s", rendered)
 	}
-	if !strings.Contains(rendered, "You canceled the request to run date") {
+	if !strings.Contains(rendered, "Canceled request to run date") {
 		t.Fatalf("expected cancel notice in transcript:\n%s", rendered)
 	}
 }
@@ -9614,7 +9668,7 @@ func TestShellRunTranscriptKeepsStatusAndOutputSeparate(t *testing.T) {
 		Text:       `shell_run: {"command":"cd internal/tui && wc -l model.go model_events.go model_keys.go model_prompt.go"}`,
 	}))
 	m = next.(model)
-	raw := `{"success":true,"code":"ok","data":{"status":"ok","metrics":{"exit_code":0,"duration_ms":23},"payload":{"command":"cd internal/tui && wc -l model.go model_events.go model_keys.go model_prompt.go","stdout":"284 model.go\n202 model_events.go\n401 model_keys.go\n88 model_prompt.go\n975 total\n","stderr":""}}}`
+	raw := `{"success":true,"code":"ok","data":{"status":"ok","metrics":{"exit_code":0,"duration_ms":23},"payload":{"command":"cd internal/tui && wc -l model.go model_events.go model_keys.go model_prompt.go","cwd":"internal/tui","stdout":"284 model.go\n202 model_events.go\n401 model_keys.go\n88 model_prompt.go\n975 total\n","stderr":""}}}`
 	next, _ = m.Update(svcMsg(service.Event{
 		Kind:       service.EventToolResult,
 		ToolCallID: "tc-shell",
@@ -9622,6 +9676,10 @@ func TestShellRunTranscriptKeepsStatusAndOutputSeparate(t *testing.T) {
 		Text:       raw,
 	}))
 	m = next.(model)
+	wantIdentity := "cd internal/tui && wc -l model.go model_events.go model_keys.go model_prompt.go\x00cwd=internal/tui"
+	if len(m.transcript) != 1 || m.transcript[0].ToolIdentity != wantIdentity {
+		t.Fatalf("shell result should preserve payload command identity, got %+v", m.transcript)
+	}
 	rendered := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
 	if strings.Contains(rendered, "23ms 284 model.go") {
 		t.Fatalf("status and shell output collapsed onto one line:\n%s", rendered)
@@ -9630,6 +9688,34 @@ func TestShellRunTranscriptKeepsStatusAndOutputSeparate(t *testing.T) {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("expected rendered transcript to contain %q:\n%s", want, rendered)
 		}
+	}
+}
+
+func TestShellResultFallsBackToRunningCommandWhenPayloadOmitsCommand(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 100, height: 30}
+	next, _ := m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolCall,
+		ToolCallID: "tc-shell",
+		ToolName:   "shell_run",
+		Text:       `shell_run: {"command":"git status"}`,
+	}))
+	m = next.(model)
+	raw := `{"success":false,"code":"denied","message":"denied","data":{"status":"error","summary":"denied","payload":{"stderr":"","stdout":""}}}`
+	next, _ = m.Update(svcMsg(service.Event{
+		Kind:       service.EventToolResult,
+		ToolCallID: "tc-shell",
+		ToolName:   "shell_run",
+		Text:       raw,
+	}))
+	m = next.(model)
+	if len(m.transcript) != 1 {
+		t.Fatalf("expected one transcript message, got %+v", m.transcript)
+	}
+	if m.transcript[0].Text != "Ran git status\nDENIED · denied" {
+		t.Fatalf("shell result should preserve previous command in title, got %q", m.transcript[0].Text)
+	}
+	if m.transcript[0].ToolIdentity != "git status" {
+		t.Fatalf("shell result should use previous command as identity, got %q", m.transcript[0].ToolIdentity)
 	}
 }
 

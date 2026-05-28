@@ -114,6 +114,8 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 		if !isEnvironmentInventoryBlock(ev.Text) {
 			if ev.LocalResult != nil {
 				m.appendLocalResult(ev.LocalResult)
+			} else if notice := permissionNoticeFromInfo(ev.Text); notice != nil {
+				m.appendSystemNotice(notice)
 			} else if isSessionNotice(ev.Text) {
 				m.appendTranscript("notice", tuirender.KindNotice, ev.Text)
 			} else {
