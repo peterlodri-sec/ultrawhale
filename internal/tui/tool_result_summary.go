@@ -274,9 +274,14 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 		return "result_blocked", summarizePathIsDirectory(env, detail)
 	case "approval_denied", "policy_denied":
 		return "result_denied", "DENIED · " + detail
-	case "permission_denied", "mcp_allowed_dirs_denied":
+	case "permission_denied":
 		if isOutsideWorkspaceDetail(detail) {
-			return "result_blocked", firstNonEmpty(outsideWorkspaceSummary(env, detail), "Outside workspace")
+			return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+		}
+		return "result_denied", "DENIED · " + detail
+	case "mcp_allowed_dirs_denied":
+		if isOutsideWorkspaceDetail(detail) {
+			return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 		}
 		return "result_denied", "DENIED · " + detail
 	case "timeout":
@@ -296,7 +301,7 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 
 	lower := strings.ToLower(detail + " " + env.code)
 	if strings.Contains(lower, "outside") && (strings.Contains(lower, "workspace") || strings.Contains(lower, "allowed directories")) {
-		return "result_blocked", firstNonEmpty(outsideWorkspaceSummary(env, detail), "Outside workspace")
+		return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 	}
 	if strings.Contains(lower, " is a directory") || strings.Contains(lower, "use list_dir") || strings.Contains(lower, "use list_directory") {
 		return "result_blocked", summarizePathIsDirectory(env, detail)
@@ -422,16 +427,16 @@ func pathFromDirectoryMessage(detail string) string {
 	return strings.TrimSpace(before)
 }
 
-func outsideWorkspaceSummary(env toolResultEnvelope, detail string) string {
+func accessBlockedSummary(env toolResultEnvelope, detail string) string {
 	path := firstNonEmpty(asString(env.payload["file_path"]), asString(env.payload["path"]), asString(env.data["file_path"]), asString(env.data["path"]))
 	if path == "" {
 		path = outsideWorkspacePath(detail)
 	}
 	if path != "" {
-		return "Outside workspace · " + path
+		return "Access blocked · " + path
 	}
 	if detail != "" && isOutsideWorkspaceDetail(detail) {
-		return "Outside workspace · " + detail
+		return "Access blocked · " + detail
 	}
 	return ""
 }

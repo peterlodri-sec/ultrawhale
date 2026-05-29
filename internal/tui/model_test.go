@@ -9108,9 +9108,9 @@ func TestApprovalViewShowsExternalDirectoryMetadata(t *testing.T) {
 
 	view := xansi.Strip(m.View())
 	for _, want := range []string{
-		"Approval required: external directory",
+		"Approval required: file access",
 		"mcp__fs__list_directory",
-		"Allow access outside the current workspace.",
+		"Allow access to this path.",
 		"Path: /Users/goranka/Engineer/ai/dsk/opencode-dev",
 	} {
 		if !strings.Contains(view, want) {
@@ -9875,18 +9875,18 @@ func TestSummarizeToolResultForChat_RequestReplanHidesInternalRecoveryText(t *te
 	if strings.Contains(got, "recovery exhausted") || strings.Contains(got, "replan required") {
 		t.Fatalf("summary leaked internal recovery text: %q", got)
 	}
-	if !strings.Contains(got, "Outside workspace") || !strings.Contains(got, "/workspace") {
-		t.Fatalf("expected user-facing workspace block, got %q", got)
+	if !strings.Contains(got, "Access blocked") || !strings.Contains(got, "/workspace") {
+		t.Fatalf("expected user-facing access block, got %q", got)
 	}
 }
 
-func TestSummarizeToolResultForChat_PermissionDeniedOutsideWorkspaceShowsBlocked(t *testing.T) {
+func TestSummarizeToolResultForChat_PermissionDeniedExternalAccessShowsAccessBlocked(t *testing.T) {
 	raw := `{"success":false,"code":"permission_denied","message":"path outside MCP fs allowed directories: /workspace not in /tmp"}`
 	role, got := summarizeToolResultForChat("mcp__fs__search_files", raw)
 	if role != "result_blocked" {
 		t.Fatalf("expected result_blocked role, got %q", role)
 	}
-	want := "Outside workspace · /workspace"
+	want := "Access blocked · /workspace"
 	if got != want {
 		t.Fatalf("unexpected summary:\nwant: %q\ngot:  %q", want, got)
 	}
@@ -9987,13 +9987,13 @@ func TestMCPToolResultSummarizesStructuredOnlyContent(t *testing.T) {
 	}
 }
 
-func TestSummarizeToolResultForChat_MCPAllowedDirsDeniedShowsDenied(t *testing.T) {
+func TestSummarizeToolResultForChat_MCPAllowedDirsDeniedShowsAccessBlocked(t *testing.T) {
 	raw := `{"success":false,"code":"mcp_allowed_dirs_denied","message":"MCP filesystem server cannot access /workspace; allowed directories: /tmp. Use Whale built-in file tools for this path, or add the directory to the MCP server configuration."}`
 	role, got := summarizeToolResultForChat("mcp__fs__search_files", raw)
 	if role != "result_blocked" {
 		t.Fatalf("expected result_blocked role, got %q", role)
 	}
-	if got != "Outside workspace · /workspace" {
+	if got != "Access blocked · /workspace" {
 		t.Fatalf("unexpected summary: %q", got)
 	}
 }
