@@ -59,7 +59,19 @@ func sanitizeSessionID(v string) string {
 	if v == "" {
 		return "default"
 	}
-	v = strings.ReplaceAll(v, "/", "_")
-	v = strings.ReplaceAll(v, "\\", "_")
+	v = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return r
+		case r >= 'A' && r <= 'Z':
+			return r
+		case r >= '0' && r <= '9':
+			return r
+		case r == '-' || r == '_':
+			return r
+		default:
+			return '_'
+		}
+	}, v)
 	return v
 }

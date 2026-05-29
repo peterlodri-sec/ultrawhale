@@ -298,16 +298,16 @@ func summarizeToolCall(call core.ToolCall) string {
 	name := strings.TrimSpace(call.Name)
 	switch name {
 	case "parallel_reason":
-		count := len(asAnySlice(body["prompts"]))
+		count := len(core.AsAnySlice(body["prompts"]))
 		if count > 0 {
 			return fmt.Sprintf("parallel_reason: %d prompt(s)", count)
 		}
 	case "spawn_subagent":
-		role := strings.TrimSpace(asString(body["role"]))
+		role := strings.TrimSpace(core.AsString(body["role"]))
 		if role == "" {
 			role = "explore"
 		}
-		task := firstLine(strings.TrimSpace(asString(body["task"])))
+		task := firstLine(strings.TrimSpace(core.AsString(body["task"])))
 		if task != "" {
 			return fmt.Sprintf("spawn_subagent: %s · %s", role, task)
 		}
@@ -352,26 +352,26 @@ func summarizeToolCall(call core.ToolCall) string {
 		return "apply_patch: patch payload"
 	case "request_user_input":
 		if qs := body["questions"]; qs != nil {
-			return fmt.Sprintf("request_user_input: %d question(s)", len(asAnySlice(qs)))
+			return fmt.Sprintf("request_user_input: %d question(s)", len(core.AsAnySlice(qs)))
 		}
 	case "update_plan":
-		if plan := asAnySlice(body["plan"]); len(plan) > 0 {
+		if plan := core.AsAnySlice(body["plan"]); len(plan) > 0 {
 			return fmt.Sprintf("update_plan: %d step(s)", len(plan))
 		}
 		return "update_plan"
 	case "todo_add":
-		if text := strings.TrimSpace(asString(body["text"])); text != "" {
+		if text := strings.TrimSpace(core.AsString(body["text"])); text != "" {
 			return "todo_add: " + text
 		}
 	case "todo_update":
-		if text := strings.TrimSpace(asString(body["text"])); text != "" {
+		if text := strings.TrimSpace(core.AsString(body["text"])); text != "" {
 			return "todo_update: " + text
 		}
-		if id := strings.TrimSpace(asString(body["id"])); id != "" {
+		if id := strings.TrimSpace(core.AsString(body["id"])); id != "" {
 			return "todo_update: " + id
 		}
 	case "todo_remove":
-		if id := strings.TrimSpace(asString(body["id"])); id != "" {
+		if id := strings.TrimSpace(core.AsString(body["id"])); id != "" {
 			return "todo_remove: " + id
 		}
 	case "todo_list":
@@ -386,9 +386,9 @@ func summarizeToolCall(call core.ToolCall) string {
 }
 
 func summarizeContentSearchCall(body map[string]any) string {
-	pattern := strings.TrimSpace(asString(body["pattern"]))
-	path := strings.TrimSpace(asString(body["path"]))
-	include := strings.TrimSpace(asString(body["include"]))
+	pattern := strings.TrimSpace(core.AsString(body["pattern"]))
+	path := strings.TrimSpace(core.AsString(body["path"]))
+	include := strings.TrimSpace(core.AsString(body["include"]))
 	if pattern == "" {
 		return ""
 	}
@@ -396,8 +396,8 @@ func summarizeContentSearchCall(body map[string]any) string {
 }
 
 func summarizeFileSearchCall(body map[string]any) string {
-	pattern := strings.TrimSpace(asString(body["pattern"]))
-	path := strings.TrimSpace(asString(body["path"]))
+	pattern := strings.TrimSpace(core.AsString(body["pattern"]))
+	path := strings.TrimSpace(core.AsString(body["path"]))
 	if pattern == "" {
 		return ""
 	}
@@ -405,18 +405,18 @@ func summarizeFileSearchCall(body map[string]any) string {
 }
 
 func summarizeWebSearchCall(body map[string]any) string {
-	if query := strings.TrimSpace(asString(body["query"])); query != "" {
+	if query := strings.TrimSpace(core.AsString(body["query"])); query != "" {
 		return query
 	}
-	if query := strings.TrimSpace(asString(body["q"])); query != "" {
+	if query := strings.TrimSpace(core.AsString(body["q"])); query != "" {
 		return query
 	}
-	for _, entry := range asAnySlice(body["search_query"]) {
+	for _, entry := range core.AsAnySlice(body["search_query"]) {
 		obj, _ := entry.(map[string]any)
-		if query := strings.TrimSpace(asString(obj["q"])); query != "" {
+		if query := strings.TrimSpace(core.AsString(obj["q"])); query != "" {
 			return query
 		}
-		if query := strings.TrimSpace(asString(obj["query"])); query != "" {
+		if query := strings.TrimSpace(core.AsString(obj["query"])); query != "" {
 			return query
 		}
 	}
@@ -443,20 +443,4 @@ func firstLine(v string) string {
 		return strings.TrimSpace(v[:i])
 	}
 	return v
-}
-
-func asString(v any) string {
-	s, _ := v.(string)
-	return s
-}
-
-func asAnySlice(v any) []any {
-	if v == nil {
-		return nil
-	}
-	arr, ok := v.([]any)
-	if !ok {
-		return nil
-	}
-	return arr
 }

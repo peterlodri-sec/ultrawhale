@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/usewhale/whale/internal/core"
 )
 
 const (
@@ -143,10 +145,10 @@ func mcpCompletedTitle(toolName, raw, previous string) string {
 		return "Called " + firstNonEmpty(toolName, "MCP tool")
 	}
 	env := parseToolEnvelope(raw)
-	if server := strings.TrimSpace(asString(env.data["server"])); server != "" {
+	if server := strings.TrimSpace(core.AsString(env.data["server"])); server != "" {
 		info.Server = server
 	}
-	if tool := strings.TrimSpace(asString(env.data["tool"])); tool != "" {
+	if tool := strings.TrimSpace(core.AsString(env.data["tool"])); tool != "" {
 		info.Tool = tool
 	}
 	lines := []string{"Called " + info.label()}
@@ -163,7 +165,7 @@ func summarizeMCPResult(env toolResultEnvelope, successBySignal bool) (string, s
 	if duration != "" {
 		parts = append(parts, duration)
 	}
-	text := summarizeMCPOutput(asString(env.data["text"]))
+	text := summarizeMCPOutput(core.AsString(env.data["text"]))
 	if text == "" {
 		text = summarizeMCPStructuredContent(env.data["structured_content"])
 	}

@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	xansi "github.com/charmbracelet/x/ansi"
+
+	"github.com/usewhale/whale/internal/core"
 )
 
 const shellOutputPreviewLines = 6
@@ -72,9 +74,9 @@ func summarizeTaskResult(toolName string, env toolResultEnvelope, successBySigna
 		}
 		return "result_ok", strings.Join(parts, " · ")
 	case "spawn_subagent":
-		role := firstNonEmpty(asString(env.data["role"]), "explore")
+		role := firstNonEmpty(core.AsString(env.data["role"]), "explore")
 		parts = append(parts, role)
-		if summary := firstLine(firstNonEmpty(asString(env.data["summary"]), env.summary)); summary != "" {
+		if summary := firstLine(firstNonEmpty(core.AsString(env.data["summary"]), env.summary)); summary != "" {
 			return "result_ok", strings.Join(parts, " · ") + "\n" + summary
 		}
 		return "result_ok", strings.Join(parts, " · ")
@@ -111,8 +113,8 @@ func summarizeShellResult(env toolResultEnvelope, successBySignal bool) (string,
 	hasExitCode := hasInt(env.metrics["exit_code"])
 	duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
 	if env.status == "running" {
-		taskID := asString(env.payload["task_id"])
-		reason := shellDiagnosisLabel(asString(env.diagnosis["reason"]))
+		taskID := core.AsString(env.payload["task_id"])
+		reason := shellDiagnosisLabel(core.AsString(env.diagnosis["reason"]))
 		if taskID != "" {
 			if reason != "" && duration != "" {
 				return "result_running", reason + " · " + duration + " · " + taskID
@@ -170,7 +172,7 @@ func summarizeFailedShellResult(env toolResultEnvelope) (string, string) {
 	if duration != "" {
 		parts = append(parts, duration)
 	}
-	if reason := shellDiagnosisLabel(asString(env.diagnosis["reason"])); reason != "" {
+	if reason := shellDiagnosisLabel(core.AsString(env.diagnosis["reason"])); reason != "" {
 		parts = append(parts, reason)
 	}
 	return "result_failed", strings.Join(parts, " · ") + "\n" + output
@@ -186,8 +188,8 @@ func shellFailureUsesGenericSummary(env toolResultEnvelope) bool {
 }
 
 func shellPayloadOutput(env toolResultEnvelope, preferStderr bool) string {
-	stdout := strings.TrimRight(asString(env.payload["stdout"]), "\n")
-	stderr := strings.TrimRight(asString(env.payload["stderr"]), "\n")
+	stdout := strings.TrimRight(core.AsString(env.payload["stdout"]), "\n")
+	stderr := strings.TrimRight(core.AsString(env.payload["stderr"]), "\n")
 	if preferStderr {
 		return joinShellOutput(stderr, stdout)
 	}
@@ -247,10 +249,10 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 	duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
 	detail := firstLine(firstNonEmpty(
 		env.summary,
-		asString(env.payload["stderr"]),
-		asString(env.payload["stdout"]),
+		core.AsString(env.payload["stderr"]),
+		core.AsString(env.payload["stdout"]),
 		env.message,
-		asString(env.data["summary"]),
+		core.AsString(env.data["summary"]),
 		fallback,
 	))
 
@@ -260,7 +262,7 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 	case "approval_denied", "policy_denied", "permission_denied", "mcp_allowed_dirs_denied":
 		return "result_denied", "DENIED · " + detail
 	case "timeout":
-		if reason := shellDiagnosisLabel(asString(env.diagnosis["reason"])); reason != "" {
+		if reason := shellDiagnosisLabel(core.AsString(env.diagnosis["reason"])); reason != "" {
 			if duration != "" {
 				return "result_timeout", "TIMEOUT · " + duration + " · " + reason
 			}
@@ -332,7 +334,7 @@ func shellDiagnosisLabel(reason string) string {
 }
 
 func summarizeReplanRequired(env toolResultEnvelope) string {
-	last := strings.TrimSpace(asString(env.data["last_error"]))
+	last := strings.TrimSpace(core.AsString(env.data["last_error"]))
 	if last != "" {
 		if inner, ok := parseToolEnvelopeOK(last); ok {
 			_, text := summarizeFailedResult(inner, "tool failed")
@@ -342,7 +344,7 @@ func summarizeReplanRequired(env toolResultEnvelope) string {
 		}
 		return "✗ · " + firstLine(last)
 	}
-	if tool := strings.TrimSpace(asString(env.data["tool_name"])); tool != "" {
+	if tool := strings.TrimSpace(core.AsString(env.data["tool_name"])); tool != "" {
 		return "✗ · " + tool + " failed; choose a different approach"
 	}
 	return "✗ · tool failed; choose a different approach"
@@ -378,7 +380,7 @@ func summarizeExploreResult(toolName string, env toolResultEnvelope, successBySi
 		return "result_ok", fmt.Sprintf("✓ · %d matches", total)
 	case "fetch", "web_fetch":
 		status := asInt(firstNonEmptyAny(env.payload["status_code"], env.data["status_code"]))
-		format := firstNonEmpty(asString(env.payload["format"]), asString(env.data["format"]))
+		format := firstNonEmpty(core.AsString(env.payload["format"]), core.AsString(env.data["format"]))
 		if status > 0 && format != "" {
 			return "result_ok", fmt.Sprintf("✓ · HTTP %d · %s", status, format)
 		}

@@ -110,22 +110,22 @@ func summarizeChildToolCall(call core.ToolCall) childToolAction {
 	_ = json.Unmarshal([]byte(call.Input), &args)
 	switch call.Name {
 	case "read_file":
-		target := compactProgressTarget(firstNonEmptyString(asString(args["file_path"]), asString(args["path"]), "file"))
+		target := compactProgressTarget(firstNonEmptyString(core.AsString(args["file_path"]), core.AsString(args["path"]), "file"))
 		return childToolAction{ToolName: call.Name, Target: target, Running: "Reading " + target, DoneVerb: "Read"}
 	case "list_dir":
-		target := compactProgressTarget(firstNonEmptyString(asString(args["path"]), "."))
+		target := compactProgressTarget(firstNonEmptyString(core.AsString(args["path"]), "."))
 		return childToolAction{ToolName: call.Name, Target: target, Running: "Listing " + target, DoneVerb: "Listed"}
 	case "grep", "search_content":
 		target := summarizeSearchTarget(args)
 		return childToolAction{ToolName: call.Name, Target: target, Running: "Searching " + target, DoneVerb: "Searched"}
 	case "search_files":
-		pattern := quoteProgressTerm(firstNonEmptyString(asString(args["pattern"]), asString(args["query"]), "files"))
+		pattern := quoteProgressTerm(firstNonEmptyString(core.AsString(args["pattern"]), core.AsString(args["query"]), "files"))
 		return childToolAction{ToolName: call.Name, Target: pattern, Running: "Searching files " + pattern, DoneVerb: "Searched files"}
 	case "web_search":
-		target := quoteProgressTerm(firstNonEmptyString(asString(args["query"]), "query"))
+		target := quoteProgressTerm(firstNonEmptyString(core.AsString(args["query"]), "query"))
 		return childToolAction{ToolName: call.Name, Target: target, Running: "Searching web " + target, DoneVerb: "Searched web"}
 	case "fetch", "web_fetch":
-		target := compactURLForProgress(firstNonEmptyString(asString(args["url"]), "url"))
+		target := compactURLForProgress(firstNonEmptyString(core.AsString(args["url"]), "url"))
 		return childToolAction{ToolName: call.Name, Target: target, Running: "Fetching " + target, DoneVerb: "Fetched"}
 	default:
 		if call.Name != "" {
@@ -136,9 +136,9 @@ func summarizeChildToolCall(call core.ToolCall) childToolAction {
 }
 
 func summarizeSearchTarget(args map[string]any) string {
-	pattern := quoteProgressTerm(firstNonEmptyString(asString(args["pattern"]), asString(args["query"]), "content"))
-	path := compactProgressTarget(firstNonEmptyString(asString(args["path"]), asString(args["directory"]), ""))
-	include := compactProgressTarget(firstNonEmptyString(asString(args["include"]), ""))
+	pattern := quoteProgressTerm(firstNonEmptyString(core.AsString(args["pattern"]), core.AsString(args["query"]), "content"))
+	path := compactProgressTarget(firstNonEmptyString(core.AsString(args["path"]), core.AsString(args["directory"]), ""))
+	include := compactProgressTarget(firstNonEmptyString(core.AsString(args["include"]), ""))
 	if path != "" && include != "" {
 		return fmt.Sprintf("%s in %s (%s)", pattern, path, include)
 	}
@@ -183,9 +183,9 @@ func childResultMetricSuffix(res core.ToolResult) string {
 			return fmt.Sprintf("%d/%d lines", returned, total)
 		}
 	case "list_dir":
-		items := asAnySlice(payload["items"])
+		items := core.AsAnySlice(payload["items"])
 		if len(items) == 0 {
-			items = asAnySlice(env.Data["items"])
+			items = core.AsAnySlice(env.Data["items"])
 		}
 		if len(items) > 0 {
 			return fmt.Sprintf("%d items", len(items))
@@ -204,7 +204,7 @@ func childResultMetricSuffix(res core.ToolResult) string {
 		if total > 0 {
 			return fmt.Sprintf("%d matches", total)
 		}
-		items := asAnySlice(payload["items"])
+		items := core.AsAnySlice(payload["items"])
 		if len(items) > 0 {
 			return fmt.Sprintf("%d matches", len(items))
 		}
