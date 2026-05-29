@@ -9899,6 +9899,21 @@ func TestSummarizeToolResultForChat_ShellGrepNoMatchesIsNeutral(t *testing.T) {
 	}
 }
 
+func TestSummarizeToolResultForChat_ShellGrepNoMatchesWithPriorOutputIsNeutral(t *testing.T) {
+	raw := `{"success":false,"code":"exec_failed","message":"command failed","data":{"status":"error","summary":"command failed","metrics":{"exit_code":1,"duration_ms":16},"payload":{"command":"cd /repo && wc -l internal/tui/model_events.go && grep -n \"func handleServiceEvent\" internal/tui/model_events.go","stderr":"","stdout":"     650 internal/tui/model_events.go\n"}}}`
+	role, got := summarizeToolResultForChat("shell_run", raw)
+	if role != "result_neutral" {
+		t.Fatalf("expected result_neutral role, got %q", role)
+	}
+	want := "No matches · 16ms\n     650 internal/tui/model_events.go"
+	if got != want {
+		t.Fatalf("unexpected summary text:\nwant: %q\ngot:  %q", want, got)
+	}
+	if title := completedToolTitle("shell_run", raw, ""); strings.HasPrefix(title, "Command failed") {
+		t.Fatalf("grep no-match with prior output should not render as command failure title: %q", title)
+	}
+}
+
 func TestSummarizeToolResultForChat_ShellExitOneWithStderrStillFails(t *testing.T) {
 	raw := `{"success":false,"code":"exec_failed","message":"command failed","data":{"status":"error","metrics":{"duration_ms":20,"exit_code":1},"payload":{"command":"grep pattern missing.txt","stderr":"grep: missing.txt: No such file or directory","stdout":""}}}`
 	role, got := summarizeToolResultForChat("shell_run", raw)
