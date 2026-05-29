@@ -10,10 +10,14 @@ import (
 )
 
 func emitSubagentProgress(progress func(core.ToolProgress), role, model string, count int, status, summary string, metadata map[string]any) {
+	emitSubagentProgressWithSteps(progress, role, model, count, status, summary, nil, metadata)
+}
+
+func emitSubagentProgressWithSteps(progress func(core.ToolProgress), role, model string, count int, status, summary string, steps []core.SubagentStep, metadata map[string]any) {
 	if progress == nil {
 		return
 	}
-	progress(core.ToolProgress{
+	p := core.ToolProgress{
 		ToolName: "spawn_subagent",
 		Role:     role,
 		Model:    model,
@@ -21,7 +25,11 @@ func emitSubagentProgress(progress func(core.ToolProgress), role, model string, 
 		Status:   status,
 		Summary:  strings.TrimSpace(summary),
 		Metadata: metadata,
-	})
+	}
+	if len(steps) > 0 {
+		p.ProgressMessages = steps
+	}
+	progress(p)
 }
 
 func summarizeChildAgentEvent(ev agent.AgentEvent) (status, summary string, metadata map[string]any, ok bool) {

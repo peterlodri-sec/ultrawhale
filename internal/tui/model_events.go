@@ -228,7 +228,7 @@ func (m *model) handleServiceEvent(ev service.Event) (tea.Cmd, bool, bool) {
 	case service.EventTaskProgress:
 		m.clearProviderRetryStatus()
 		m.status = ev.Text
-		m.updateTaskProgress(ev.ToolCallID, ev.ToolName, ev.Text, ev.Status, ev.Metadata)
+		m.updateTaskProgressWithSteps(ev.ToolCallID, ev.ToolName, ev.Text, ev.Status, ev.Metadata, ev.ProgressMessages)
 		m.addLog(logEntry{Kind: "task_progress", Source: ev.ToolName, Summary: ev.Text, Raw: fmt.Sprintf("%+v", ev.Metadata)})
 	case service.EventTaskCompleted:
 		m.clearProviderRetryStatus()

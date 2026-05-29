@@ -243,14 +243,15 @@ func taskActivityEvent(kind EventKind, info *agent.TaskActivityInfo) Event {
 		meta[k] = v
 	}
 	return Event{
-		Kind:       kind,
-		ToolCallID: info.ToolCallID,
-		ToolName:   info.ToolName,
-		Text:       summarizeTaskActivity(kind, info),
-		Metadata:   meta,
-		Status:     info.Status,
-		Count:      info.Count,
-		DurationMS: info.DurationMS,
+		Kind:             kind,
+		ToolCallID:       info.ToolCallID,
+		ToolName:         info.ToolName,
+		Text:             summarizeTaskActivity(kind, info),
+		Metadata:         meta,
+		Status:           info.Status,
+		Count:            info.Count,
+		DurationMS:       info.DurationMS,
+		ProgressMessages: info.ProgressMessages,
 	}
 }
 

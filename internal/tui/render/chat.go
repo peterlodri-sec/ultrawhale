@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/usewhale/whale/internal/app"
+	"github.com/usewhale/whale/internal/core"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
 
@@ -813,6 +814,9 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 	if header == "" {
 		return nil
 	}
+	if m.Kind == KindSubagent {
+		return renderSubagentEvent(m, header, rawLines[1:], width, contentWidth)
+	}
 	if isShellToolEvent(m) {
 		return renderShellToolEvent(m, header, rawLines[1:], width, contentWidth)
 	}
@@ -833,6 +837,104 @@ func renderToolEvent(m UIMessage, block string, width int) []string {
 		out = append(out, renderToolEventChild(line, contentWidth)...)
 	}
 	return out
+}
+
+const subagentCardMaxVisibleSteps = 5
+const subagentCardMaxSummaryLen = 120
+
+func renderSubagentEvent(m UIMessage, header string, bodyLines []string, width, contentWidth int) []string {
+	// Determine status glyph from accumulated step statuses
+	statusGlyph := "◐"
+	role := subagentRoleFromHeader(header)
+	for _, line := range bodyLines {
+		if strings.HasPrefix(line, "role:") {
+			role = strings.TrimSpace(strings.TrimPrefix(line, "role:"))
+		}
+	}
+	if len(m.SubagentSteps) > 0 {
+		last := m.SubagentSteps[len(m.SubagentSteps)-1]
+		switch last.Status {
+		case "completed", "done", "success":
+			statusGlyph = "✓"
+		case "failed", "error", "tool_failed":
+			statusGlyph = "✗"
+		case "cancelled":
+			statusGlyph = "⊘"
+		}
+	}
+
+	// Build content
+	shortHeader := statusGlyph + " Subagent " + role
+	stepCount := len(m.SubagentSteps)
+	if stepCount > 0 {
+		shortHeader += " (" + fmt.Sprintf("%d steps)", stepCount)
+		// Show at most subagentCardMaxVisibleSteps, oldest truncated
+		var visible []core.SubagentStep
+		truncated := 0
+		if stepCount > subagentCardMaxVisibleSteps {
+			truncated = stepCount - subagentCardMaxVisibleSteps
+			visible = m.SubagentSteps[truncated:]
+		} else {
+			visible = m.SubagentSteps
+		}
+		if truncated > 0 {
+			shortHeader += "\n···"
+		}
+		for _, step := range visible {
+			label := step.ToolName
+			if label == "" {
+				label = "agent_event"
+			}
+			detail := truncateSubagentSummary(step.Summary)
+			if label == "subagent" {
+				// Final result row — visually separate from tool steps
+				shortHeader += "\n" + tuitheme.MutedStyle().Render("── result ──")
+				if detail != "" {
+					shortHeader += "\n" + detail
+				}
+			} else if detail != "" {
+				shortHeader += "\n" + label + ": " + detail
+			} else {
+				shortHeader += "\n" + label
+			}
+		}
+	} else {
+		// No steps yet - show original body
+		for _, line := range bodyLines {
+			shortHeader += "\n" + line
+		}
+	}
+
+	// Render as a card with border
+	card := spacedCardStyle(width, lipgloss.Color("#6c6c6c")).
+		Render(strings.TrimRight(shortHeader, "\n"))
+	return strings.Split(strings.TrimRight(card, "\n"), "\n")
+}
+
+func truncateSubagentSummary(s string) string {
+	s = strings.TrimSpace(s)
+	runes := []rune(s)
+	if len(runes) <= subagentCardMaxSummaryLen {
+		return s
+	}
+	cut := subagentCardMaxSummaryLen
+	// Try to break at a word boundary (space or punctuation) for cleaner cut
+	for i := cut; i > cut/2; i-- {
+		r := runes[i]
+		if r == ' ' || r == '\n' || r == '，' || r == '。' || r == '.' || r == ',' {
+			cut = i
+			break
+		}
+	}
+	return string(runes[:cut]) + " " + tuitheme.MutedStyle().Render("... omitted")
+}
+
+func subagentRoleFromHeader(header string) string {
+	fields := strings.Fields(strings.TrimSpace(header))
+	if len(fields) >= 2 && fields[0] == "Subagent" {
+		return fields[1]
+	}
+	return "explore"
 }
 
 func renderEditToolEvent(m UIMessage, header string, rawLines []string, width, contentWidth int) []string {

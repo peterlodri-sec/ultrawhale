@@ -32,6 +32,9 @@ func (a *Agent) dispatchWithRecovery(ctx context.Context, sessionID, assistantMe
 				DurationMS: progress.DurationMS,
 				Metadata:   progress.Metadata,
 			}
+			if len(progress.ProgressMessages) > 0 {
+				info.ProgressMessages = progress.ProgressMessages
+			}
 			_ = emit(AgentEvent{Type: AgentEventTypeTaskProgress, Task: &info})
 		})
 		if ctx.Err() != nil {

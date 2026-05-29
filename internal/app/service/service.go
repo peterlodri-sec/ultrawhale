@@ -110,33 +110,34 @@ const (
 )
 
 type Event struct {
-	Kind            EventKind
-	Text            string
-	ToolCallID      string
-	ToolName        string
-	Metadata        map[string]any
-	Status          string
-	Count           int
-	DurationMS      int64
-	Questions       []core.UserInputQuestion
-	Choices         []string
-	Approval        *policy.ApprovalRequest
-	LastResponse    string
-	ModelChoices    []string
-	EffortChoices   []string
-	CurrentModel    string
-	CurrentEffort   string
-	ThinkingChoices []string
-	CurrentThinking string
-	AutoAccept      bool
-	AutoAcceptKnown bool
-	ViewMode        string
-	LocalResult     *app.LocalResult
-	Skills          []skills.SkillView
-	Plugins         []plugins.PluginStatus
-	WorktreeExit    *app.WorktreeExitSummary
-	SessionID       string
-	Messages        []core.Message
+	Kind             EventKind
+	Text             string
+	ToolCallID       string
+	ToolName         string
+	Metadata         map[string]any
+	Status           string
+	Count            int
+	DurationMS       int64
+	ProgressMessages []core.SubagentStep
+	Questions        []core.UserInputQuestion
+	Choices          []string
+	Approval         *policy.ApprovalRequest
+	LastResponse     string
+	ModelChoices     []string
+	EffortChoices    []string
+	CurrentModel     string
+	CurrentEffort    string
+	ThinkingChoices  []string
+	CurrentThinking  string
+	AutoAccept       bool
+	AutoAcceptKnown  bool
+	ViewMode         string
+	LocalResult      *app.LocalResult
+	Skills           []skills.SkillView
+	Plugins          []plugins.PluginStatus
+	WorktreeExit     *app.WorktreeExitSummary
+	SessionID        string
+	Messages         []core.Message
 }
 
 type Service struct {

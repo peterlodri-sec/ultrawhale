@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/usewhale/whale/internal/core"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
 
@@ -70,6 +71,10 @@ func shellCommandIdentityFromResult(raw string) string {
 }
 
 func (m *model) updateTaskProgress(toolCallID, toolName, text, status string, metadata map[string]any) bool {
+	return m.updateTaskProgressWithSteps(toolCallID, toolName, text, status, metadata, nil)
+}
+
+func (m *model) updateTaskProgressWithSteps(toolCallID, toolName, text, status string, metadata map[string]any, steps []core.SubagentStep) bool {
 	if toolCallID == "" || m.assembler == nil {
 		return false
 	}
@@ -79,12 +84,12 @@ func (m *model) updateTaskProgress(toolCallID, toolName, text, status string, me
 		previous := m.assembler.ToolCallText(toolCallID)
 		title = subagentProgressText(text, status, metadata, previous)
 		role = subagentProgressRole(status, text)
+		m.assembler.UpdateSubagentProgress(toolCallID, title, role, steps)
+	} else {
+		m.assembler.UpdateToolCall(toolCallID, title, role)
 	}
-	ok := m.assembler.UpdateToolCall(toolCallID, title, role)
-	if ok {
-		m.refreshLiveViewportContent()
-	}
-	return ok
+	m.refreshLiveViewportContent()
+	return true
 }
 
 func (m *model) markToolCallPending(toolCallID string) {
