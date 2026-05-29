@@ -71,7 +71,7 @@ func TestRequestUserInputRoundTrip(t *testing.T) {
 			}, true
 		}),
 	)
-	msg, err := a.Run(context.Background(), "s-rui", "start")
+	msg, err := a.RunSession(context.Background(), "s-rui", "start")
 	if err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
@@ -467,7 +467,7 @@ func TestApprovalAllowOnceDoesNotCacheBySessionKey(t *testing.T) {
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-approval-cache-once", "t1"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-approval-cache-once", "t1"); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 	if asked != 2 {
@@ -490,10 +490,10 @@ func TestApprovalAllowForSessionCachesBySessionKey(t *testing.T) {
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-approval-cache", "t1"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-approval-cache", "t1"); err != nil {
 		t.Fatalf("run1 failed: %v", err)
 	}
-	if _, err := a.Run(context.Background(), "s-approval-cache", "t2"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-approval-cache", "t2"); err != nil {
 		t.Fatalf("run2 failed: %v", err)
 	}
 	if asked != 1 {
@@ -536,10 +536,10 @@ func TestApprovalAllowForSessionCachesSemanticShellFamily(t *testing.T) {
 		}}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-semantic-shell-cache", "t1"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-semantic-shell-cache", "t1"); err != nil {
 		t.Fatalf("run1 failed: %v", err)
 	}
-	if _, err := a.Run(context.Background(), "s-semantic-shell-cache", "t2"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-semantic-shell-cache", "t2"); err != nil {
 		t.Fatalf("run2 failed: %v", err)
 	}
 	if asked != 1 {
@@ -605,10 +605,10 @@ func TestApprovalAllowForSessionCachesEditAndWriteByFile(t *testing.T) {
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-file-approval", "edit"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-file-approval", "edit"); err != nil {
 		t.Fatalf("run1 failed: %v", err)
 	}
-	if _, err := a.Run(context.Background(), "s-file-approval", "write"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-file-approval", "write"); err != nil {
 		t.Fatalf("run2 failed: %v", err)
 	}
 	if asked != 1 {
@@ -647,7 +647,7 @@ func TestApprovalAllowForSessionDoesNotCacheFailedFileMutation(t *testing.T) {
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-failed-file-approval", "patch then write"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-failed-file-approval", "patch then write"); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 	if asked != 2 {
@@ -686,7 +686,7 @@ func TestApprovalAllowForSessionDoesNotCacheUnclassifiedFailedFileMutation(t *te
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-unclassified-failed-file-approval", "edit then write"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-unclassified-failed-file-approval", "edit then write"); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 	if asked != 2 {
@@ -727,7 +727,7 @@ func TestApprovalAllowForSessionDoesNotCacheRecoveredReadonlyFallback(t *testing
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-fallback-file-approval", "fallback then write"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-fallback-file-approval", "fallback then write"); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 	if asked != 2 {
@@ -780,13 +780,13 @@ func TestApprovalAllowForSessionCachesApplyPatchByIndividualFiles(t *testing.T) 
 		}),
 	)
 
-	if _, err := a.Run(context.Background(), "s-patch-approval", "patch ab"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-patch-approval", "patch ab"); err != nil {
 		t.Fatalf("run1 failed: %v", err)
 	}
-	if _, err := a.Run(context.Background(), "s-patch-approval", "patch a"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-patch-approval", "patch a"); err != nil {
 		t.Fatalf("run2 failed: %v", err)
 	}
-	if _, err := a.Run(context.Background(), "s-patch-approval", "patch ac"); err != nil {
+	if _, err := a.RunSession(context.Background(), "s-patch-approval", "patch ac"); err != nil {
 		t.Fatalf("run3 failed: %v", err)
 	}
 	if asked != 2 {

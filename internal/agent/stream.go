@@ -38,10 +38,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 	}
 	lastUsage := llm.Usage{}
 	lastModel := ""
-	var planParser core.ProposedPlanParser
-	var planText strings.Builder
-	planStarted := false
-	planCompleted := false
+	var ps planState
 	assistantDeltaSeen := false
 	streamPersisted := false
 	emit := func(ev AgentEvent) bool {
@@ -54,7 +51,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		case llm.EventContentDelta:
 			assistant.Text += ev.Content
 			assistantDeltaSeen = true
-			if !a.emitAssistantContentDelta(ctx, ev.Content, &planParser, &planText, &planStarted, &planCompleted, events) {
+			if !a.emitAssistantContentDelta(ctx, ev.Content, &ps, events) {
 				return core.Message{}, nil, llm.Usage{}, "", false, ctx.Err()
 			}
 			// Intentionally do not persist on every delta: rewriting the full
@@ -101,10 +98,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 					assistant.ToolCalls = nil
 					assistant.FinishReason = ""
 					rt.Scratch.ResetTurn()
-					planParser = core.ProposedPlanParser{}
-					planText.Reset()
-					planStarted = false
-					planCompleted = false
+					ps = planState{}
 					assistantDeltaSeen = false
 					streamPersisted = false
 					if err := a.store.Update(ctx, assistant); err != nil {
@@ -143,11 +137,11 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 				if ev.Response.Content != "" {
 					assistant.Text = ev.Response.Content
 					if !assistantDeltaSeen {
-						if !a.emitAssistantContentDelta(ctx, ev.Response.Content, &planParser, &planText, &planStarted, &planCompleted, events) {
+						if !a.emitAssistantContentDelta(ctx, ev.Response.Content, &ps, events) {
 							return core.Message{}, nil, llm.Usage{}, "", false, ctx.Err()
 						}
-					} else if a.mode == session.ModePlan && !planCompleted {
-						if !a.emitFinalProposedPlan(ctx, ev.Response.Content, &planText, &planStarted, &planCompleted, events) {
+					} else if a.mode == session.ModePlan && !ps.completed {
+						if !a.emitFinalProposedPlan(ctx, ev.Response.Content, &ps, events) {
 							return core.Message{}, nil, llm.Usage{}, "", false, ctx.Err()
 						}
 					}
@@ -172,9 +166,9 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 	if !streamPersisted && (assistant.Text != "" || assistant.Reasoning != "" || len(assistant.ToolCalls) > 0) {
 		a.bestEffortUpdateAssistant(assistant)
 	}
-	if a.mode == session.ModePlan && !planCompleted {
-		for _, seg := range planParser.Finish() {
-			if !a.emitProposedPlanSegment(ctx, seg, &planText, &planStarted, &planCompleted, events) {
+	if a.mode == session.ModePlan && !ps.completed {
+		for _, seg := range ps.parser.Finish() {
+			if !a.emitProposedPlanSegment(ctx, seg, &ps, events) {
 				return core.Message{}, nil, llm.Usage{}, "", false, ctx.Err()
 			}
 		}
@@ -328,7 +322,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, history [
 		if !a.hooks.Empty() {
 			var toolArgs any
 			_ = json.Unmarshal([]byte(call.Input), &toolArgs)
-			report := a.hooks.Run(ctx, NewPreToolUsePayload(sessionID, call, toolArgs))
+			report := a.hooks.RunHook(ctx, NewPreToolUsePayload(sessionID, call, toolArgs))
 			if !a.emitHookReport(ctx, events, report) {
 				return core.Message{}, nil, llm.Usage{}, "", false, ctx.Err()
 			}
@@ -729,7 +723,7 @@ func (a *Agent) appendDispatchedToolResult(ctx context.Context, sessionID string
 	if !a.hooks.Empty() {
 		var toolArgs any
 		_ = json.Unmarshal([]byte(call.Input), &toolArgs)
-		report := a.hooks.Run(ctx, NewPostToolUsePayload(sessionID, call, toolArgs, finalRes.Content))
+		report := a.hooks.RunHook(ctx, NewPostToolUsePayload(sessionID, call, toolArgs, finalRes.Content))
 		if !a.emitHookReport(ctx, events, report) {
 			return false
 		}

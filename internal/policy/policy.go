@@ -1157,19 +1157,11 @@ func cleanAbs(path string) string {
 }
 
 func pathInside(path, root string) bool {
-	path = cleanAbs(path)
-	root = cleanAbs(root)
-	if path == "" || root == "" {
-		return false
-	}
-	if path == root {
-		return true
-	}
-	rel, err := filepath.Rel(root, path)
+	ok, err := core.PathInside(path, root)
 	if err != nil {
 		return false
 	}
-	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	return ok
 }
 
 func uniqueStrings(in []string) []string {

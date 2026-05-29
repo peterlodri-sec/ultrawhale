@@ -10,7 +10,7 @@ import (
 	"github.com/usewhale/whale/internal/app/service"
 )
 
-func Run(cfg app.Config, start app.StartOptions) error {
+func RunTUI(cfg app.Config, start app.StartOptions) error {
 	ctx := context.Background()
 	if !cfg.ConfigLoaded {
 		workspaceRoot, err := os.Getwd()
