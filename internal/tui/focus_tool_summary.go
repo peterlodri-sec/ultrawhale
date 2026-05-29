@@ -336,7 +336,9 @@ func focusSemanticResultDetail(input focusToolSummaryInput) string {
 	for i := start; i < len(lines); i++ {
 		line := strings.TrimSpace(xansi.Strip(lines[i]))
 		switch {
-		case strings.HasPrefix(line, "Outside workspace"):
+		case strings.HasPrefix(line, "Permission required"):
+			return truncateFocusToolDetail(line)
+		case strings.HasPrefix(line, "Access blocked"), strings.HasPrefix(line, "Outside workspace"):
 			return truncateFocusToolDetail(line)
 		case strings.HasPrefix(line, "Path is a directory"):
 			return truncateFocusToolDetail(line)

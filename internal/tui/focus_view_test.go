@@ -723,7 +723,25 @@ func TestProjectFocusMessagesUsesURLLanguageForFetch(t *testing.T) {
 	}
 }
 
-func TestProjectFocusMessagesUsesBlockedLanguageForOutsideWorkspace(t *testing.T) {
+func TestProjectFocusMessagesUsesAccessBlockedLanguageForExternalAccess(t *testing.T) {
+	messages := []tuirender.UIMessage{
+		{Role: "result_blocked", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead ../src/Tool.ts\nAccess blocked · ../src/Tool.ts"},
+	}
+
+	projected := projectFocusMessages(messages)
+	if len(projected) != 1 {
+		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
+	}
+	want := "Access blocked: ../src/Tool.ts (1 blocked) (ctrl+o to expand)"
+	if got := projected[0].Text; got != want {
+		t.Fatalf("unexpected blocked summary:\nwant: %q\n got: %q", want, got)
+	}
+	if strings.Contains(projected[0].Text, "Failed") || strings.Contains(projected[0].Text, "Denied") {
+		t.Fatalf("access block should not use failed/denied language:\n%s", projected[0].Text)
+	}
+}
+
+func TestProjectFocusMessagesPreservesLegacyOutsideWorkspaceDetail(t *testing.T) {
 	messages := []tuirender.UIMessage{
 		{Role: "result_blocked", Kind: tuirender.KindToolCall, ToolName: "read_file", Text: "Explored\nRead ../src/Tool.ts\nOutside workspace · ../src/Tool.ts"},
 	}
@@ -734,10 +752,7 @@ func TestProjectFocusMessagesUsesBlockedLanguageForOutsideWorkspace(t *testing.T
 	}
 	want := "Outside workspace: ../src/Tool.ts (1 blocked) (ctrl+o to expand)"
 	if got := projected[0].Text; got != want {
-		t.Fatalf("unexpected blocked summary:\nwant: %q\n got: %q", want, got)
-	}
-	if strings.Contains(projected[0].Text, "Failed") || strings.Contains(projected[0].Text, "Denied") {
-		t.Fatalf("workspace block should not use failed/denied language:\n%s", projected[0].Text)
+		t.Fatalf("unexpected legacy blocked summary:\nwant: %q\n got: %q", want, got)
 	}
 }
 
@@ -776,7 +791,7 @@ func TestProjectFocusMessagesUsesModeHintLanguageForShell(t *testing.T) {
 
 func TestProjectFocusMessagesKeepsStandaloneSemanticResultDetail(t *testing.T) {
 	messages := []tuirender.UIMessage{
-		{Role: "result_blocked", Kind: tuirender.KindToolResult, ToolName: "read_file", Text: "Outside workspace · ../src/Tool.ts"},
+		{Role: "result_blocked", Kind: tuirender.KindToolResult, ToolName: "read_file", Text: "Access blocked · ../src/Tool.ts"},
 		{Role: "result_mode_hint", Kind: tuirender.KindToolResult, ToolName: "shell_run", Text: "Ask mode · switch to /agent to edit"},
 	}
 
@@ -785,7 +800,7 @@ func TestProjectFocusMessagesKeepsStandaloneSemanticResultDetail(t *testing.T) {
 		t.Fatalf("expected one focus summary, got %d: %+v", len(projected), projected)
 	}
 	for _, want := range []string{
-		"Outside workspace: ../src/Tool.ts",
+		"Access blocked: ../src/Tool.ts",
 		"Ask mode: switch to /agent to edit",
 	} {
 		if !strings.Contains(projected[0].Text, want) {

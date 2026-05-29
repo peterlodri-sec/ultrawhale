@@ -1167,7 +1167,7 @@ func normalizedStatusToken(token string) string {
 		return "error"
 	case "TIMEOUT":
 		return "timeout"
-	case "WARN", "WARNING":
+	case "WARN", "WARNING", "HTTP":
 		return "warning"
 	case "CANCELED", "CANCELLED":
 		return "canceled"
