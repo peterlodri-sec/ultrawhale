@@ -8,11 +8,6 @@ import (
 	"github.com/usewhale/whale/internal/tui/history"
 )
 
-func asString(v any) string {
-	s, _ := v.(string)
-	return s
-}
-
 func asInt(v any) int {
 	switch n := v.(type) {
 	case int:
@@ -108,7 +103,7 @@ func stringSlice(v any) []string {
 	case []any:
 		out := make([]string, 0, len(xs))
 		for _, x := range xs {
-			if s := strings.TrimSpace(asString(x)); s != "" {
+			if s := strings.TrimSpace(core.AsString(x)); s != "" {
 				out = append(out, s)
 			}
 		}

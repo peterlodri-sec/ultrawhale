@@ -49,7 +49,7 @@ func NormalizeEffort(v string) string {
 	return normalizeEffort(v)
 }
 
-func onOff(v bool) string {
+func OnOff(v bool) string {
 	if v {
 		return "on"
 	}

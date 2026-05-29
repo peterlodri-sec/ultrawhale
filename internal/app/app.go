@@ -390,7 +390,7 @@ func (a *App) SetUserInputFunc(fn agent.UserInputFunc) {
 
 func (a *App) StartupLines() []string {
 	lines := []string{"whale repl", fmt.Sprintf("session: %s", a.sessionID), fmt.Sprintf("mode: %s", a.currentMode), fmt.Sprintf("permissions.default: %s", a.permissionPolicy.Default)}
-	lines = append(lines, fmt.Sprintf("model: %s", a.model), fmt.Sprintf("effort: %s", a.reasoningEffort), fmt.Sprintf("thinking: %s", onOff(a.thinkingEnabled)), fmt.Sprintf("view: %s", a.ViewMode()))
+	lines = append(lines, fmt.Sprintf("model: %s", a.model), fmt.Sprintf("effort: %s", a.reasoningEffort), fmt.Sprintf("thinking: %s", OnOff(a.thinkingEnabled)), fmt.Sprintf("view: %s", a.ViewMode()))
 	if a.budgetWarningUSD > 0 {
 		lines = append(lines, fmt.Sprintf("budget.session_limit_usd: %.4f", a.budgetWarningUSD))
 	} else {

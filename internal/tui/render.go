@@ -10,6 +10,7 @@ import (
 
 	"github.com/usewhale/whale/internal/app"
 	appcommands "github.com/usewhale/whale/internal/app/commands"
+	"github.com/usewhale/whale/internal/core"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
@@ -361,7 +362,7 @@ func (m model) renderApprovalPrompt() string {
 }
 
 func isFileDiffApproval(toolName string, metadata map[string]any) bool {
-	if strings.TrimSpace(asString(metadata["approval_kind"])) == "file_diff_review" {
+	if strings.TrimSpace(core.AsString(metadata["approval_kind"])) == "file_diff_review" {
 		return true
 	}
 	switch toolName {
@@ -373,7 +374,7 @@ func isFileDiffApproval(toolName string, metadata map[string]any) bool {
 }
 
 func memoryApprovalKind(metadata map[string]any) string {
-	switch strings.TrimSpace(asString(metadata["approval_kind"])) {
+	switch strings.TrimSpace(core.AsString(metadata["approval_kind"])) {
 	case "memory_write":
 		return "memory write"
 	case "memory_delete":
@@ -384,15 +385,15 @@ func memoryApprovalKind(metadata map[string]any) string {
 }
 
 func approvalSessionScope(metadata map[string]any) string {
-	return strings.TrimSpace(asString(metadata["approval_session_scope"]))
+	return strings.TrimSpace(core.AsString(metadata["approval_session_scope"]))
 }
 
 func approvalPermissionKind(metadata map[string]any) string {
-	return strings.TrimSpace(asString(metadata["permission_kind"]))
+	return strings.TrimSpace(core.AsString(metadata["permission_kind"]))
 }
 
 func approvalPermissionTarget(metadata map[string]any) string {
-	return strings.TrimSpace(asString(metadata["permission_target"]))
+	return strings.TrimSpace(core.AsString(metadata["permission_target"]))
 }
 
 func approvalSessionOptionLabel(metadata map[string]any) string {
@@ -442,13 +443,13 @@ func renderApprovalDetail(toolName, detail string) string {
 }
 
 func renderApprovalMemoryMetadata(metadata map[string]any) string {
-	kind := strings.TrimSpace(asString(metadata["approval_kind"]))
-	scope := strings.TrimSpace(asString(metadata["memory_scope"]))
-	typ := strings.TrimSpace(asString(metadata["memory_type"]))
-	name := strings.TrimSpace(asString(metadata["memory_name"]))
-	description := strings.TrimSpace(asString(metadata["memory_description"]))
-	content := strings.TrimSpace(asString(metadata["memory_content_preview"]))
-	status := strings.TrimSpace(asString(metadata["memory_write_status"]))
+	kind := strings.TrimSpace(core.AsString(metadata["approval_kind"]))
+	scope := strings.TrimSpace(core.AsString(metadata["memory_scope"]))
+	typ := strings.TrimSpace(core.AsString(metadata["memory_type"]))
+	name := strings.TrimSpace(core.AsString(metadata["memory_name"]))
+	description := strings.TrimSpace(core.AsString(metadata["memory_description"]))
+	content := strings.TrimSpace(core.AsString(metadata["memory_content_preview"]))
+	status := strings.TrimSpace(core.AsString(metadata["memory_write_status"]))
 
 	var lines []string
 	switch kind {

@@ -66,7 +66,7 @@ func (s *Service) Dispatch(in Intent) {
 		if strings.EqualFold(strings.TrimSpace(in.Thinking), "off") {
 			s.app.SetThinkingEnabled(false)
 		}
-		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("model set: %s  effort: %s  thinking: %s", s.app.Model(), s.app.ReasoningEffort(), onOff(s.app.ThinkingEnabled()))})
+		s.emit(Event{Kind: EventInfo, Text: fmt.Sprintf("model set: %s  effort: %s  thinking: %s", s.app.Model(), s.app.ReasoningEffort(), app.OnOff(s.app.ThinkingEnabled()))})
 		s.emit(Event{Kind: EventTurnDone})
 	case IntentSetApprovalMode:
 		enabled := in.ApprovalMode == "auto_accept"
@@ -234,7 +234,7 @@ func (s *Service) handleLocalSubmit(line string) {
 			CurrentModel:    s.app.Model(),
 			CurrentEffort:   s.app.ReasoningEffort(),
 			ThinkingChoices: []string{"on", "off"},
-			CurrentThinking: onOff(s.app.ThinkingEnabled()),
+			CurrentThinking: app.OnOff(s.app.ThinkingEnabled()),
 		})
 		return
 	}
@@ -345,7 +345,7 @@ func (s *Service) handleSubmit(line string, hiddenInput bool, skillBinding *app.
 			CurrentModel:    s.app.Model(),
 			CurrentEffort:   s.app.ReasoningEffort(),
 			ThinkingChoices: []string{"on", "off"},
-			CurrentThinking: onOff(s.app.ThinkingEnabled()),
+			CurrentThinking: app.OnOff(s.app.ThinkingEnabled()),
 		})
 		return
 	}
@@ -568,4 +568,11 @@ func btwQuestionFromLine(line string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "/btw")), true
+}
+
+func autoAcceptMessage(enabled bool) string {
+	if enabled {
+		return "Session auto-accept enabled"
+	}
+	return "Session auto-accept disabled"
 }

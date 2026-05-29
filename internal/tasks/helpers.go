@@ -81,28 +81,12 @@ func compactURLForProgress(raw string) string {
 	return compactProgressTarget(target)
 }
 
-func asString(v any) string {
-	s, _ := v.(string)
-	return s
-}
-
 func asMap(v any) map[string]any {
 	m, _ := v.(map[string]any)
 	if m == nil {
 		return map[string]any{}
 	}
 	return m
-}
-
-func asAnySlice(v any) []any {
-	if v == nil {
-		return nil
-	}
-	arr, ok := v.([]any)
-	if ok {
-		return arr
-	}
-	return nil
 }
 
 func asInt(v any) int {
