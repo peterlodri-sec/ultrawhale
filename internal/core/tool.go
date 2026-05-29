@@ -17,15 +17,15 @@ type SubagentStep struct {
 }
 
 type ToolProgress struct {
-	ToolCallID      string
-	ToolName        string
-	Status          string
-	Summary         string
-	Role            string
-	Model           string
-	Count           int
-	DurationMS      int64
-	Metadata        map[string]any
+	ToolCallID       string
+	ToolName         string
+	Status           string
+	Summary          string
+	Role             string
+	Model            string
+	Count            int
+	DurationMS       int64
+	Metadata         map[string]any
 	ProgressMessages []SubagentStep
 }
 
