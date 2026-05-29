@@ -75,9 +75,9 @@ func summarizeTaskResult(toolName string, env toolResultEnvelope, successBySigna
 		}
 		return "result_ok", strings.Join(parts, " · ")
 	case "spawn_subagent":
-		role := firstNonEmpty(core.AsString(env.data["role"]), "explore")
+		role := core.FirstNonEmpty(core.AsString(env.data["role"]), "explore")
 		parts = append(parts, role)
-		if summary := firstLine(firstNonEmpty(core.AsString(env.data["summary"]), env.summary)); summary != "" {
+		if summary := firstNonEmptyLine(core.FirstNonEmpty(core.AsString(env.data["summary"]), env.summary)); summary != "" {
 			return "result_ok", strings.Join(parts, " · ") + "\n" + summary
 		}
 		return "result_ok", strings.Join(parts, " · ")
@@ -222,8 +222,8 @@ func summarizeShellOutput(text string) string {
 	if len(lines) <= shellOutputPreviewLines {
 		return strings.Join(lines, "\n")
 	}
-	head := minInt(shellOutputHeadLines, len(lines))
-	tail := minInt(shellOutputTailLines, len(lines)-head)
+	head := min(shellOutputHeadLines, len(lines))
+	tail := min(shellOutputTailLines, len(lines)-head)
 	omitted := len(lines) - head - tail
 	out := make([]string, 0, head+1+tail)
 	out = append(out, lines[:head]...)
@@ -239,18 +239,11 @@ func truncateShellOutputLine(line string) string {
 	return xansi.Truncate(line, shellOutputLineRunes, "...")
 }
 
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, string) {
 	exitCode := asInt(env.metrics["exit_code"])
 	hasExitCode := hasInt(env.metrics["exit_code"])
 	duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
-	detail := firstLine(firstNonEmpty(
+	detail := firstNonEmptyLine(core.FirstNonEmpty(
 		env.summary,
 		core.AsString(env.payload["stderr"]),
 		core.AsString(env.payload["stdout"]),
@@ -276,12 +269,12 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 		return "result_denied", "DENIED · " + detail
 	case "permission_denied":
 		if isOutsideWorkspaceDetail(detail) {
-			return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+			return "result_blocked", core.FirstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 		}
 		return "result_denied", "DENIED · " + detail
 	case "mcp_allowed_dirs_denied":
 		if isOutsideWorkspaceDetail(detail) {
-			return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+			return "result_blocked", core.FirstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 		}
 		return "result_denied", "DENIED · " + detail
 	case "timeout":
@@ -301,7 +294,7 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 
 	lower := strings.ToLower(detail + " " + env.code)
 	if strings.Contains(lower, "outside") && (strings.Contains(lower, "workspace") || strings.Contains(lower, "allowed directories")) {
-		return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+		return "result_blocked", core.FirstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 	}
 	if strings.Contains(lower, " is a directory") || strings.Contains(lower, "use list_dir") || strings.Contains(lower, "use list_directory") {
 		return "result_blocked", summarizePathIsDirectory(env, detail)
@@ -337,7 +330,7 @@ func summarizeModeBlocked(env toolResultEnvelope) string {
 	case "plan_mode_blocked":
 		mode = "Plan mode"
 	}
-	summary := firstLine(firstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
+	summary := firstNonEmptyLine(core.FirstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
 	if strings.Contains(summary, "/agent") {
 		return mode + " · switch to /agent to edit"
 	}
@@ -348,7 +341,7 @@ func summarizeModeBlocked(env toolResultEnvelope) string {
 }
 
 func summarizeInvalidArgs(detail string) string {
-	detail = firstLine(strings.TrimSpace(detail))
+	detail = firstNonEmptyLine(strings.TrimSpace(detail))
 	if detail == "" {
 		return "Invalid tool input"
 	}
@@ -383,7 +376,7 @@ func parseJSONUnmarshalFieldType(detail string) (string, string, bool) {
 }
 
 func httpStatusSummary(env toolResultEnvelope) string {
-	message := strings.ToLower(strings.TrimSpace(firstNonEmpty(env.message, env.summary, core.AsString(env.data["summary"]))))
+	message := strings.ToLower(strings.TrimSpace(core.FirstNonEmpty(env.message, env.summary, core.AsString(env.data["summary"]))))
 	fields := strings.Fields(message)
 	for i, field := range fields {
 		if strings.Trim(field, ":") != "http" || i+1 >= len(fields) {
@@ -409,7 +402,7 @@ func httpStatusSummary(env toolResultEnvelope) string {
 }
 
 func summarizePathIsDirectory(env toolResultEnvelope, detail string) string {
-	path := firstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
+	path := core.FirstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
 	if path == "" {
 		path = pathFromDirectoryMessage(detail)
 	}
@@ -428,7 +421,7 @@ func pathFromDirectoryMessage(detail string) string {
 }
 
 func accessBlockedSummary(env toolResultEnvelope, detail string) string {
-	path := firstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
+	path := core.FirstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
 	if path == "" {
 		path = outsideWorkspacePath(detail)
 	}
@@ -510,7 +503,7 @@ func summarizeReplanRequired(env toolResultEnvelope) string {
 				return text
 			}
 		}
-		return "✗ · " + firstLine(last)
+		return "✗ · " + firstNonEmptyLine(last)
 	}
 	if tool := strings.TrimSpace(core.AsString(env.data["tool_name"])); tool != "" {
 		return "✗ · " + tool + " failed; choose a different approach"
@@ -548,7 +541,7 @@ func summarizeExploreResult(toolName string, env toolResultEnvelope, successBySi
 		return "result_ok", fmt.Sprintf("✓ · %d matches", total)
 	case "fetch", "web_fetch":
 		status := asInt(firstNonEmptyAny(env.payload["status_code"], env.data["status_code"]))
-		format := firstNonEmpty(core.AsString(env.payload["format"]), core.AsString(env.data["format"]))
+		format := core.FirstNonEmpty(core.AsString(env.payload["format"]), core.AsString(env.data["format"]))
 		if status > 0 && format != "" {
 			return "result_ok", fmt.Sprintf("✓ · HTTP %d · %s", status, format)
 		}

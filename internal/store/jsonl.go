@@ -250,11 +250,11 @@ func (s *JSONLStore) rewriteSessionLocked(sessionID string, msgs []core.Message)
 }
 
 func (s *JSONLStore) sessionPath(sessionID string) string {
-	return filepath.Join(s.sessionsDir, sanitizeSessionID(sessionID)+".jsonl")
+	return filepath.Join(s.sessionsDir, core.SanitizeSessionID(sessionID)+".jsonl")
 }
 
 func (s *JSONLStore) approvalsPath(sessionID string) string {
-	return filepath.Join(s.sessionsDir, sanitizeSessionID(sessionID)+".approvals.json")
+	return filepath.Join(s.sessionsDir, core.SanitizeSessionID(sessionID)+".approvals.json")
 }
 
 func (s *JSONLStore) GetApprovals(_ context.Context, sessionID string) (map[string]bool, error) {
@@ -312,28 +312,6 @@ func (s *JSONLStore) RewriteSession(_ context.Context, sessionID string, msgs []
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.rewriteSessionLocked(sessionID, msgs)
-}
-
-func sanitizeSessionID(v string) string {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return "default"
-	}
-	v = strings.Map(func(r rune) rune {
-		switch {
-		case r >= 'a' && r <= 'z':
-			return r
-		case r >= 'A' && r <= 'Z':
-			return r
-		case r >= '0' && r <= '9':
-			return r
-		case r == '-' || r == '_':
-			return r
-		default:
-			return '_'
-		}
-	}, v)
-	return v
 }
 
 func parseMessageSeq(id string) int {

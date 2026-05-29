@@ -57,15 +57,6 @@ func formatDurationMS(ms int64) string {
 	return fmt.Sprintf("%ds", int(sec+0.5))
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if strings.TrimSpace(v) != "" {
-			return v
-		}
-	}
-	return ""
-}
-
 func firstNonEmptyAny(values ...any) any {
 	for _, v := range values {
 		switch x := v.(type) {
@@ -141,7 +132,7 @@ func truncateDisplayText(text string, maxLines int) string {
 	return strings.Join(out, "\n")
 }
 
-func firstLine(s string) string {
+func firstNonEmptyLine(s string) string {
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {

@@ -126,33 +126,11 @@ func singleLine(text string) string {
 }
 
 func FindSessionPathByID(sessionsDir, sessionID string) string {
-	id := sanitizeSessionID(sessionID)
+	id := core.SanitizeSessionID(sessionID)
 	return filepath.Join(sessionsDir, id+".jsonl")
 }
 
 func isSubagentSessionID(id string) bool {
 	id = strings.TrimSpace(id)
 	return strings.Contains(id, "--subagent-") || strings.HasPrefix(id, "subagent-")
-}
-
-func sanitizeSessionID(v string) string {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return "default"
-	}
-	v = strings.Map(func(r rune) rune {
-		switch {
-		case r >= 'a' && r <= 'z':
-			return r
-		case r >= 'A' && r <= 'Z':
-			return r
-		case r >= '0' && r <= '9':
-			return r
-		case r == '-' || r == '_':
-			return r
-		default:
-			return '_'
-		}
-	}, v)
-	return v
 }

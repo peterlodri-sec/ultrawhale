@@ -43,7 +43,7 @@ func (b *Toolset) searchFiles(_ context.Context, call core.ToolCall) (core.ToolR
 		return b.marshalReadPathError(call, in.Path, err), nil
 	}
 
-	matches := make([]string, 0, minInt(in.Limit, 128))
+	matches := make([]string, 0, min(in.Limit, 128))
 	total := 0
 	pat := strings.ToLower(strings.TrimSpace(in.Pattern))
 	_ = filepath.WalkDir(abs, func(path string, d fs.DirEntry, walkErr error) error {
@@ -77,11 +77,4 @@ func (b *Toolset) searchFiles(_ context.Context, call core.ToolCall) (core.ToolR
 			"items": matches,
 		},
 	})
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
