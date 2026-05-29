@@ -132,7 +132,7 @@ func truncateDisplayText(text string, maxLines int) string {
 	return strings.Join(out, "\n")
 }
 
-func firstLine(s string) string {
+func firstNonEmptyLine(s string) string {
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {

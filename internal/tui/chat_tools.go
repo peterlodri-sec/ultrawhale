@@ -271,7 +271,7 @@ func subagentCompletedText(raw, previous string) string {
 			summary = "subagent completed"
 		}
 	}
-	return subagentText(role, status, sessionID, current, "", duration, firstLine(summary))
+	return subagentText(role, status, sessionID, current, "", duration, firstNonEmptyLine(summary))
 }
 
 func subagentText(role, status, sessionID, current, detail, duration, summary string) string {
@@ -642,7 +642,7 @@ func todoToolDetail(text string) string {
 		t = strings.TrimSpace(t[idx+1:])
 	}
 	if !strings.HasPrefix(t, "{") {
-		return firstLine(t)
+		return firstNonEmptyLine(t)
 	}
 	var body map[string]any
 	if err := json.Unmarshal([]byte(t), &body); err != nil {

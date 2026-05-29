@@ -235,7 +235,7 @@ func mcpArgLines(args map[string]any, max int) []string {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-	out := make([]string, 0, minInt(max, len(keys)))
+	out := make([]string, 0, min(max, len(keys)))
 	for _, key := range keys {
 		value := asDisplayString(args[key])
 		if value == "" {

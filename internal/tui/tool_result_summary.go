@@ -77,7 +77,7 @@ func summarizeTaskResult(toolName string, env toolResultEnvelope, successBySigna
 	case "spawn_subagent":
 		role := core.FirstNonEmpty(core.AsString(env.data["role"]), "explore")
 		parts = append(parts, role)
-		if summary := firstLine(core.FirstNonEmpty(core.AsString(env.data["summary"]), env.summary)); summary != "" {
+		if summary := firstNonEmptyLine(core.FirstNonEmpty(core.AsString(env.data["summary"]), env.summary)); summary != "" {
 			return "result_ok", strings.Join(parts, " · ") + "\n" + summary
 		}
 		return "result_ok", strings.Join(parts, " · ")
@@ -222,8 +222,8 @@ func summarizeShellOutput(text string) string {
 	if len(lines) <= shellOutputPreviewLines {
 		return strings.Join(lines, "\n")
 	}
-	head := minInt(shellOutputHeadLines, len(lines))
-	tail := minInt(shellOutputTailLines, len(lines)-head)
+	head := min(shellOutputHeadLines, len(lines))
+	tail := min(shellOutputTailLines, len(lines)-head)
 	omitted := len(lines) - head - tail
 	out := make([]string, 0, head+1+tail)
 	out = append(out, lines[:head]...)
@@ -239,18 +239,11 @@ func truncateShellOutputLine(line string) string {
 	return xansi.Truncate(line, shellOutputLineRunes, "...")
 }
 
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, string) {
 	exitCode := asInt(env.metrics["exit_code"])
 	hasExitCode := hasInt(env.metrics["exit_code"])
 	duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
-	detail := firstLine(core.FirstNonEmpty(
+	detail := firstNonEmptyLine(core.FirstNonEmpty(
 		env.summary,
 		core.AsString(env.payload["stderr"]),
 		core.AsString(env.payload["stdout"]),
@@ -337,7 +330,7 @@ func summarizeModeBlocked(env toolResultEnvelope) string {
 	case "plan_mode_blocked":
 		mode = "Plan mode"
 	}
-	summary := firstLine(core.FirstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
+	summary := firstNonEmptyLine(core.FirstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
 	if strings.Contains(summary, "/agent") {
 		return mode + " · switch to /agent to edit"
 	}
@@ -348,7 +341,7 @@ func summarizeModeBlocked(env toolResultEnvelope) string {
 }
 
 func summarizeInvalidArgs(detail string) string {
-	detail = firstLine(strings.TrimSpace(detail))
+	detail = firstNonEmptyLine(strings.TrimSpace(detail))
 	if detail == "" {
 		return "Invalid tool input"
 	}
@@ -510,7 +503,7 @@ func summarizeReplanRequired(env toolResultEnvelope) string {
 				return text
 			}
 		}
-		return "✗ · " + firstLine(last)
+		return "✗ · " + firstNonEmptyLine(last)
 	}
 	if tool := strings.TrimSpace(core.AsString(env.data["tool_name"])); tool != "" {
 		return "✗ · " + tool + " failed; choose a different approach"
