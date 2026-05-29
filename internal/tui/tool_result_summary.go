@@ -157,8 +157,15 @@ func summarizeShellResult(env toolResultEnvelope, successBySignal bool) (string,
 func summarizeFailedShellResult(env toolResultEnvelope) (string, string) {
 	if shellFailureIsNoMatches(env) {
 		duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
+		output := summarizeShellOutput(core.AsString(env.payload["stdout"]))
 		if duration != "" {
+			if output != "" {
+				return "result_neutral", "No matches · " + duration + "\n" + output
+			}
 			return "result_neutral", "No matches · " + duration
+		}
+		if output != "" {
+			return "result_neutral", "No matches\n" + output
 		}
 		return "result_neutral", "No matches"
 	}
@@ -192,7 +199,7 @@ func shellFailureIsNoMatches(env toolResultEnvelope) bool {
 	if env.code != "exec_failed" || !hasInt(env.metrics["exit_code"]) || asInt(env.metrics["exit_code"]) != 1 {
 		return false
 	}
-	if strings.TrimSpace(core.AsString(env.payload["stdout"])) != "" || strings.TrimSpace(core.AsString(env.payload["stderr"])) != "" {
+	if strings.TrimSpace(core.AsString(env.payload["stderr"])) != "" {
 		return false
 	}
 	return shellCommandUsesSearchExitOne(core.AsString(env.payload["command"]))
