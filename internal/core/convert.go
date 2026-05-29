@@ -20,27 +20,6 @@ func AsAnySlice(v any) []any {
 	return nil
 }
 
-// FirstNonEmpty returns the first non-empty (after trimming whitespace) variadic string argument.
-// Returns "" if all values are empty.
-func FirstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if s := strings.TrimSpace(v); s != "" {
-			return s
-		}
-	}
-	return ""
-}
-
-// FirstLine returns the first line of s (up to the first newline), trimmed.
-func FirstLine(s string) string {
-	s = strings.TrimSpace(s)
-	idx := strings.IndexByte(s, '\n')
-	if idx >= 0 {
-		return s[:idx]
-	}
-	return s
-}
-
 // ContainsArg reports whether want is present in argv.
 func ContainsArg(argv []string, want string) bool {
 	for _, got := range argv {
