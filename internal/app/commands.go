@@ -11,9 +11,9 @@ import (
 	"github.com/usewhale/whale/internal/agent"
 	appcommands "github.com/usewhale/whale/internal/app/commands"
 	"github.com/usewhale/whale/internal/compact"
+	"github.com/usewhale/whale/internal/core"
 	whalemcp "github.com/usewhale/whale/internal/mcp"
 	"github.com/usewhale/whale/internal/plugins"
-	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/session"
 	"github.com/usewhale/whale/internal/skills"
 )

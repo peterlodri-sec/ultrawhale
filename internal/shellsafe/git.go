@@ -196,5 +196,3 @@ func gitRelativePathAllowed(path string, allowDevNull bool) bool {
 func ArgContainsUnsafeMeta(arg string) bool {
 	return strings.ContainsAny(arg, "$`;&|<>\n\r")
 }
-
-

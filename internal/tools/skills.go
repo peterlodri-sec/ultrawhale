@@ -86,5 +86,3 @@ func (b *Toolset) loadSkill(_ context.Context, call core.ToolCall) (core.ToolRes
 		"summary": "loaded skill: " + skill.Name,
 	})
 }
-
-

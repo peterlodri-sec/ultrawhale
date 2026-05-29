@@ -444,5 +444,3 @@ func firstLine(v string) string {
 	}
 	return v
 }
-
-

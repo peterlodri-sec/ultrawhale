@@ -86,8 +86,6 @@ func taskCompletedEvent(res core.ToolResult) (AgentEvent, bool) {
 	}
 }
 
-
-
 func asInt64(v any) int64 {
 	switch n := v.(type) {
 	case int64:
