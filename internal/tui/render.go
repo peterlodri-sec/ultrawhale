@@ -304,7 +304,7 @@ func (m model) renderApprovalPrompt() string {
 	} else if memory != "" {
 		titleText = "Approval required: " + memory
 	} else if externalDirectory {
-		titleText = "Approval required: external directory"
+		titleText = "Approval required: file access"
 	}
 	bodyParts := []string{}
 	if review {
@@ -314,7 +314,7 @@ func (m model) renderApprovalPrompt() string {
 	} else if memory == "memory delete" {
 		bodyParts = append(bodyParts, "Review memory before Whale deletes it.")
 	} else if externalDirectory {
-		bodyParts = append(bodyParts, "Allow access outside the current workspace.")
+		bodyParts = append(bodyParts, "Allow access to this path.")
 		if target := approvalPermissionTarget(m.approval.metadata); target != "" {
 			bodyParts = append(bodyParts, "Path: "+target)
 		}
