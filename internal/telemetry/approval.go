@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/usewhale/whale/internal/core"
 )
 
 const ApprovalEventsSuffix = ".approval_events.jsonl"
@@ -78,7 +80,7 @@ func ApprovalEventIsUserVisible(event string) bool {
 }
 
 func ApprovalEventsPath(sessionsDir, sessionID string) string {
-	return filepath.Join(strings.TrimSpace(sessionsDir), sanitizeSessionID(sessionID)+ApprovalEventsSuffix)
+	return filepath.Join(strings.TrimSpace(sessionsDir), core.SanitizeSessionID(sessionID)+ApprovalEventsSuffix)
 }
 
 func AppendApprovalEvent(sessionsDir string, rec ApprovalEvent, now time.Time) error {

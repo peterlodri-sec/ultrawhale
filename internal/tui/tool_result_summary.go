@@ -276,12 +276,12 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 		return "result_denied", "DENIED · " + detail
 	case "permission_denied":
 		if isOutsideWorkspaceDetail(detail) {
-			return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+			return "result_blocked", core.FirstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 		}
 		return "result_denied", "DENIED · " + detail
 	case "mcp_allowed_dirs_denied":
 		if isOutsideWorkspaceDetail(detail) {
-			return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+			return "result_blocked", core.FirstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 		}
 		return "result_denied", "DENIED · " + detail
 	case "timeout":
@@ -301,7 +301,7 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 
 	lower := strings.ToLower(detail + " " + env.code)
 	if strings.Contains(lower, "outside") && (strings.Contains(lower, "workspace") || strings.Contains(lower, "allowed directories")) {
-		return "result_blocked", firstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
+		return "result_blocked", core.FirstNonEmpty(accessBlockedSummary(env, detail), "Access blocked")
 	}
 	if strings.Contains(lower, " is a directory") || strings.Contains(lower, "use list_dir") || strings.Contains(lower, "use list_directory") {
 		return "result_blocked", summarizePathIsDirectory(env, detail)
@@ -337,7 +337,7 @@ func summarizeModeBlocked(env toolResultEnvelope) string {
 	case "plan_mode_blocked":
 		mode = "Plan mode"
 	}
-	summary := firstLine(firstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
+	summary := firstLine(core.FirstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
 	if strings.Contains(summary, "/agent") {
 		return mode + " · switch to /agent to edit"
 	}
@@ -383,7 +383,7 @@ func parseJSONUnmarshalFieldType(detail string) (string, string, bool) {
 }
 
 func httpStatusSummary(env toolResultEnvelope) string {
-	message := strings.ToLower(strings.TrimSpace(firstNonEmpty(env.message, env.summary, core.AsString(env.data["summary"]))))
+	message := strings.ToLower(strings.TrimSpace(core.FirstNonEmpty(env.message, env.summary, core.AsString(env.data["summary"]))))
 	fields := strings.Fields(message)
 	for i, field := range fields {
 		if strings.Trim(field, ":") != "http" || i+1 >= len(fields) {
@@ -409,7 +409,7 @@ func httpStatusSummary(env toolResultEnvelope) string {
 }
 
 func summarizePathIsDirectory(env toolResultEnvelope, detail string) string {
-	path := firstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
+	path := core.FirstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
 	if path == "" {
 		path = pathFromDirectoryMessage(detail)
 	}
@@ -428,7 +428,7 @@ func pathFromDirectoryMessage(detail string) string {
 }
 
 func accessBlockedSummary(env toolResultEnvelope, detail string) string {
-	path := firstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
+	path := core.FirstNonEmpty(core.AsString(env.payload["file_path"]), core.AsString(env.payload["path"]), core.AsString(env.data["file_path"]), core.AsString(env.data["path"]))
 	if path == "" {
 		path = outsideWorkspacePath(detail)
 	}
