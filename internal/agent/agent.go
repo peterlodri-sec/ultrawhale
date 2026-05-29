@@ -507,7 +507,7 @@ func WithMaxParallelSubagents(maxParallel int) AgentOption {
 	}
 }
 
-func (a *Agent) Run(ctx context.Context, sessionID, input string) (core.Message, error) {
+func (a *Agent) RunSession(ctx context.Context, sessionID, input string) (core.Message, error) {
 	events, err := a.RunStream(ctx, sessionID, input)
 	if err != nil {
 		return core.Message{}, err

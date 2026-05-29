@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/usewhale/whale/internal/core"
@@ -144,30 +143,7 @@ func worktreeRemovalCwdState(worktreePath string) (string, bool, error) {
 }
 
 func pathInside(path, parent string) (bool, error) {
-	path = strings.TrimSpace(path)
-	parent = strings.TrimSpace(parent)
-	if path == "" || parent == "" {
-		return false, nil
-	}
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return false, err
-	}
-	absParent, err := filepath.Abs(parent)
-	if err != nil {
-		return false, err
-	}
-	if resolved, err := filepath.EvalSymlinks(absPath); err == nil {
-		absPath = resolved
-	}
-	if resolved, err := filepath.EvalSymlinks(absParent); err == nil {
-		absParent = resolved
-	}
-	rel, err := filepath.Rel(absParent, absPath)
-	if err != nil {
-		return false, err
-	}
-	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))), nil
+	return core.PathInside(path, parent)
 }
 
 func (a *App) markWorktreeExited() error {

@@ -221,7 +221,7 @@ func (r *HookRunner) Empty() bool {
 	return r == nil || (len(r.hooks) == 0 && len(r.handlers) == 0)
 }
 
-func (r *HookRunner) Run(ctx context.Context, payload HookPayload) HookReport {
+func (r *HookRunner) RunHook(ctx context.Context, payload HookPayload) HookReport {
 	out := HookReport{Event: payload.Event, Metadata: map[string]any{}}
 	if r.Empty() {
 		return out

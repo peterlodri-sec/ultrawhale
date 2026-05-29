@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/usewhale/whale/internal/app"
+	"github.com/usewhale/whale/internal/core"
 )
 
 func newExecCmd(opts *cliOptions) *cobra.Command {
@@ -113,13 +114,11 @@ func prepareResumeWorktree(args []string, last bool, opts *cliOptions) error {
 }
 
 func pathInside(path, root string) bool {
-	path = filepath.Clean(path)
-	root = filepath.Clean(root)
-	rel, err := filepath.Rel(root, path)
+	ok, err := core.PathInside(path, root)
 	if err != nil {
 		return false
 	}
-	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)))
+	return ok
 }
 
 func newDoctorCmd(opts *cliOptions) *cobra.Command {
