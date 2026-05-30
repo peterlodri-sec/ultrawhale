@@ -24,6 +24,10 @@ func initAppRuntime(cfg Config, sessionInit appSessionInit, toolInit appToolInit
 	if err != nil {
 		return appRuntimeInit{}, fmt.Errorf("load api key failed: %w", err)
 	}
+	toolInit.toolset.SetWebFetchExtractor(newDeepSeekWebFetchExtractor(webFetchExtractorOptions{
+		APIKey:  apiKey,
+		BaseURL: cfg.APIBaseURL,
+	}))
 	providerFactory := func(model string, maxTokens int) (llm.Provider, error) {
 		if strings.TrimSpace(model) == "" {
 			model = defaults.DefaultModel
