@@ -54,8 +54,8 @@ func buildDoctorLocalResult(a *App) *LocalResult {
 		fileLines = append(fileLines, fmt.Sprintf("  %s  %9s  %s", c.display, sz, mt))
 	}
 
-	// --- Diagnostics via RunDoctor (use app context for cancellation) ---
-	report, err := RunDoctor(a.ctx, a.cfg, a.workspaceRoot)
+	// --- Diagnostics via RunDoctor (skip network checks — /doctor is synchronous) ---
+	report, err := RunDoctor(a.ctx, a.cfg, a.workspaceRoot, DoctorOptions{SkipNetworkChecks: true})
 	diagFields := make([]LocalResultField, 0)
 	diagLines := make([]string, 0)
 	if err == nil {
@@ -65,11 +65,6 @@ func buildDoctorLocalResult(a *App) *LocalResult {
 			}
 			// Skip noisy internal checks that aren't actionable.
 			if strings.HasPrefix(check.Label, "legacy") {
-				continue
-			}
-			// Skip network-dependent checks — /doctor is synchronous and
-			// must not block the TUI with HTTP timeouts.
-			if check.Label == "api reach" {
 				continue
 			}
 			tone := "info"

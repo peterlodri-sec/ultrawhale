@@ -43,7 +43,14 @@ type fileState struct {
 	Err     error
 }
 
-func RunDoctor(ctx context.Context, cfg Config, workspaceRoot string) (DoctorReport, error) {
+// DoctorOptions controls which checks RunDoctor performs.
+type DoctorOptions struct {
+	// SkipNetworkChecks skips network-dependent checks such as API reachability,
+	// which can block the caller for several seconds on timeout.
+	SkipNetworkChecks bool
+}
+
+func RunDoctor(ctx context.Context, cfg Config, workspaceRoot string, opts ...DoctorOptions) (DoctorReport, error) {
 	dataDir := strings.TrimSpace(cfg.DataDir)
 	if dataDir == "" {
 		dataDir = store.DefaultDataDir()
@@ -66,7 +73,16 @@ func RunDoctor(ctx context.Context, cfg Config, workspaceRoot string) (DoctorRep
 	dataDirCheck := doctorCheckDataDir(dataDir)
 	dataDirOverrideCheck := doctorCheckDataDirOverride(runtime.GOOS, os.Getenv, dataDir)
 	dataDirACLCheck := doctorCheckDataDirACL(runtime.GOOS, dataDir)
-	apiReachCheck := doctorCheckAPIReach(ctx, key)
+	var skipNet bool
+	for _, o := range opts {
+		if o.SkipNetworkChecks {
+			skipNet = true
+		}
+	}
+	var apiReachCheck DoctorCheck
+	if !skipNet {
+		apiReachCheck = doctorCheckAPIReach(ctx, key)
+	}
 	memoryCheck := doctorCheckMemory(workspaceRoot, order, cfg.MemoryMaxChars)
 	hooksCheck := doctorCheckHooks(dataDir, workspaceRoot)
 	pluginChecks := doctorCheckPlugins(ctx, cfg, workspaceRoot)
@@ -86,7 +102,10 @@ func RunDoctor(ctx context.Context, cfg Config, workspaceRoot string) (DoctorRep
 	if dataDirACLCheck.Level != "" {
 		checks = append(checks, dataDirACLCheck)
 	}
-	checks = append(checks, apiReachCheck, memoryCheck)
+	if !skipNet {
+		checks = append(checks, apiReachCheck)
+	}
+	checks = append(checks, memoryCheck)
 	if hooksCheck.Level != "" {
 		checks = append(checks, hooksCheck)
 	}
