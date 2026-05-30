@@ -62,6 +62,7 @@ type FileAPIConfig struct {
 type FileRetryConfig struct {
 	MaxAttempts       *int   `toml:"max_attempts,omitempty"`
 	StreamMaxAttempts *int   `toml:"stream_max_attempts,omitempty"`
+	StreamIdleTimeout string `toml:"stream_idle_timeout,omitempty"`
 	MaxDelay          string `toml:"max_delay,omitempty"`
 }
 

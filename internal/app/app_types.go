@@ -41,6 +41,7 @@ type Config struct {
 	RetryMaxAttempts         int
 	RetryMaxAttemptsExplicit bool
 	RetryStreamMaxAttempts   int
+	RetryStreamIdleTimeout   time.Duration
 	RetryMaxDelay            time.Duration
 	MaxParallelSubagents     int
 	MCPConfigPath            string

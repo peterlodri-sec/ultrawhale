@@ -70,6 +70,16 @@ func ApplyFileConfig(cfg *Config, file FileConfig) error {
 		}
 		cfg.RetryStreamMaxAttempts = *file.Retry.StreamMaxAttempts
 	}
+	if strings.TrimSpace(file.Retry.StreamIdleTimeout) != "" {
+		d, err := time.ParseDuration(strings.TrimSpace(file.Retry.StreamIdleTimeout))
+		if err != nil {
+			return fmt.Errorf("invalid retry.stream_idle_timeout: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("invalid retry.stream_idle_timeout: must be greater than 0")
+		}
+		cfg.RetryStreamIdleTimeout = d
+	}
 	if strings.TrimSpace(file.Retry.MaxDelay) != "" {
 		d, err := time.ParseDuration(strings.TrimSpace(file.Retry.MaxDelay))
 		if err != nil {
@@ -187,6 +197,9 @@ func overlayExplicitConfig(dst *Config, src Config) {
 	}
 	if src.RetryStreamMaxAttempts != 0 && src.RetryStreamMaxAttempts != def.RetryStreamMaxAttempts {
 		dst.RetryStreamMaxAttempts = src.RetryStreamMaxAttempts
+	}
+	if src.RetryStreamIdleTimeout != 0 && src.RetryStreamIdleTimeout != def.RetryStreamIdleTimeout {
+		dst.RetryStreamIdleTimeout = src.RetryStreamIdleTimeout
 	}
 	if src.RetryMaxDelay != 0 && src.RetryMaxDelay != def.RetryMaxDelay {
 		dst.RetryMaxDelay = src.RetryMaxDelay
