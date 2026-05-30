@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestDetectTerminal_Fallback(t *testing.T) {
@@ -86,6 +87,38 @@ func TestTruncate_Long(t *testing.T) {
 	}
 }
 
+func TestTruncate_Multibyte(t *testing.T) {
+	s := "你好世界hello"
+	got := truncate(s, 4)
+	if got != "你好世界…" {
+		t.Errorf("truncated multibyte incorrectly: got %q, want %q", got, "你好世界…")
+	}
+	// Verify output is valid UTF-8
+	if !utf8.ValidString(got) {
+		t.Errorf("truncated string is not valid UTF-8: %q", got)
+	}
+}
+
+func TestTruncate_MultibyteWithSpace(t *testing.T) {
+	s := "你好 世界 hello world"
+	got := truncate(s, 3)
+	if got != "你好…" {
+		t.Errorf("expected space-boundary truncation, got %q", got)
+	}
+}
+
+func TestTruncate_CJKByteVsRuneComparison(t *testing.T) {
+	// 3 CJK runes (9 bytes) + space + more text, n=10.
+	// Space is at rune index 3, which is <= n/2=5 → should NOT truncate at space.
+	// Byte offset 9 > 5 would falsely trigger space truncation.
+	s := "你我他 abcdefghij"
+	got := truncate(s, 10)
+	want := "你我他 abcdef…"
+	if got != want {
+		t.Errorf("expected %q (keep content after space), got %q", want, got)
+	}
+}
+
 func TestEscapeOSC(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -117,11 +150,11 @@ func TestEscapeOSC(t *testing.T) {
 func TestSendTurnDone_RespectsMinInterval(t *testing.T) {
 	var buf bytes.Buffer
 	n := &Notifier{
-		enabled:         true,
-		writer:          &buf,
-		term:            termBEL,
-		minInterval:     1 * time.Hour, // Very long interval
-		lastNotifyTurn:  time.Now(),
+		enabled:        true,
+		writer:         &buf,
+		term:           termBEL,
+		minInterval:    1 * time.Hour, // Very long interval
+		lastNotifyTurn: time.Now(),
 	}
 	n.SendTurnDone("test")
 	if buf.String() != "" {
@@ -161,11 +194,11 @@ func TestSendApprovalRequired_NotThrottledByTurnDone(t *testing.T) {
 func TestSendTurnDone_NotThrottledByApproval(t *testing.T) {
 	var buf bytes.Buffer
 	n := &Notifier{
-		enabled:             true,
-		writer:              &buf,
-		term:                termBEL,
-		minInterval:         1 * time.Hour, // Very long interval
-		lastNotifyApproval:  time.Now(),    // Recent approval notification
+		enabled:            true,
+		writer:             &buf,
+		term:               termBEL,
+		minInterval:        1 * time.Hour, // Very long interval
+		lastNotifyApproval: time.Now(),    // Recent approval notification
 	}
 	// Turn-done should NOT be throttled by lastNotifyApproval.
 	n.SendTurnDone("task finished")

@@ -24,11 +24,11 @@ import (
 
 // Notifier handles desktop notifications for the TUI.
 type Notifier struct {
-	mu          sync.Mutex
-	enabled     bool
-	lastNotifyTurn      time.Time
-	lastNotifyApproval  time.Time
-	minInterval time.Duration // minimum gap between notifications
+	mu                 sync.Mutex
+	enabled            bool
+	lastNotifyTurn     time.Time
+	lastNotifyApproval time.Time
+	minInterval        time.Duration // minimum gap between notifications
 
 	writer io.Writer
 	term   terminalKind
@@ -47,8 +47,8 @@ const (
 	termUnknown terminalKind = iota
 	termGhostty
 	termKitty
-	termOSC9   // iTerm2, WezTerm, foot — all speak OSC 9
-	termBEL    // fallback: just terminal bell
+	termOSC9 // iTerm2, WezTerm, foot — all speak OSC 9
+	termBEL  // fallback: just terminal bell
 )
 
 const defaultMinInterval = 10 * time.Second
@@ -242,14 +242,20 @@ func escapeOSC(s string) string {
 
 // truncate shortens a string to at most n runes.
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	runes := []rune(s)
+	if len(runes) <= n {
 		return s
 	}
-	// Trim to roughly n bytes, then cut at the last space to avoid
-	// mid-word breaks and multi-byte rune corruption.
-	trimmed := s[:n]
-	if i := strings.LastIndex(trimmed, " "); i > n/2 {
-		trimmed = trimmed[:i]
+	// Find the last space within the first n runes (in rune-space, not byte-space)
+	// so that multibyte text like CJK or emoji doesn't skew the comparison.
+	spaceAt := -1
+	for i := 0; i < n && i < len(runes); i++ {
+		if runes[i] == ' ' {
+			spaceAt = i
+		}
 	}
-	return trimmed + "…"
+	if spaceAt > n/2 {
+		return string(runes[:spaceAt]) + "…"
+	}
+	return string(runes[:n]) + "…"
 }
