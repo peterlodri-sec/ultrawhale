@@ -7834,7 +7834,7 @@ func TestChatViewportTurnDoneUnfreezesScrolledLiveOutput(t *testing.T) {
 	}
 }
 
-func TestTurnDoneWhileScrolledDefersNativeScrollbackUntilTail(t *testing.T) {
+func TestTurnDoneWhileScrolledFlushesNativeScrollbackImmediately(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
 	m.height = 10
@@ -7851,26 +7851,27 @@ func TestTurnDoneWhileScrolledDefersNativeScrollbackUntilTail(t *testing.T) {
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyPgUp})
 	m = next.(model)
 	m.append("assistant", "tail while scrolled\n")
-	next, _ = m.Update(svcMsg(service.Event{Kind: service.EventTurnDone, LastResponse: "done"}))
-	m = next.(model)
+	cmd := m.handleTurnDone(service.Event{Kind: service.EventTurnDone, LastResponse: "done"})
 
-	if m.nativeScrollbackPrinted == len(m.transcript) {
-		t.Fatal("expected turn completion while scrolled to defer native scrollback")
-	}
+	// The user's scroll position is preserved (we do not yank them to the tail)...
 	if m.followTail {
 		t.Fatal("expected turn completion to preserve user-scrolled position")
 	}
-
-	cmd := m.resumeChatTail()
+	// ...but the completed turn is flushed to native scrollback immediately, so
+	// the final answer is reachable by scrolling the terminal rather than hidden
+	// until the next keystroke.
+	if m.nativeScrollbackPrinted != len(m.transcript) {
+		t.Fatal("expected turn completion to flush native scrollback even while scrolled")
+	}
 	if cmd == nil {
-		t.Fatal("expected returning to tail to flush deferred turn output")
+		t.Fatal("expected turn completion to return a native-scrollback flush command")
 	}
 	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "tail while scrolled") {
-		t.Fatalf("expected deferred native scrollback to include turn tail, got %s", got)
+		t.Fatalf("expected flushed native scrollback to include turn tail, got %s", got)
 	}
 }
 
-func TestLongTurnDoneWhileScrolledPreservesViewportAndDefersDurationNotice(t *testing.T) {
+func TestLongTurnDoneWhileScrolledPreservesViewportButFlushesDurationNotice(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.width = 80
 	m.height = 10
@@ -7888,35 +7889,31 @@ func TestLongTurnDoneWhileScrolledPreservesViewportAndDefersDurationNotice(t *te
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyPgUp})
 	m = next.(model)
 	m.append("assistant", "tail while scrolled\n")
-	next, _ = m.Update(svcMsg(service.Event{
+	cmd := m.handleTurnDone(service.Event{
 		Kind:         service.EventTurnDone,
 		LastResponse: "done",
 		Metadata:     agentTurnMetadata(),
-	}))
-	m = next.(model)
+	})
 
+	// Scroll position is preserved: the user is not yanked to the tail.
 	if m.followTail {
 		t.Fatal("expected long turn completion to preserve user-scrolled position")
-	}
-	if m.nativeScrollbackPrinted == len(m.transcript) {
-		t.Fatal("expected long turn completion while scrolled to defer native scrollback")
 	}
 	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
 	if !strings.Contains(rendered, "✻ Worked for 3m ") {
 		t.Fatalf("expected duration notice to be appended to transcript:\n%s", rendered)
 	}
-	// Scroll preservation intent: followTail must stay false (asserted above)
-	// and the duration notice must remain deferred from native scrollback
-	// (nativeScrollbackPrinted assertion above). A "view does not contain"
-	// check here would be a coincidental coupling to which rows happen to
-	// fit in the small test viewport, not a real scroll-position check.
-
-	cmd := m.resumeChatTail()
+	// But the completed long turn — including the duration notice — is flushed
+	// to native scrollback immediately, not deferred until the user returns to
+	// the tail.
+	if m.nativeScrollbackPrinted != len(m.transcript) {
+		t.Fatal("expected long turn completion to flush native scrollback even while scrolled")
+	}
 	if cmd == nil {
-		t.Fatal("expected returning to tail to flush deferred long-turn output")
+		t.Fatal("expected long turn completion to return a native-scrollback flush command")
 	}
 	if got := fmt.Sprintf("%#v", cmd()); !strings.Contains(got, "✻ Worked for 3m ") {
-		t.Fatalf("expected deferred native scrollback to include duration notice, got %s", got)
+		t.Fatalf("expected flushed native scrollback to include duration notice, got %s", got)
 	}
 }
 
@@ -7996,8 +7993,8 @@ func TestTurnDoneReconciliationPreservesScrolledPosition(t *testing.T) {
 	if m.followTail {
 		t.Fatal("final reconciliation should not force scrolled chat back to tail")
 	}
-	if m.nativeScrollbackPrinted == len(m.transcript) {
-		t.Fatal("expected reconciled turn output to remain deferred for native scrollback")
+	if m.nativeScrollbackPrinted != len(m.transcript) {
+		t.Fatal("expected reconciled turn output to flush to native scrollback even while scrolled")
 	}
 	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
 	prefixIx := strings.Index(rendered, "visible assistant")
