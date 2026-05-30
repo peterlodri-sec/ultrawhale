@@ -173,18 +173,28 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 	if !wasStopping {
 		m.markNoFinalAnswerIfNeeded()
 	}
+	// Preserve the user's scroll position: if they scrolled up mid-turn (frozen
+	// viewport, followTail cleared) we deliberately do NOT yank them back to the
+	// tail when the turn completes.
 	m.commitLiveTranscript(reconciledAssistant && !wasFrozen)
 	m.appendTurnDurationNotice(wasBusy, wasStopping, turnDuration)
 	if wasFrozen {
 		m.unfreezeChatViewport()
 		m.refreshViewportContentFollow(false)
 	}
+	// ...but always emit the completed turn into the terminal's native
+	// scrollback, even when scrolled up. The normal flush in handleServiceUpdate
+	// is gated on followTail/!frozen and would otherwise defer this until the
+	// next keystroke, leaving the final answer hidden (the "看起来突然停下来"
+	// symptom). Flushing here keeps the in-app position untouched while making
+	// the finished answer immediately reachable via terminal scroll.
+	turnScrollbackCmd := m.flushCompletedTurnToNativeScrollbackCmd()
 	m.addLog(logEntry{Kind: "turn_done", Source: "assistant", Summary: truncateLine(ev.LastResponse, 120), Raw: ev.LastResponse})
 	m.status = "ready"
 	queuedTurnStarted := false
 	queuedRestored := false
 	shouldOpenPlanPicker := wasBusy && !wasBlockingModal && m.chatMode == "plan" && m.sawPlanThisTurn && m.mode == modeChat
-	var eventCmd tea.Cmd
+	eventCmd := turnScrollbackCmd
 	pendingWindowsInput := m.snapshotWindowsBusyInput()
 	if wasStopping {
 		m.deferredPlanPicker = false
@@ -198,7 +208,7 @@ func (m *model) handleTurnDone(ev service.Event) tea.Cmd {
 		m.status = "wait for command to finish"
 	} else if next, ok := m.popQueuedPrompt(); ok {
 		m.deferredPlanPicker = false
-		eventCmd = tea.Batch(m.submitPromptWithBinding(next.Text, next.SkillBinding), m.restoreWindowsBusyInput(pendingWindowsInput))
+		eventCmd = tea.Batch(eventCmd, m.submitPromptWithBinding(next.Text, next.SkillBinding), m.restoreWindowsBusyInput(pendingWindowsInput))
 		queuedTurnStarted = true
 	}
 	if !queuedTurnStarted && !queuedRestored && m.localSubmitPending == 0 && !m.hasPendingWindowsBusyInput() && shouldOpenPlanPicker {
