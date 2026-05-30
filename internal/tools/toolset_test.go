@@ -2296,6 +2296,57 @@ func TestSearchFilesFallsBackWhenRipgrepUnavailable(t *testing.T) {
 	}
 }
 
+func TestSearchFilesDoesNotMatchWorkspaceParentPath(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "parenthit-workspace")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "plain.txt"), []byte("fixture"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	res, err := ts.searchFiles(context.Background(), tc("search_files", map[string]any{
+		"pattern": "parenthit",
+	}))
+	if err != nil || res.IsError {
+		t.Fatalf("search_files failed: err=%v res=%+v", err, res)
+	}
+	data := readFileData(t, res)
+	if got := searchFileItems(t, data); len(got) != 0 {
+		t.Fatalf("items len = %d, want 0: %#v", len(got), got)
+	}
+}
+
+func TestSearchFilesWithRipgrepIncludesGitignoredFiles(t *testing.T) {
+	if _, err := exec.LookPath("rg"); err != nil {
+		t.Skipf("rg not available: %v", err)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
+		t.Fatalf("write gitignore: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ignored.txt"), []byte("fixture"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	ts, err := NewToolset(dir)
+	if err != nil {
+		t.Fatalf("new toolset: %v", err)
+	}
+	res, err := ts.searchFiles(context.Background(), tc("search_files", map[string]any{
+		"pattern": "ignored",
+	}))
+	if err != nil || res.IsError {
+		t.Fatalf("search_files failed: err=%v res=%+v", err, res)
+	}
+	data := readFileData(t, res)
+	if got := searchFileItems(t, data); len(got) != 1 || got[0] != "ignored.txt" {
+		t.Fatalf("items = %#v, want ignored.txt", got)
+	}
+}
+
 func TestSearchFilesResultReportsTimeout(t *testing.T) {
 	data := buildSearchFilesResult([]string{"alpha.txt"}, fileSearchMeta{TimedOut: true}, 10)
 	metrics, ok := data["metrics"].(map[string]any)

@@ -95,7 +95,7 @@ func searchFileNamesWithRipgrep(ctx context.Context, abs string, pattern string,
 	if _, err := exec.LookPath("rg"); err != nil {
 		return nil, fileSearchMeta{}, err
 	}
-	args := []string{"--files", "--hidden"}
+	args := []string{"--files", "--hidden", "--no-ignore"}
 	for dir := range defaultIgnoredDirs {
 		args = append(args, "--glob", "!**/"+dir+"/**")
 	}
@@ -125,7 +125,7 @@ func searchFileNamesWithRipgrep(ctx context.Context, abs string, pattern string,
 		if !filepath.IsAbs(rawPath) {
 			rawPath = filepath.Join(abs, rawPath)
 		}
-		if searchFilePathMatches(rawPath, pat) {
+		if searchFilePathMatches(abs, rawPath, pat) {
 			matches = append(matches, displayPath(rawPath))
 			if len(matches) >= limit {
 				meta.MatchLimitReached = true
@@ -167,7 +167,7 @@ func searchFileNamesWithGo(ctx context.Context, abs string, pattern string, limi
 			}
 			return nil
 		}
-		if searchFilePathMatches(path, pat) {
+		if searchFilePathMatches(abs, path, pat) {
 			matches = append(matches, displayPath(path))
 			if len(matches) >= limit {
 				meta.MatchLimitReached = true
@@ -195,8 +195,12 @@ func (m *fileSearchMeta) applyContextStop(err error) {
 	}
 }
 
-func searchFilePathMatches(path string, lowerPattern string) bool {
-	return strings.Contains(strings.ToLower(filepath.ToSlash(path)), lowerPattern) ||
+func searchFilePathMatches(root string, path string, lowerPattern string) bool {
+	rel := filepath.ToSlash(path)
+	if r, err := filepath.Rel(root, path); err == nil && r != "." && !strings.HasPrefix(r, "..") && !filepath.IsAbs(r) {
+		rel = filepath.ToSlash(r)
+	}
+	return strings.Contains(strings.ToLower(rel), lowerPattern) ||
 		strings.Contains(strings.ToLower(filepath.Base(path)), lowerPattern)
 }
 
