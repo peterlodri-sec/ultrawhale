@@ -432,9 +432,26 @@ func TestSummarizeToolResultForChat_AskModeBlockedShowsProductCommands(t *testin
 	if role != "result_mode_hint" {
 		t.Fatalf("expected result_mode_hint role, got %q", role)
 	}
-	want := "Ask mode · switch to /agent to edit"
+	want := "Ask mode · switch to /agent to run commands"
 	if got != want {
 		t.Fatalf("unexpected ask-mode summary:\nwant: %q\ngot:  %q", want, got)
+	}
+}
+
+func TestSummarizeToolResultForChat_PlanShellModeBlockedIsConcise(t *testing.T) {
+	raw := `{"success":false,"code":"plan_mode_blocked","message":"shell command is not classified as safe read-only","summary":"Current mode: plan. Plan mode allows only safe read-only shell commands. This shell command is not classified as safe read-only; stay here to refine the plan and produce a <proposed_plan> block for review. Only the user or UI can switch modes.","data":{"current_mode":"plan"}}`
+	role, got := summarizeToolResultForChat("shell_run", raw)
+	if role != "result_mode_hint" {
+		t.Fatalf("expected result_mode_hint role, got %q", role)
+	}
+	want := "Plan mode · shell command not confirmed read-only"
+	if got != want {
+		t.Fatalf("unexpected plan-mode shell summary:\nwant: %q\ngot:  %q", want, got)
+	}
+	for _, noisy := range []string{"Only the user or UI", "<proposed_plan>", "Plan mode allows only"} {
+		if strings.Contains(got, noisy) {
+			t.Fatalf("plan-mode shell summary leaked noisy detail %q:\n%s", noisy, got)
+		}
 	}
 }
 func TestSummarizeToolResultForChat_FetchHTTPStatusShowsHTTPError(t *testing.T) {

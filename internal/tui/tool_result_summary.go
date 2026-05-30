@@ -155,6 +155,9 @@ func summarizeShellResult(env toolResultEnvelope, successBySignal bool) (string,
 }
 
 func summarizeFailedShellResult(env toolResultEnvelope) (string, string) {
+	if isModeBlockedCode(env.code) {
+		return "result_mode_hint", summarizeModeBlocked(env, true)
+	}
 	if shellFailureIsNoMatches(env) {
 		duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
 		output := summarizeShellOutput(core.AsString(env.payload["stdout"]))
@@ -348,7 +351,7 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 	case "request_replan":
 		return "result_failed", summarizeReplanRequired(env)
 	case "ask_mode_blocked", "plan_mode_blocked", "mode_blocked":
-		return "result_mode_hint", summarizeModeBlocked(env)
+		return "result_mode_hint", summarizeModeBlocked(env, false)
 	case "fetch_failed", "web_fetch_failed":
 		if status := httpStatusSummary(env); status != "" {
 			return "result_http_error", status
@@ -414,20 +417,28 @@ func summarizeFailedResult(env toolResultEnvelope, fallback string) (string, str
 	return "result_failed", fmt.Sprintf("%s · %s", prefix, detail)
 }
 
-func summarizeModeBlocked(env toolResultEnvelope) string {
+func isModeBlockedCode(code string) bool {
+	return code == "ask_mode_blocked" || code == "plan_mode_blocked" || code == "mode_blocked"
+}
+
+func summarizeModeBlocked(env toolResultEnvelope, isShell bool) string {
 	mode := "Current mode"
 	switch env.code {
 	case "ask_mode_blocked":
 		mode = "Ask mode"
+		if isShell {
+			return mode + " · switch to /agent to run commands"
+		}
+		return mode + " · switch to /agent to edit"
 	case "plan_mode_blocked":
 		mode = "Plan mode"
+		if isShell {
+			return mode + " · shell command not confirmed read-only"
+		}
+		return mode + " · tool unavailable while planning"
 	}
-	summary := firstNonEmptyLine(core.FirstNonEmpty(env.summary, env.message, core.AsString(env.data["summary"])))
-	if strings.Contains(summary, "/agent") {
-		return mode + " · switch to /agent to edit"
-	}
-	if summary != "" {
-		return mode + " · " + summary
+	if isShell {
+		return mode + " · shell command unavailable"
 	}
 	return mode + " · tool unavailable"
 }
