@@ -75,6 +75,11 @@ func classifySlashFields(head string, fields []string, line string) SubmitClass 
 			return SubmitLocalReadOnly
 		}
 		return SubmitUsageError
+	case "/doctor":
+		if len(fields) == 1 {
+			return SubmitLocalReadOnly
+		}
+		return SubmitUsageError
 	case "/model", "/permissions", "/skills", "/plugins", "/resume":
 		if len(fields) == 1 {
 			return SubmitLocalUI
