@@ -6,7 +6,7 @@ func (b *Toolset) webTools() []core.Tool {
 	return []core.Tool{
 		toolFn{
 			name:        "web_search",
-			description: "Search the public web and return structured results. Uses DuckDuckGo HTML with Bing fallback when needed.",
+			description: "Search the public web and return structured results. Uses DuckDuckGo HTML with Bing fallback when needed; blocked, timed out, or unparseable searches return recovery hints.",
 			parameters: map[string]any{
 				"type":                 "object",
 				"additionalProperties": false,
