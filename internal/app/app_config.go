@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/usewhale/whale/internal/defaults"
 	llmretry "github.com/usewhale/whale/internal/llm/retry"
 	"github.com/usewhale/whale/internal/policy"
@@ -25,6 +27,7 @@ func DefaultConfig() Config {
 		ShowReasoning:           false,
 		RetryMaxAttempts:        llmretry.DefaultPolicy().MaxAttempts,
 		RetryStreamMaxAttempts:  6,
+		RetryStreamIdleTimeout:  90 * time.Second,
 		RetryMaxDelay:           llmretry.DefaultPolicy().MaxDelay,
 	}
 }

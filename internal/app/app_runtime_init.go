@@ -37,6 +37,7 @@ func initAppRuntime(cfg Config, sessionInit appSessionInit, toolInit appToolInit
 			MaxTokens:         maxTokens,
 			RetryPolicy:       retryPolicyFromConfig(cfg),
 			StreamMaxAttempts: cfg.RetryStreamMaxAttempts,
+			StreamIdleTimeout: cfg.RetryStreamIdleTimeout,
 		})
 	}
 	taskRunner := tasks.NewRunner(tasks.RunnerConfig{
