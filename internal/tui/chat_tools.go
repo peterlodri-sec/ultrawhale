@@ -350,6 +350,12 @@ func completedToolTitle(toolName, raw, previous string) string {
 		if !toolEnvelopeSucceeded(env) && env.code == "exec_failed" && !shellFailureIsNoMatches(env) {
 			return shellFailureLabel(env) + ": " + cmd
 		}
+		if hasInt(env.metrics["exit_code"]) {
+			exitCode := asInt(env.metrics["exit_code"])
+			if exitCode != 0 && toolEnvelopeSucceeded(env) {
+				return fmt.Sprintf("Ran %s (exit %d)", cmd, exitCode)
+			}
+		}
 		return "Ran " + cmd
 	case "explore":
 		return "Explored\n" + explorationLine(toolName, previousToolActionLine(previous), env)
@@ -385,6 +391,8 @@ func shellResultRole(role string) string {
 		return "shell_result_ok"
 	case "result_neutral":
 		return "shell_result_neutral"
+	case "result_nonzero":
+		return "shell_result_nonzero"
 	case "result_failed":
 		return "shell_result_failed"
 	case "result_timeout":
