@@ -165,8 +165,13 @@ func summarizeShellResult(env toolResultEnvelope, successBySignal bool) (string,
 		return summarizeFailedShellResult(env)
 	}
 
-	_ = exitCode
-	_ = hasExitCode
+	if shellExitIsNoMatches(env) {
+		return summarizeNoMatchShellResult(env)
+	}
+	if hasExitCode && exitCode != 0 {
+		return summarizeNonZeroShellResult(env, exitCode, duration)
+	}
+
 	parts := []string{"✓"}
 	if duration != "" {
 		parts = append(parts, duration)
@@ -178,23 +183,33 @@ func summarizeShellResult(env toolResultEnvelope, successBySignal bool) (string,
 	return "result_ok", strings.Join(parts, " · ")
 }
 
+func summarizeNonZeroShellResult(env toolResultEnvelope, exitCode int, duration string) (string, string) {
+	parts := []string{fmt.Sprintf("exit %d", exitCode)}
+	if duration != "" {
+		parts = append(parts, duration)
+	}
+	if reason := shellDiagnosisLabel(core.AsString(env.diagnosis["reason"])); reason != "" {
+		parts = append(parts, reason)
+	}
+	output := summarizeShellOutput(shellPayloadOutput(env, true))
+	if output != "" {
+		return "result_nonzero", strings.Join(parts, " · ") + "\n" + output
+	}
+	if strings.TrimSpace(core.AsString(env.payload["stderr"])) == "" {
+		parts = append(parts, "stderr empty")
+	}
+	if strings.TrimSpace(core.AsString(env.payload["stdout"])) == "" {
+		parts = append(parts, "stdout empty")
+	}
+	return "result_nonzero", strings.Join(parts, " · ")
+}
+
 func summarizeFailedShellResult(env toolResultEnvelope) (string, string) {
 	if isModeBlockedCode(env.code) {
 		return "result_mode_hint", summarizeModeBlocked(env, true)
 	}
 	if shellFailureIsNoMatches(env) {
-		duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
-		output := summarizeShellOutput(core.AsString(env.payload["stdout"]))
-		if duration != "" {
-			if output != "" {
-				return "result_neutral", "No matches · " + duration + "\n" + output
-			}
-			return "result_neutral", "No matches · " + duration
-		}
-		if output != "" {
-			return "result_neutral", "No matches\n" + output
-		}
-		return "result_neutral", "No matches"
+		return summarizeNoMatchShellResult(env)
 	}
 	if shellFailureUsesGenericSummary(env) {
 		return summarizeFailedResult(env, "command failed")
@@ -226,10 +241,36 @@ func shellFailureIsNoMatches(env toolResultEnvelope) bool {
 	if env.code != "exec_failed" || !hasInt(env.metrics["exit_code"]) || asInt(env.metrics["exit_code"]) != 1 {
 		return false
 	}
+	return shellExitOneIsNoMatches(env)
+}
+
+func shellExitIsNoMatches(env toolResultEnvelope) bool {
+	if !hasInt(env.metrics["exit_code"]) || asInt(env.metrics["exit_code"]) != 1 {
+		return false
+	}
+	return shellExitOneIsNoMatches(env)
+}
+
+func shellExitOneIsNoMatches(env toolResultEnvelope) bool {
 	if strings.TrimSpace(core.AsString(env.payload["stderr"])) != "" {
 		return false
 	}
 	return shellCommandUsesSearchExitOne(core.AsString(env.payload["command"]))
+}
+
+func summarizeNoMatchShellResult(env toolResultEnvelope) (string, string) {
+	duration := formatDurationMS(asInt64(env.metrics["duration_ms"]))
+	output := summarizeShellOutput(core.AsString(env.payload["stdout"]))
+	if duration != "" {
+		if output != "" {
+			return "result_neutral", "No matches · " + duration + "\n" + output
+		}
+		return "result_neutral", "No matches · " + duration
+	}
+	if output != "" {
+		return "result_neutral", "No matches\n" + output
+	}
+	return "result_neutral", "No matches"
 }
 
 func shellCommandUsesSearchExitOne(command string) bool {
