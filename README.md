@@ -40,12 +40,11 @@
 
 ## 🚀 Quick Start
 
-```bash
-# macOS / Linux
-brew install usewhale/tap/whale
-
-# or grab a binary from GitHub Releases
-```
+| Platform | Install |
+|---|---|
+| macOS | `brew install usewhale/tap/whale` |
+| Linux | `curl -fsSL https://raw.githubusercontent.com/usewhale/DeepSeek-Code-Whale/main/scripts/install.sh | sh` |
+| Windows | `powershell -c "irm https://raw.githubusercontent.com/usewhale/DeepSeek-Code-Whale/main/scripts/install.ps1 | iex"` |
 
 ```bash
 # Set your DeepSeek API key
