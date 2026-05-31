@@ -146,16 +146,16 @@ func validatePureMetaLiteral(literal string) error {
 }
 
 func decodeMetaLiteral(literal string) (ScriptMeta, error) {
-	rt, err := qjs.New()
+	jsrt, err := newWorkflowJSRuntime(workflowJSRuntimeOptions{})
 	if err != nil {
-		return ScriptMeta{}, fmt.Errorf("create workflow JS runtime: %w", err)
+		return ScriptMeta{}, err
 	}
-	defer rt.Close()
-	val, err := rt.Eval("workflow-meta.js", qjs.Code("JSON.stringify(("+literal+"))"))
+	defer jsrt.Close()
+	val, err := jsrt.Eval("workflow-meta.js", qjs.Code("JSON.stringify(("+literal+"))"))
 	if err != nil {
 		return ScriptMeta{}, fmt.Errorf("parse meta literal: %w", err)
 	}
-	defer val.Free()
+	defer freeWorkflowJSValue(val)
 	var meta ScriptMeta
 	if err := json.Unmarshal([]byte(val.String()), &meta); err != nil {
 		return ScriptMeta{}, fmt.Errorf("decode meta literal: %w", err)

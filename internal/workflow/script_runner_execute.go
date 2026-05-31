@@ -16,13 +16,13 @@ func (r *ScriptRunner) executeScript(exec *workflowExecution, parsed parsedWorkf
 	if err := prepareWorkflowExecution(exec); err != nil {
 		return nil, err
 	}
-	rt, err := qjs.New(qjs.Option{Context: exec.ctx, CloseOnContextDone: true})
+	jsrt, err := newWorkflowJSRuntime(workflowJSRuntimeOptions{Context: exec.ctx, Timeout: r.jsTimeout()})
 	if err != nil {
-		return nil, fmt.Errorf("create workflow JS runtime: %w", err)
+		return nil, err
 	}
-	defer rt.Close()
-	jsctx := rt.Context()
-	if _, err := jsctx.Eval("workflow-url.js", qjs.Code(`
+	defer jsrt.Close()
+	jsctx := jsrt.Context()
+	if _, err := jsrt.Eval("workflow-url.js", qjs.Code(`
 if (typeof URL === 'undefined') {
   globalThis.URL = class URL {
     constructor(input) {
@@ -42,7 +42,7 @@ if (typeof URL === 'undefined') {
 		return nil, fmt.Errorf("prepare workflow args: %w", err)
 	}
 	argsVal := jsctx.ParseJSON(string(argsJSON))
-	defer argsVal.Free()
+	defer freeWorkflowJSValue(argsVal)
 	jsctx.Global().SetPropertyStr("args", argsVal)
 	if _, err := jsctx.Eval("workflow-args.js", qjs.Code("if (args && typeof args === 'object') Object.freeze(args);")); err != nil {
 		return nil, fmt.Errorf("freeze workflow args: %w", err)
@@ -354,7 +354,9 @@ if (typeof URL === 'undefined') {
 			callIndex := appendCollectedCall(call)
 			return callMarker(this.Context(), callIndex, "agent"), nil
 		}
-		res, err := spawnCall(call)
+		res, err := workflowJSHostWait(jsrt.watchdog, func() (AgentTaskResult, error) {
+			return spawnCall(call)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +378,9 @@ if (typeof URL === 'undefined') {
 			callIndex := appendCollectedCall(collectedWorkflowCall{kind: workflowCallKindWorkflow, workflow: spec})
 			return callMarker(this.Context(), callIndex, "workflow"), nil
 		}
-		result, err := r.runChildWorkflow(exec, spec)
+		result, err := workflowJSHostWait(jsrt.watchdog, func() (any, error) {
+			return r.runChildWorkflow(exec, spec)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -453,7 +457,9 @@ if (typeof URL === 'undefined') {
 				return nil, fmt.Errorf("parallel thunk at index %d must call agent() or workflow() at most once", i)
 			}
 		}
-		callResults, err := runParallelCalls(exec.ctx, calls, DefaultMaxConcurrency, executeCall)
+		callResults, err := workflowJSHostWait(jsrt.watchdog, func() ([]parallelCallResult, error) {
+			return runParallelCalls(exec.ctx, calls, DefaultMaxConcurrency, executeCall)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -520,6 +526,9 @@ if (typeof URL === 'undefined') {
 		stages := append([]*qjs.Value(nil), this.Args()[1:]...)
 		opKey := exec.resumePrefix + "/" + nextOperation("pipeline")
 		results, err := runPipelineItems(exec.ctx, itemList, stages, DefaultMaxConcurrency, func(stage *qjs.Value, prev, original any, index, stageIndex int) (pipelineStageResult, error) {
+			if jsrt.watchdog != nil {
+				jsrt.watchdog.beat()
+			}
 			if err := beginCollect(); err != nil {
 				return pipelineStageResult{}, err
 			}
@@ -562,7 +571,13 @@ if (typeof URL === 'undefined') {
 				out.value = value
 			}
 			return out, nil
-		}, executeCall, postprocessValue, catchValue)
+		}, executeCall, postprocessValue, catchValue, func() func() {
+			if jsrt.watchdog == nil {
+				return func() {}
+			}
+			jsrt.watchdog.enterHostWait()
+			return jsrt.watchdog.leaveHostWait
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -571,17 +586,20 @@ if (typeof URL === 'undefined') {
 		}
 		return thenableValue(this.Context(), "pipeline", results)
 	})
-	if _, err := jsctx.Eval("workflow-guards.js", qjs.Code(`
+	if _, err := jsrt.Eval("workflow-guards.js", qjs.Code(`
 Date.now = function() { throw new Error("Date.now() is unavailable in workflow scripts (breaks resume)"); };
 Math.random = function() { throw new Error("Math.random() is unavailable in workflow scripts (breaks resume)"); };
 `)); err != nil {
 		return nil, fmt.Errorf("install workflow runtime guards: %w", err)
 	}
-	val, err := jsctx.Eval("workflow.js", qjs.Code(parsed.Executable), qjs.FlagAsync())
+	val, err := jsrt.Eval("workflow.js", qjs.Code(parsed.Executable), qjs.FlagAsync())
 	if val != nil {
-		defer val.Free()
+		defer freeWorkflowJSValue(val)
 	}
 	if err != nil {
+		if watchdogErr := jsrt.watchdogErr(); watchdogErr != nil {
+			return nil, fmt.Errorf("workflow script failed: %w", watchdogErr)
+		}
 		return nil, fmt.Errorf("workflow script failed: %w", err)
 	}
 	result, err := jsValueToGo(jsctx, val)
