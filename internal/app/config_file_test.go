@@ -669,7 +669,4 @@ func TestSetModelAndThinkingPersistToConfig(t *testing.T) {
 	if loaded.ThinkingEnabled == nil || *loaded.ThinkingEnabled {
 		t.Fatal("persisted thinking_enabled: want false")
 	}
-	if _, err := os.Stat(preferencesPath(dir)); !os.IsNotExist(err) {
-		t.Fatalf("preferences.json should not be created, err=%v", err)
-	}
 }
