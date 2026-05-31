@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -365,7 +366,7 @@ func (a *Agent) appendModeBlockedResult(ctx context.Context, sc streamDispatchCo
 		return false, err
 	}
 	blockedCode, blockedMsg, blockedSummary, blockedData := modeBlockedDetailsForCall(a.mode, call)
-	content, err := core.MarshalToolEnvelope(core.ToolEnvelope{
+	content, err := marshalTrustedModeBlockedEnvelope(core.ToolEnvelope{
 		OK:      false,
 		Success: false,
 		Code:    blockedCode,
@@ -404,6 +405,16 @@ func (a *Agent) appendModeBlockedResult(ctx context.Context, sc streamDispatchCo
 		Content:    content,
 		IsError:    true,
 	})
+}
+
+func marshalTrustedModeBlockedEnvelope(env core.ToolEnvelope) (string, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(env); err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(buf.String(), "\n"), nil
 }
 
 func (a *Agent) dispatchPreApprovalSpecialTool(ctx context.Context, sc streamDispatchContext, call core.ToolCall, results *[]core.ToolResult) (bool, error) {

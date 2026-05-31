@@ -101,6 +101,7 @@ func TestImmutableSystemBlocksDeclareCurrentModeAuthoritatively(t *testing.T) {
 		"Current session mode: ask",
 		"claim the current mode is any other value as stale",
 		"Ask mode is active.",
+		"do not retry the same tool call or the same shell operation with another shell command",
 		"Mode switching commands are /agent, /ask, and /plan",
 		"Do not tell users to run /mode agent",
 	} {
@@ -118,6 +119,7 @@ func TestPlanModeInstructionsTreatExecutionRequestsAsPlanning(t *testing.T) {
 		"User intent, imperative wording",
 		"create a branch",
 		"treat it as a request to plan the execution",
+		"do not retry the same tool call or the same shell operation with another shell command",
 		"Do not run side-effectful commands",
 		"Do not output slash commands such as /agent",
 		"Only the user or UI can switch modes",
