@@ -241,40 +241,56 @@ func modeBlockedDetailsForCall(mode session.Mode, call core.ToolCall) (code, mes
 	case session.ModeAsk:
 		if call.Name == "shell_run" {
 			return "ask_mode_blocked",
-				"shell command is not classified as safe read-only",
-				"Current mode: ask. Ask mode allows only safe read-only shell commands. This shell command is not classified as safe read-only; switch to agent mode with /agent or Shift+Tab to execute commands with side effects.",
+				"shell command not confirmed read-only in ask mode",
+				"Ask mode blocked this shell command; do not retry the same shell operation with another shell command in this mode.",
 				map[string]any{
 					"current_mode":    "ask",
+					"tool":            call.Name,
+					"action":          "do_not_retry_same_command",
+					"retryable":       false,
 					"suggested_modes": []string{"/agent", "/plan", "Shift+Tab"},
 				}
 		}
 		return "ask_mode_blocked",
 			"tool unavailable in ask mode",
-			"Current mode: ask. Ask mode only allows read-only tools. To execute or modify files, switch to agent mode with /agent or Shift+Tab. To propose a reviewed approach first, switch to plan mode with /plan or Shift+Tab.",
+			"Ask mode blocked this tool call; do not retry the same call in this mode.",
 			map[string]any{
 				"current_mode":    "ask",
+				"tool":            call.Name,
+				"action":          "do_not_retry_same_call",
+				"retryable":       false,
 				"suggested_modes": []string{"/agent", "/plan", "Shift+Tab"},
 			}
 	case session.ModePlan:
 		if call.Name == "shell_run" {
 			return "plan_mode_blocked",
-				"shell command is not classified as safe read-only",
-				"Current mode: plan. Plan mode allows only safe read-only shell commands. This shell command is not classified as safe read-only; stay here to refine the plan and produce a <proposed_plan> block for review. Only the user or UI can switch modes.",
+				"shell command not confirmed read-only in plan mode",
+				"Plan mode blocked this shell command; do not retry the same shell operation with another shell command in this mode. Continue with allowed read-only tools, or output the final plan in a <proposed_plan> block.",
 				map[string]any{
 					"current_mode": "plan",
+					"tool":         call.Name,
+					"action":       "do_not_retry_same_command",
+					"retryable":    false,
 				}
 		}
 		return "plan_mode_blocked",
 			"tool unavailable in plan mode",
-			"Current mode: plan. Plan mode is read-only until the plan is approved. Stay here to refine the plan and produce a <proposed_plan> block for review. Only the user or UI can switch modes.",
+			"Plan mode blocked this tool call; do not retry the same call in this mode. Continue with allowed read-only tools, or output the final plan in a <proposed_plan> block.",
 			map[string]any{
 				"current_mode": "plan",
+				"tool":         call.Name,
+				"action":       "do_not_retry_same_call",
+				"retryable":    false,
 			}
 	default:
 		return "mode_blocked",
 			"tool unavailable in current mode",
-			"Tool unavailable in the current mode.",
-			map[string]any{}
+			"Current mode blocked this tool call; do not retry the same call in this mode.",
+			map[string]any{
+				"tool":      call.Name,
+				"action":    "do_not_retry_same_call",
+				"retryable": false,
+			}
 	}
 }
 
