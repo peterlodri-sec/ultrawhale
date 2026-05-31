@@ -40,12 +40,11 @@
 
 ## 🚀 快速开始
 
-```bash
-# macOS / Linux
-brew install usewhale/tap/whale
-
-# 或者从 GitHub Releases 下载二进制文件
-```
+| 平台 | 安装方式 |
+|---|---|
+| macOS | `brew install usewhale/tap/whale` |
+| Linux | `curl -fsSL https://raw.githubusercontent.com/usewhale/DeepSeek-Code-Whale/main/scripts/install.sh | sh` |
+| Windows | `powershell -c "irm https://raw.githubusercontent.com/usewhale/DeepSeek-Code-Whale/main/scripts/install.ps1 | iex"` |
 
 ```bash
 # 配置 DeepSeek API Key
