@@ -15,6 +15,7 @@ func runPipelineItems(
 	execute func(collectedWorkflowCall) (any, error),
 	postprocess func(fn *qjs.Value, value any) (any, error),
 	catchError func(fn *qjs.Value, err error) (any, error),
+	enterHostWait func() func(),
 ) ([]any, error) {
 	if maxConcurrency <= 0 {
 		maxConcurrency = DefaultMaxConcurrency
@@ -119,8 +120,13 @@ func runPipelineItems(
 			}
 			continue
 		}
+		leaveHostWait := func() {}
+		if enterHostWait != nil {
+			leaveHostWait = enterHostWait()
+		}
 		select {
 		case completion := <-completions:
+			leaveHostWait()
 			activeAgents--
 			if completion.err != nil {
 				if ctx.Err() != nil {
@@ -168,6 +174,7 @@ func runPipelineItems(
 				return results, err
 			}
 		case <-ctx.Done():
+			leaveHostWait()
 			return results, ctx.Err()
 		}
 	}

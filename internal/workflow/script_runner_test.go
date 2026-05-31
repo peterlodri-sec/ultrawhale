@@ -1008,6 +1008,107 @@ args.topic = 'changed'
 	}
 }
 
+func TestScriptRunnerJSSandboxDoesNotExposeWorkspaceCWD(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workspace, "workspace-sentinel.txt"), []byte("secret"), 0o600); err != nil {
+		t.Fatalf("write sentinel: %v", err)
+	}
+	t.Chdir(workspace)
+
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	out, err := runner.StartWorkflow(context.Background(), "parent", WorkflowInput{Script: `export const meta = { name: 'cwd-sandbox', description: 'cwd sandbox' }
+let files = [];
+let osUnavailable = false;
+let readError = "";
+try {
+  if (typeof os === "undefined" || typeof os.readdir !== "function") {
+    osUnavailable = true;
+  } else {
+    files = os.readdir(".");
+  }
+} catch (e) {
+  readError = String(e);
+}
+return { files, osUnavailable, readError }`})
+	if err != nil {
+		t.Fatalf("StartWorkflow: %v", err)
+	}
+	run := waitRunStatus(t, store, out.RunID, RunStatusCompleted)
+	result, ok := completedRunResult(t, run).(map[string]any)
+	if !ok {
+		t.Fatalf("result type = %T", completedRunResult(t, run))
+	}
+	files, ok := result["files"].([]any)
+	if !ok {
+		t.Fatalf("files type = %T (%v)", result["files"], result["files"])
+	}
+	for _, item := range files {
+		if item == "workspace-sentinel.txt" {
+			t.Fatalf("workflow JS runtime observed workspace cwd sentinel: %#v", result)
+		}
+	}
+}
+
+func TestScriptRunnerWatchdogFailsContinuousJSLoop(t *testing.T) {
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.JSTimeout = 50 * time.Millisecond
+	out, err := runner.StartWorkflow(context.Background(), "parent", WorkflowInput{Script: `export const meta = { name: 'js-loop', description: 'js loop' }
+while (true) {}
+return { ok: true }`})
+	if err != nil {
+		t.Fatalf("StartWorkflow: %v", err)
+	}
+	run := waitRunStatus(t, store, out.RunID, RunStatusFailed)
+	if !strings.Contains(run.Error, "workflow JS execution exceeded") {
+		t.Fatalf("expected JS watchdog failure, got %q", run.Error)
+	}
+}
+
+func TestScriptRunnerWatchdogFailsPipelineStageJSLoop(t *testing.T) {
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.JSTimeout = 50 * time.Millisecond
+	out, err := runner.StartWorkflow(context.Background(), "parent", WorkflowInput{Script: `export const meta = { name: 'pipeline-js-loop', description: 'pipeline js loop' }
+await pipeline([1], () => {
+  while (true) {}
+  return 1
+})
+return { ok: true }`})
+	if err != nil {
+		t.Fatalf("StartWorkflow: %v", err)
+	}
+	run := waitRunStatus(t, store, out.RunID, RunStatusFailed)
+	if !strings.Contains(run.Error, "workflow JS execution exceeded") {
+		t.Fatalf("expected JS watchdog failure, got %q", run.Error)
+	}
+}
+
+func TestScriptRunnerWatchdogAllowsLongAgentWait(t *testing.T) {
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{delay: 150 * time.Millisecond}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.JSTimeout = 50 * time.Millisecond
+	out, err := runner.StartWorkflow(context.Background(), "parent", WorkflowInput{Script: `export const meta = { name: 'agent-wait', description: 'agent wait' }
+const res = await agent("slow agent");
+return { summary: res }`})
+	if err != nil {
+		t.Fatalf("StartWorkflow: %v", err)
+	}
+	run := waitRunStatus(t, store, out.RunID, RunStatusCompleted)
+	result, ok := completedRunResult(t, run).(map[string]any)
+	if !ok {
+		t.Fatalf("result type = %T", completedRunResult(t, run))
+	}
+	if got := result["summary"]; got != "summary slow agent" {
+		t.Fatalf("summary = %v", got)
+	}
+}
+
 func TestScriptRunnerAgentSchemaExtractsJSONFromMarkdownResponse(t *testing.T) {
 	store := &memoryRunEventStore{}
 	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{
@@ -1953,4 +2054,15 @@ func waitRunStatus(t *testing.T, store RunEventStore, runID RunID, status string
 	}
 	t.Fatalf("run %s did not reach %s; last=%+v err=%v", runID, status, run, err)
 	return Run{}
+}
+
+func completedRunResult(t *testing.T, run Run) any {
+	t.Helper()
+	for _, ev := range run.Events {
+		if ev.Type == EventRunCompleted {
+			return ev.Data["result"]
+		}
+	}
+	t.Fatalf("completed result not found in run events: %+v", run.Events)
+	return nil
 }

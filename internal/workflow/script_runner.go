@@ -79,6 +79,7 @@ type ScriptRunner struct {
 	Library         *Library
 	Now             func() time.Time
 	MaxAgentCalls   int
+	JSTimeout       time.Duration
 	CompileValidate bool
 	activeMu        sync.Mutex
 	activeRuns      map[RunID]*activeWorkflowRun
@@ -103,6 +104,7 @@ func NewScriptRunner(dataDir string, manager *RunManager) *ScriptRunner {
 		DataDir:         dataDir,
 		Now:             time.Now,
 		MaxAgentCalls:   1000,
+		JSTimeout:       defaultWorkflowJSTimeout,
 		CompileValidate: true,
 	}
 }
@@ -317,12 +319,12 @@ func (r *ScriptRunner) writeRunScript(runID RunID, script string) (string, error
 }
 
 func validateWorkflowCompile(code string) error {
-	rt, err := qjs.New()
+	jsrt, err := newWorkflowJSRuntime(workflowJSRuntimeOptions{})
 	if err != nil {
-		return fmt.Errorf("create workflow JS runtime: %w", err)
+		return err
 	}
-	defer rt.Close()
-	if _, err := rt.Compile("workflow.js", qjs.Code(code), qjs.FlagAsync()); err != nil {
+	defer jsrt.Close()
+	if err := jsrt.Compile("workflow.js", qjs.Code(code), qjs.FlagAsync()); err != nil {
 		return fmt.Errorf("workflow script syntax error: %w", err)
 	}
 	return nil
@@ -1075,6 +1077,16 @@ func (r *ScriptRunner) maxAgentCalls() int {
 		return r.MaxAgentCalls
 	}
 	return 1000
+}
+
+func (r *ScriptRunner) jsTimeout() time.Duration {
+	if r == nil || r.JSTimeout == 0 {
+		return defaultWorkflowJSTimeout
+	}
+	if r.JSTimeout < 0 {
+		return 0
+	}
+	return r.JSTimeout
 }
 
 func cloneMap(in map[string]any) map[string]any {
