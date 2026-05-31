@@ -285,10 +285,10 @@ For security-sensitive issues, see [SECURITY.md](SECURITY.md).
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=DeepSeek-Code-Whale%2FDeepSeek-Code-Whale%2Cusewhale%2FDeepSeek-Code-Whale&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=usewhale%2FDeepSeek-Code-Whale&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=DeepSeek-Code-Whale/DeepSeek-Code-Whale%2Cusewhale/DeepSeek-Code-Whale&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=DeepSeek-Code-Whale/DeepSeek-Code-Whale%2Cusewhale/DeepSeek-Code-Whale&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=DeepSeek-Code-Whale/DeepSeek-Code-Whale%2Cusewhale/DeepSeek-Code-Whale&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=usewhale/DeepSeek-Code-Whale&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=usewhale/DeepSeek-Code-Whale&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=usewhale/DeepSeek-Code-Whale&type=date&legend=top-left" />
  </picture>
 </a>
