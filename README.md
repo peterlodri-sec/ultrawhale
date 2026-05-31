@@ -177,6 +177,16 @@ Whale can load external tools from MCP servers.
 
 See [docs/mcp.md](docs/mcp.md) for setup and supported features.
 
+## Workflows
+
+Whale supports dynamic workflows — JavaScript scripts that orchestrate multiple
+sub-agents deterministically. Workflows are compatible with Claude Code's raw
+script format.
+
+See [docs/workflows.en.md](docs/workflows.en.md) for an overview and
+[docs/custom-workflows.en.md](docs/custom-workflows.en.md) for a guide
+on writing your own.
+
 ## Skills
 
 Whale supports local Agent Skills for reusable workflows, team conventions, or tool-specific guidance.

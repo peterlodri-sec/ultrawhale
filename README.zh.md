@@ -174,6 +174,13 @@ Whale 支持从 MCP server 加载外部工具。
 
 配置和支持范围见 [docs/mcp.md](docs/mcp.md)。
 
+## Workflows
+
+Whale 支持动态 workflow——用 JavaScript 脚本编排多个子 agent，兼容 Claude Code 的 raw script 格式。
+
+概览说明见 [docs/workflows.md](docs/workflows.md)，
+自定义指南见 [docs/custom-workflows.md](docs/custom-workflows.md)。
+
 ## Skills
 
 Whale 支持本地 Agent Skills，用于复用固定工作流、团队规范或特定工具用法。
