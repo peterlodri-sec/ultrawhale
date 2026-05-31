@@ -215,6 +215,8 @@ type model struct {
 	inHistoryNav                   bool
 	queuedPrompts                  []queuedPrompt
 	nativeScrollbackPrinted        int
+	holdCompletedTurnInViewport    bool
+	heldTurnStart                  int
 	pendingMouseCSIFragment        bool
 	windowsPaste                   windowsPasteFallbackState
 	viewCache                      *modelViewCache
