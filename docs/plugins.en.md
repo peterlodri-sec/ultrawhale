@@ -1,273 +1,330 @@
 # Plugins
 
-Whale can install local plugin packages and use config to decide which plugins
-are active in the current project. Installing and enabling are separate:
-installing puts a plugin in Whale's plugin directory; enabling makes it part of
-the runtime.
+Plugins extend Whale with new capabilities: slash commands, skills, subagents, rules, MCP servers, and hooks.
+Installing and enabling are separate — plugins are **disabled** by default after install.
 
-## Current Plugin: Memory
+---
 
-Whale ships one official built-in plugin:
+## User Guide
 
-**`memory`** — Durable memory across sessions. Provides:
+### Quick Start
 
-- `remember` / `forget` / `recall_memory` tools
-- `/memory` management in the TUI
-- Startup context with memory index
-- Global and project-scoped storage
-
-Memory is enabled by default.
-
-## What Local Plugins Can Load
-
-Current local plugins can contribute:
-
-- Skills
-- Prompt and shell slash commands
-- Subagent roles
-- Startup rules
-- MCP servers
-- Command hooks
-
-Official built-in plugins can also provide tools, slash commands, startup
-context, storage, services, and diagnostics.
-
-## Managing Plugins
-
-CLI management commands:
+Three steps to get a plugin running:
 
 ```text
+# 1. Install from a local directory
+whale plugin install ./my-plugin
+
+# 2. Confirm it's installed
 whale plugin list
-whale plugin install <path>
-whale plugin inspect <id>
-whale plugin enable <id>
-whale plugin disable <id>
-whale plugin uninstall <id>
+
+# 3. Enable it
+whale plugin enable my-plugin
 ```
 
-Local plugin directories must contain `whale-plugin.toml`. Installed local
-plugins are disabled by default; enable them with `whale plugin enable <id>` or
-Space in `/plugins`.
+Once installed and enabled, open the TUI to use the plugin's features.
+If the plugin provides slash commands, just type `/` to see them.
 
-In the TUI, run:
+---
 
-```text
-/plugins
+### Command Reference
+
+| Command | What it does |
+|---------|--------------|
+| `whale plugin install <path>` | Install a plugin from a local directory |
+| `whale plugin list` | List installed plugins (enabled/disabled, version) |
+| `whale plugin enable <id>` | Enable a plugin |
+| `whale plugin disable <id>` | Disable a plugin (keep it installed) |
+| `whale plugin uninstall <id>` | Remove a plugin from disk completely |
+| `whale plugin inspect <id>` | Show plugin details: what it contributes, diagnostics |
+
+---
+
+### TUI Usage
+
+Type `/plugins` in the TUI to open the plugin manager panel:
+
+- Shows all installed plugins. **Green** = enabled, **gray** = disabled.
+- Press `Space` to toggle enable/disable.
+- Press `Esc` to close the panel.
+
+When a plugin is enabled, its slash commands appear in the command list — just type `/`.
+
+---
+
+### FAQ
+
+**Q: I installed a plugin but don't see it working.**
+A: Plugins are **disabled** by default after install. Run `whale plugin enable <id>` to turn it on.
+
+**Q: How do I know what a plugin provides?**
+A: `whale plugin inspect <id>` lists all commands, skills, agents, rules, and MCP servers it contributes.
+
+**Q: How do I completely remove a plugin?**
+A: `whale plugin uninstall <id>` deletes it from disk. You'd need to reinstall to use it again.
+
+**Q: Where are plugins stored on disk?**
+A: Installed plugin cache is at `~/.whale/plugins/cache/local/<id>/<version>/`.
+
+---
+
+## Developer Guide
+
+### A Plugin is a Directory
+
+A minimal plugin is just a folder with `whale-plugin.toml`:
+
+```
+my-first-plugin/
+├── whale-plugin.toml   ← Required, the plugin's identity
+└── skills/
+    └── hello/
+        └── SKILL.md    ← Optional, add a skill to try it out
 ```
 
-This lists installed plugins, their descriptions, and contributed
-commands/tools/skills/hooks.
+### Step 1: Write whale-plugin.toml
 
-- Press `Space` to enable or disable a plugin
-- Press `Esc` to close
-
-Disabled plugins hide their commands and tools.
-
-### Plugin-specific commands
-
-```text
-/memory
-```
-
-If a plugin is disabled, its slash command is unavailable.
-
-Config example:
+The minimum is just `id`:
 
 ```toml
-[plugins.memory]
-enabled = false
-
-[plugins.my-local-plugin]
-enabled = true
-
-[plugins.my-local-plugin.mcp_servers.search]
-enabled = false
-disabled_tools = ["write_file"]
-```
-
-When config files are layered, plugin MCP server `disabled_tools` uses
-replacement semantics, not cross-layer merging. For example, if project config
-sets `["tool_a"]` and project-local config sets `["tool_b"]` for the same
-server, the final value is only `["tool_b"]`. To disable both tools, write the
-complete list in the highest-priority config: `["tool_a", "tool_b"]`.
-
-## Local Plugin Packages
-
-A minimal local plugin package looks like this:
-
-```text
-my-local-plugin/
-├── whale-plugin.toml
-├── skills/
-│   └── demo-skill/
-│       └── SKILL.md
-├── commands/
-│   ├── explain.md
-│   └── commands.toml
-├── agents/
-│   └── reviewer.md
-├── rules/
-│   └── style.md
-├── mcp.json
-└── hooks.toml
-```
-
-`whale-plugin.toml` is required:
-
-```toml
-id = "my-local-plugin"
-name = "My Local Plugin"
+id = "my-first-plugin"
+name = "My First Plugin"
 version = "0.1.0"
-description = "Demo plugin."
-
-[components]
-skills = "./skills"
-commands = "./commands"
-agents = "./agents"
-rules = "./rules"
-mcp = "./mcp.json"
-hooks = "./hooks.toml"
+description = "My first Whale plugin"
 ```
 
-After you enable the plugin:
+Then install and enable it:
 
-- `skills` appear in `/skills` and `$skill-name` selection
-- `commands/*.md` become prompt slash commands, for example
-  `/my-local-plugin:explain`
-- `commands.toml` becomes shell slash commands. They still go through Whale's
-  `shell_run`, approval, hooks, and checkpoint path.
-- `agents/*.md` become `spawn_subagent` roles, for example
-  `my-local-plugin:reviewer`
-- `rules/*.md` become short startup rules for the session
-- `mcp` servers are merged into the MCP runtime, with plugin-prefixed names
-  such as `my-local-plugin.search`
-- `hooks` are merged into `/hooks` as managed hooks, so they do not need a
-  separate trust step
+```text
+whale plugin install ./my-first-plugin
+whale plugin enable my-first-plugin
+```
 
-Plugin MCP config uses Whale's normal MCP config shape:
+### Step 2: Add a Skill
+
+Put a SKILL.md under `skills/`:
+
+```markdown
+# Hello
+
+When asked about "hello", respond in a friendly tone.
+```
+
+Start a new TUI session and the plugin's skill will be available.
+
+> The `skills/` directory is auto-detected — even if the `whale-plugin.toml` doesn't declare `[components]`, Whale will load skills from `skills/` if it exists.
+
+---
+
+### What Else Can a Plugin Add?
+
+Plugins can contribute six types of components. Here's the minimum example for each.
+
+#### Slash Command (Prompt type)
+
+`.md` files under `commands/` become slash commands. The file path determines the name:
+
+```
+commands/
+├── explain.md             → /my-first-plugin:explain
+└── review/
+    └── code.md            → /my-first-plugin:review:code
+```
+
+`commands/explain.md` example:
+
+```markdown
+---
+description: Explain a topic from the plugin's perspective
+argument_hint: "<topic>"
+---
+Explain {{args}} from my plugin's perspective.
+```
+
+Type `/my-first-plugin:explain what is a plugin` in the TUI to trigger it.
+
+#### Slash Command (Shell type)
+
+To run shell commands, put a `commands.toml` under `commands/`:
+
+```toml
+[[commands]]
+name = "status"
+description = "Check if the plugin is working"
+command = "echo 'plugin is running'"
+timeout_ms = 10000
+```
+
+Typing `/my-first-plugin:status` makes Whale execute the command through `shell_run` (normal permissions and approval apply — no bypass).
+
+#### Subagent (Agent)
+
+`.md` files under `agents/` become spawnable subagent roles:
+
+```markdown
+---
+description: Review code using plugin conventions
+capabilities: workspace.read
+---
+You are an expert on {{plugin_id}}. Review the code against this plugin's conventions.
+```
+
+#### Session Rules (Rules)
+
+Rules under `rules/` are injected into every session's startup context:
+
+```markdown
+This project uses the my-first-plugin plugin. Please follow its conventions.
+```
+
+#### MCP Server
+
+`mcp.json` adds external tools. The server name gets a plugin prefix automatically:
 
 ```json
 {
   "mcpServers": {
     "search": {
-      "command": "./bin/search-server"
+      "command": "node",
+      "args": ["server.js"]
     }
   }
 }
 ```
 
-Relative `command` values are resolved from the installed plugin directory.
-Whale also sets these environment variables for plugin MCP servers:
+Whale registers it as `my-first-plugin.search`.
 
-- `WHALE_PLUGIN_ROOT`
-- `WHALE_PLUGIN_DATA_DIR`
-- `WHALE_PLUGIN_PROJECT_DIR`
+Plugin MCP servers get these environment variables:
 
-Plugin hooks use Whale's hooks TOML shape:
+- `WHALE_PLUGIN_ROOT` — plugin install directory
+- `WHALE_PLUGIN_DATA_DIR` — plugin-scoped data directory
+- `WHALE_PLUGIN_PROJECT_DIR` — per-project plugin data directory
+
+#### Hooks
+
+`hooks.toml` adds automated hooks that take effect when the plugin is enabled:
 
 ```toml
 [[hooks.SessionStart]]
-description = "Write startup marker"
-command = "printf started > marker.txt"
+description = "Write a startup marker"
+command = "echo 'plugin started' >> plugin.log"
 timeout = 5
 ```
 
-Plugin hooks run from the installed plugin directory by default. Disabling the
-plugin removes its skills, MCP servers, and hooks from the runtime. You can also
-disable an individual plugin hook from `/hooks`.
+---
 
-### Plugin Commands
+### Development Iteration
 
-Prompt commands are Markdown files. The file path determines the command name:
+After changing plugin files, just re-install to overwrite:
 
 ```text
-commands/explain.md -> /my-local-plugin:explain
-commands/review/code.md -> /my-local-plugin:review:code
+whale plugin install ./my-first-plugin
 ```
 
-Example:
+Installation is atomic: if the copy fails midway, it rolls back to the old version.
+Skill and rule changes take effect after starting a new TUI session.
+Command changes take effect after pressing Ctrl+R in the TUI.
+
+---
+
+### Naming Rules
+
+- **Plugin ID**: lowercase letters, digits, `.` `-` `_`. Underscores are converted to hyphens.
+- **Commands and agents**: automatically prefixed with `<pluginID>:`.
+- **File path determines name**: `commands/review/code.md` → `/my-first-plugin:review:code`.
+- **Override the name**: set `name: xxx` in the frontmatter to override.
+
+Important notes:
+
+- Plugin IDs must not conflict with built-in plugin IDs (those are reserved).
+- Component paths in `whale-plugin.toml` must be relative and stay inside the plugin directory.
+- A path pointing to a non-existent directory won't error, but produces a warning (`whale plugin inspect` shows it).
+
+---
+
+### Complete Working Example
+
+Here's a plugin directory you can copy verbatim:
+
+```
+my-plugin/
+├── whale-plugin.toml
+├── commands/
+│   ├── explain.md
+│   └── commands.toml
+├── skills/
+│   └── greet/
+│       └── SKILL.md
+├── agents/
+│   └── reviewer.md
+└── rules/
+    └── convention.md
+```
+
+**whale-plugin.toml**
+
+```toml
+id = "my-plugin"
+name = "My Plugin"
+version = "0.1.0"
+description = "A demo plugin"
+```
+
+**commands/explain.md**
 
 ```markdown
 ---
-description: Explain a topic with plugin guidance.
-argument_hint: "<topic>"
+description: Explain a concept
+argument_hint: "<concept>"
 read_only: true
 ---
-Explain {{args}} using this plugin's guidance.
+Explain {{args}} from my plugin's perspective.
 ```
 
-Shell commands live in `commands/commands.toml`:
+**commands/commands.toml**
 
 ```toml
 [[commands]]
-name = "fmt"
-description = "Format plugin code"
-command = "gofmt -w internal/plugins"
-timeout_ms = 30000
-class = "mutating"
+name = "ping"
+description = "Test if the plugin is online"
+command = "echo pong"
 ```
 
-Shell commands do not execute by bypassing Whale. Whale turns them into a hidden
-turn that asks the model to call `shell_run` with the declared input, so normal
-permissions and safety boundaries still apply.
+**skills/greet/SKILL.md**
 
-### Plugin Agents and Rules
+```markdown
+# Greet
 
-`agents/*.md` files become `spawn_subagent` roles:
+When the user says "hello", greet them enthusiastically and introduce yourself.
+```
+
+**agents/reviewer.md**
 
 ```markdown
 ---
-description: Review code using plugin conventions.
-capabilities: workspace.read, web.search
-max_tool_iters: 6
+description: Review code using plugin conventions
+capabilities: workspace.read
 ---
-You are a reviewer for this plugin's conventions.
+You are a code review expert for the my-plugin plugin.
 ```
 
-Supported capabilities:
+**rules/convention.md**
 
-- `workspace.read`
-- `workspace.write`
-- `shell.read`
-- `shell.write`
-- `web.search`
-- `web.fetch`
-- `mcp.read`
+```markdown
+This session uses the my-plugin plugin.
+```
 
-`workspace.write`, `shell.read`, and `shell.write` are policy-gated: without an
-approval callback they are denied; with one they use Whale's normal approval
-path.
+Install and enable:
 
-`rules/*.md` files are short, stable project rules. When the plugin is enabled,
-Whale adds them to startup context.
+```text
+whale plugin install ./my-plugin
+whale plugin enable my-plugin
+```
 
-## Why Plugins instead of core features?
+Then open the TUI and you'll see:
 
-Whale already has two extension surfaces — MCP (external tools) and
-Skills (reusable instructions). But neither is enough for features like
-memory, which needs to:
-
-- register tools (`remember`, `forget`, etc.)
-- inject context at session startup
-- own local storage (global + project-scoped)
-- expose a TUI management interface (`/memory`)
-- interact with approval and filesystem boundaries
-- remain replaceable (users can swap memory strategy later)
-
-The plugin architecture makes all of this possible while keeping core
-Whale lean.
-
-## Design Principles
-
-- Startup is non-blocking — plugins don't slow down the TUI
-- Official plugins are replaceable, but don't require external installation
-- Plugin APIs are narrower than internal Go APIs
-- Core owns trust boundaries — plugins don't decide their own permissions
-- File formats users can inspect and edit are preferred
-
-## Current Limitations
-
-- No plugin marketplace or remote installation
-- Local plugins load `skills`, `commands`, `agents`, `rules`, `mcp`, and `hooks`
-- Internal Go plugin APIs can still evolve; the long-term stable boundary is the
-  file contract
+- `/my-plugin:explain` slash command
+- `/my-plugin:ping` slash command
+- `my-plugin:reviewer` subagent role
+- `greet` skill
+- Startup rules automatically injected

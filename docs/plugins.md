@@ -1,248 +1,329 @@
 # Plugins
 
-Whale 支持安装本地插件包，并用配置决定哪些插件在当前项目启用。安装和启用是两件事：安装只是把插件放进 Whale 的插件目录；启用后插件才会进入运行时。
+插件可以给 Whale 添加新功能：斜杠命令、技能、子智能体、规则、MCP 工具、钩子。
+安装和启用是两件事——装完默认是**禁用**的，需要手动启用才会生效。
 
-## 概览
+---
 
-当前插件平台支持：
+## 用户指南
 
-- 带明确能力和权限声明的插件清单
-- 通过 `[plugins.<id>].enabled` 启用/禁用
-- 插件拥有的工具、斜杠命令、启动上下文、技能、MCP 服务器、钩子、
-  agents、rules、存储路径、服务状态和诊断
-- TUI 中的 `/plugins` 已安装插件管理
-- 一个官方内置插件：
-  - `memory`：带工具的持久记忆、`/memory`、启动上下文和插件存储
+### 快速上手
 
-当前阶段先稳定本地插件包和运行时加载，不做插件市场。
-
-## 命令
-
-CLI 管理命令：
+三步让一个插件跑起来：
 
 ```text
+# 1. 安装（从本地目录装）
+whale plugin install ./my-plugin
+
+# 2. 确认装上了
 whale plugin list
-whale plugin install <path>
-whale plugin inspect <id>
-whale plugin enable <id>
-whale plugin disable <id>
-whale plugin uninstall <id>
+
+# 3. 启用它
+whale plugin enable my-plugin
 ```
 
-本地插件目录需要包含 `whale-plugin.toml`。安装后默认禁用；用 `whale plugin enable <id>` 或 `/plugins` 中的 Space 启用。
+装好并启用后，在 TUI 里就能用插件提供的功能了。
+如果插件提供了斜杠命令，直接敲 `/` 就能看到。
 
-在 TUI 中运行：
+---
 
-```text
-/plugins
+### 命令速查
+
+| 命令 | 作用 |
+|------|------|
+| `whale plugin install <路径>` | 从本地目录安装插件 |
+| `whale plugin list` | 列出已安装的插件（是否启用、版本） |
+| `whale plugin enable <id>` | 启用一个插件 |
+| `whale plugin disable <id>` | 禁用一个插件（不卸载） |
+| `whale plugin uninstall <id>` | 彻底删除一个插件 |
+| `whale plugin inspect <id>` | 查看插件详情：贡献了什么、诊断信息 |
+
+---
+
+### TUI 操作
+
+在 TUI 里敲 `/plugins` 打开插件管理面板：
+
+- 列表显示所有已安装的插件，**绿色**=已启用，**灰色**=已禁用
+- 按 `Space` 切换启用/禁用
+- 按 `Esc` 关闭面板
+
+启用后，插件的斜杠命令会出现在命令列表里，直接敲 `/` 就能看到。
+
+---
+
+### 常见问题
+
+**Q: 装了但没看到效果？**
+A: 安装后默认是**禁用的**。运行 `whale plugin enable <id>` 启用它。
+
+**Q: 怎么知道一个插件提供了什么？**
+A: `whale plugin inspect <id>` 会列出它贡献的所有命令、技能、agent、规则等。
+
+**Q: 不想用了怎么彻底删掉？**
+A: `whale plugin uninstall <id>` 从磁盘上删除。以后想用需要重新安装。
+
+**Q: 插件装在哪里了？**
+A: 安装后的缓存文件在 `~/.whale/plugins/cache/local/<id>/<version>/`。
+
+---
+
+## 开发者指南
+
+### 一个插件就是一个目录
+
+最简单的插件就是一个文件夹加一个 `whale-plugin.toml`：
+
+```
+my-first-plugin/
+├── whale-plugin.toml   ← 必需，插件的身份证
+└── skills/
+    └── hello/
+        └── SKILL.md    ← 可选，加一个技能试试
 ```
 
-列出已安装插件、简短描述和贡献的命令/工具/技能/钩子。
-按 Space 启用或禁用选中的插件。按 Esc 关闭列表。
+### 第一步：写 whale-plugin.toml
 
-官方插件命令是常规斜杠命令：
-
-```text
-/memory
-```
-
-如果插件被禁用，其斜杠命令不可用。
-
-配置文件示例：
+最少只需要 `id`：
 
 ```toml
-[plugins.memory]
-enabled = false
-
-[plugins.my-local-plugin]
-enabled = true
-
-[plugins.my-local-plugin.mcp_servers.search]
-enabled = false
-disabled_tools = ["write_file"]
-```
-
-配置分层时，插件 MCP server 的 `disabled_tools` 使用覆盖语义，不做跨层合并。
-例如项目配置里写了 `["tool_a"]`，项目本地配置里对同一个 server 写了
-`["tool_b"]`，最终只会使用 `["tool_b"]`。如果你想同时禁用两个工具，
-需要在最高优先级配置里完整写出 `["tool_a", "tool_b"]`。
-
-## 本地插件包
-
-一个最小插件目录长这样：
-
-```text
-my-local-plugin/
-├── whale-plugin.toml
-├── skills/
-│   └── demo-skill/
-│       └── SKILL.md
-├── commands/
-│   ├── explain.md
-│   └── commands.toml
-├── agents/
-│   └── reviewer.md
-├── rules/
-│   └── style.md
-├── mcp.json
-└── hooks.toml
-```
-
-`whale-plugin.toml` 是必需文件：
-
-```toml
-id = "my-local-plugin"
-name = "My Local Plugin"
+id = "my-first-plugin"
+name = "我的第一个插件"
 version = "0.1.0"
-description = "Demo plugin."
-
-[components]
-skills = "./skills"
-commands = "./commands"
-agents = "./agents"
-rules = "./rules"
-mcp = "./mcp.json"
-hooks = "./hooks.toml"
+description = "我的第一个 Whale 插件"
 ```
 
-启用插件后：
+然后安装它：
 
-- `skills` 会出现在 `/skills` 和 `$skill-name` 选择里
-- `commands/*.md` 会注册为提示型斜杠命令，例如 `/my-local-plugin:explain`
-- `commands.toml` 会注册为 shell 型斜杠命令，执行时仍经过 Whale 的
-  `shell_run`、审批、hooks 和 checkpoint 核心链路
-- `agents/*.md` 会注册为 `spawn_subagent` 可用的 role，例如
-  `my-local-plugin:reviewer`
-- `rules/*.md` 会作为简短启动规则注入会话
-- `mcp` 中的服务器会合并进 MCP 运行时，服务器名会加上插件前缀，
-  例如 `my-local-plugin.search`
-- `hooks` 会合并进 `/hooks`，插件钩子是受管理钩子，不需要再手动 trust
+```text
+whale plugin install ./my-first-plugin
+whale plugin enable my-first-plugin
+```
 
-插件 MCP 配置使用 Whale 已有的 MCP 配置格式：
+### 第二步：加个技能
+
+在 `skills/` 目录下放一个 SKILL.md：
+
+```markdown
+# Hello
+
+当被问到"hello"相关的问题时，用友好的语气打招呼。
+```
+
+回到 TUI 重新开始会话，插件里的技能就能用了。
+
+> `skills/` 目录是自动识别的——即使 `whale-plugin.toml` 里没有声明 `[components]`，只要 `skills/` 目录存在就会被加载。
+
+---
+
+### 还能加什么
+
+插件可以贡献六种东西。下面逐个介绍最小示例。
+
+#### 斜杠命令（Prompt 型）
+
+`commands/` 下的 `.md` 文件变成一条斜杠命令。文件路径决定命令名：
+
+```
+commands/
+├── explain.md             → /my-first-plugin:explain
+└── review/
+    └── code.md            → /my-first-plugin:review:code
+```
+
+`commands/explain.md` 示例：
+
+```markdown
+---
+description: 用插件视角解释一个话题
+argument_hint: "<话题>"
+---
+请从我的插件视角解释：{{args}}
+```
+
+用户在 TUI 里敲 `/my-first-plugin:explain 什么是插件` 就会触发。
+
+#### 斜杠命令（Shell 型）
+
+如果需要在终端里跑命令，在 `commands/` 下放一个 `commands.toml`：
+
+```toml
+[[commands]]
+name = "status"
+description = "看看插件是否在工作"
+command = "echo 'plugin is running'"
+timeout_ms = 10000
+```
+
+用户敲 `/my-first-plugin:status`，Whale 会用 `shell_run` 执行这条命令（正常走权限和审批，不会绕过安全策略）。
+
+#### 子智能体（Agent）
+
+`agents/` 下的 `.md` 文件变成可 spawn 的子智能体角色：
+
+```markdown
+---
+description: 按插件惯例审查代码
+capabilities: workspace.read
+---
+你是 {{plugin_id}} 的专家，审查代码是否符合这个插件的惯例。
+```
+
+#### 会话规则（Rules）
+
+`rules/` 下的 `.md` 文件内容会在每次会话启动时注入到上下文：
+
+```markdown
+这个项目使用了 my-first-plugin 插件。所有和插件相关的修改请参考其文档。
+```
+
+#### MCP 服务器
+
+`mcp.json` 添加外部工具，服务器名会自动加上插件前缀：
 
 ```json
 {
   "mcpServers": {
     "search": {
-      "command": "./bin/search-server"
+      "command": "node",
+      "args": ["server.js"]
     }
   }
 }
 ```
 
-相对 `command` 会按插件安装目录解析。Whale 还会给插件 MCP 服务器注入：
+启用后 Whale 会把它注册为 `my-first-plugin.search`。
 
-- `WHALE_PLUGIN_ROOT`
-- `WHALE_PLUGIN_DATA_DIR`
-- `WHALE_PLUGIN_PROJECT_DIR`
+插件 MCP 服务器可以访问三个环境变量：
 
-插件钩子使用 Whale hooks TOML 格式：
+- `WHALE_PLUGIN_ROOT` — 插件安装目录
+- `WHALE_PLUGIN_DATA_DIR` — 插件专属数据目录
+- `WHALE_PLUGIN_PROJECT_DIR` — 当前项目专属的插件数据目录
+
+#### 钩子（Hooks）
+
+`hooks.toml` 添加自动化钩子，启用后自动生效：
 
 ```toml
 [[hooks.SessionStart]]
-description = "Write startup marker"
-command = "printf started > marker.txt"
+description = "打一个启动标记"
+command = "echo 'plugin started' >> plugin.log"
 timeout = 5
 ```
 
-插件钩子默认从插件安装目录执行。禁用插件会移除它的技能、MCP 服务器和钩子。
-也可以在 `/hooks` 里单独禁用某个插件钩子。
+---
 
-### 插件命令
+### 开发迭代
 
-提示型命令是 Markdown 文件。文件名决定命令名：
+改了插件内容后，直接覆盖安装：
 
 ```text
-commands/explain.md -> /my-local-plugin:explain
-commands/review/code.md -> /my-local-plugin:review:code
+whale plugin install ./my-first-plugin
 ```
 
-示例：
+安装是原子的：即使拷贝过程出错也会自动回滚到旧版本，不会留下半残的插件。
+如果改了技能或规则，重新开始 TUI 会话就会生效。
+如果改了命令，在 TUI 里按 Ctrl+R 刷新即可。
+
+---
+
+### 命名规则
+
+- **插件 ID**：小写字母 + 数字 + `.` `-` `_`（下划线会自动转成连字符）
+- **命令和 agent 名字**：自动加 `<插件ID>:` 前缀
+- **文件路径决定名字**：`commands/review/code.md` → `/my-first-plugin:review:code`
+- **覆盖默认名**：在 frontmatter 里写 `name: xxx` 可以手动指定
+
+注意事项：
+- 插件 ID 不能和内置插件冲突（内置 ID 是保留的）
+- `whale-plugin.toml` 里的组件路径必须是相对路径，不能跳出插件目录
+- 路径指向不存在的目录不会报错，只会产生一个 warning（`whale plugin inspect` 可以看到）
+
+---
+
+### 完整最小示例
+
+以下是一个可以一字不差照抄的插件目录：
+
+```
+my-plugin/
+├── whale-plugin.toml
+├── commands/
+│   ├── explain.md
+│   └── commands.toml
+├── skills/
+│   └── greet/
+│       └── SKILL.md
+├── agents/
+│   └── reviewer.md
+└── rules/
+    └── convention.md
+```
+
+**whale-plugin.toml**
+
+```toml
+id = "my-plugin"
+name = "My Plugin"
+version = "0.1.0"
+description = "一个演示插件"
+```
+
+**commands/explain.md**
 
 ```markdown
 ---
-description: Explain a topic with plugin guidance.
-argument_hint: "<topic>"
+description: 解释一个概念
+argument_hint: "<概念>"
 read_only: true
 ---
-Explain {{args}} using this plugin's guidance.
+用我的插件视角解释 {{args}}
 ```
 
-Shell 型命令放在 `commands/commands.toml`：
+**commands/commands.toml**
 
 ```toml
 [[commands]]
-name = "fmt"
-description = "Format plugin code"
-command = "gofmt -w internal/plugins"
-timeout_ms = 30000
-class = "mutating"
+name = "ping"
+description = "测试插件是否在线"
+command = "echo pong"
 ```
 
-Shell 命令不会绕过 Whale 直接执行。它们会变成一个隐藏 turn，让模型按声明调用
-`shell_run`，因此仍然走正常权限和安全边界。
+**skills/greet/SKILL.md**
 
-### 插件 Agents 和 Rules
+```markdown
+# Greet
 
-`agents/*.md` 会变成 `spawn_subagent` 的 role：
+当用户说"你好"时，用活泼的语气打招呼，并介绍一下自己。
+```
+
+**agents/reviewer.md**
 
 ```markdown
 ---
-description: Review code using plugin conventions.
-capabilities: workspace.read, web.search
-max_tool_iters: 6
+description: 按插件惯例审查
+capabilities: workspace.read
 ---
-You are a reviewer for this plugin's conventions.
+你是 my-plugin 的代码审查专家。
 ```
 
-支持的 capability 包括：
+**rules/convention.md**
 
-- `workspace.read`
-- `workspace.write`
-- `shell.read`
-- `shell.write`
-- `web.search`
-- `web.fetch`
-- `mcp.read`
+```markdown
+本会话使用了 my-plugin 插件。
+```
 
-`workspace.write`、`shell.read`、`shell.write` 是 policy-gated：没有可用审批回调时会拒绝，
-有审批回调时走 Whale 的正常审批链路。
+安装并启用：
 
-`rules/*.md` 是简短、稳定的项目规则。启用插件后，Whale 会把这些规则作为启动上下文加入会话。
+```text
+whale plugin install ./my-plugin
+whale plugin enable my-plugin
+```
 
-## 为什么是插件，而不是核心功能？
+然后打开 TUI 就能看到：
 
-Whale 已经有两个扩展面：
-
-- MCP 添加外部工具
-- Skills 添加可复用的指令
-
-但两者都不足以实现记忆功能。记忆需要：
-
-- 注册工具（`remember`、`forget`、`recall_memory`）
-- 在会话启动时注入简短记忆索引
-- 拥有全局和项目级别的本地存储
-- 在 TUI 中暴露 `/memory` 管理
-- 与审批和文件系统边界交互
-- 保持可替换——用户以后可以选择其他记忆策略
-
-如果直接在核心中实现记忆，功能更快上线，但会让未来的插件边界更难做。
-如果立即做成完全外部第三方插件，又需要过早解决信任、安装、沙箱、
-版本控制和 UI 扩展等问题。
-
-折衷方案是官方内置插件：架构上是插件，随 Whale 一起发布。
-
-## 设计原则
-
-- 正常 TUI 启动路径不阻塞
-- 官方插件可替换，但第一个版本不要求外部安装
-- 插件 API 比内部 Go API 更窄
-- 核心掌管信任边界，插件不应自行决定文件系统或 shell 权限
-- 优先使用用户可以检查和编辑的文件格式
-- 启动上下文保持简短，详细信息通过工具提供
-
-## 当前限制
-
-- 没有插件市场或远程安装
-- 本地插件支持 `skills`、`commands`、`agents`、`rules`、`mcp`、`hooks`
-- Go 内部插件接口仍可继续演进；长期稳定边界优先是文件协议
+- `/my-plugin:explain` 斜杠命令
+- `/my-plugin:ping` 斜杠命令
+- `my-plugin:reviewer` 子智能体角色
+- `greet` 技能
+- 启动规则自动注入
