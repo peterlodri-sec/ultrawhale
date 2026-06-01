@@ -38,20 +38,9 @@ const (
 
 const (
 	DefaultHookOutputCapBytes = 256 * 1024
+	DefaultHookTimeout        = 600 * time.Second
+	MinimumHookTimeout        = time.Second
 )
-
-var defaultHookTimeouts = map[HookEvent]time.Duration{
-	HookEventPreToolUse:        5 * time.Second,
-	HookEventPermissionRequest: 5 * time.Second,
-	HookEventUserPromptSubmit:  5 * time.Second,
-	HookEventPostToolUse:       30 * time.Second,
-	HookEventPreCompact:        30 * time.Second,
-	HookEventPostCompact:       30 * time.Second,
-	HookEventSessionStart:      30 * time.Second,
-	HookEventSubagentStart:     30 * time.Second,
-	HookEventSubagentStop:      30 * time.Second,
-	HookEventStop:              30 * time.Second,
-}
 
 type HookLifecycleEventInfo struct {
 	Event       HookEvent
@@ -107,7 +96,7 @@ type HookListEntry struct {
 	Match       string          `json:"match,omitempty"`
 	Command     string          `json:"command,omitempty"`
 	Description string          `json:"description,omitempty"`
-	TimeoutMS   int             `json:"timeout_ms,omitempty"`
+	TimeoutSec  int             `json:"timeout_sec,omitempty"`
 	CWD         string          `json:"cwd,omitempty"`
 	Hash        string          `json:"hash,omitempty"`
 	Enabled     bool            `json:"enabled"`
@@ -120,7 +109,7 @@ type HookConfig struct {
 	Match       string `json:"match,omitempty" toml:"match,omitempty"`
 	Command     string `json:"command" toml:"command,omitempty"`
 	Description string `json:"description,omitempty" toml:"description,omitempty"`
-	TimeoutMS   int    `json:"timeout,omitempty" toml:"timeout,omitempty"`
+	TimeoutSec  int    `json:"timeout,omitempty" toml:"timeout,omitempty"`
 	CWD         string `json:"cwd,omitempty" toml:"cwd,omitempty"`
 }
 
@@ -298,15 +287,15 @@ type HookHandler struct {
 	Name        string
 	Source      string
 	Description string
-	TimeoutMS   int
+	TimeoutSec  int
 	Run         func(context.Context, HookPayload) HookResult
 }
 
 type HookSpawnInput struct {
-	Command   string
-	CWD       string
-	Stdin     string
-	TimeoutMS int
+	Command string
+	CWD     string
+	Stdin   string
+	Timeout time.Duration
 }
 
 type HookSpawnResult struct {
@@ -438,10 +427,10 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 			})
 		}
 		start := time.Now()
-		timeout := resolveTimeoutMS(h, payload.Event)
+		timeout := resolveHookTimeout(h.TimeoutSec)
 		cwd := resolveCWD(r.workspace, h.CWD)
 		stdin := payloadToJSONLine(payload)
-		res := r.spawner(ctx, HookSpawnInput{Command: h.Command, CWD: cwd, Stdin: stdin, TimeoutMS: timeout})
+		res := r.spawner(ctx, HookSpawnInput{Command: h.Command, CWD: cwd, Stdin: stdin, Timeout: timeout})
 		parsed := shellHookResult(payload.Event, res)
 		oc := HookOutcome{
 			Hook:       h,
@@ -465,7 +454,7 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 			oc.Stderr = res.SpawnErr.Error()
 		}
 		if oc.Stderr == "" && res.TimedOut {
-			oc.Stderr = fmt.Sprintf("hook timed out after %dms", timeout)
+			oc.Stderr = hookTimeoutMessage(timeout)
 		}
 		appendHookOutcome(&out, oc)
 		emitHookOutcome(observer, payload.Event, oc)
@@ -498,14 +487,11 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 				})
 			}
 			start := time.Now()
-			timeout := h.TimeoutMS
-			if timeout <= 0 {
-				timeout = int(defaultHookTimeouts[payload.Event] / time.Millisecond)
-			}
+			timeout := resolveHookTimeout(h.TimeoutSec)
 			runCtx := ctx
 			cancel := func() {}
 			if timeout > 0 {
-				runCtx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Millisecond)
+				runCtx, cancel = context.WithTimeout(ctx, timeout)
 			}
 			res := runHookHandlerWithTimeout(runCtx, h, payload, timeout)
 			cancel()
@@ -591,7 +577,7 @@ func newHookRunID(event HookEvent, typ string, ordinal int) string {
 	return fmt.Sprintf("%s-%s-%d-%d", event, typ, ordinal, time.Now().UnixNano())
 }
 
-func runHookHandlerWithTimeout(ctx context.Context, h HookHandler, payload HookPayload, timeoutMS int) HookResult {
+func runHookHandlerWithTimeout(ctx context.Context, h HookHandler, payload HookPayload, timeout time.Duration) HookResult {
 	ch := make(chan HookResult, 1)
 	go func() {
 		ch <- h.Run(ctx, payload)
@@ -601,7 +587,7 @@ func runHookHandlerWithTimeout(ctx context.Context, h HookHandler, payload HookP
 		return res
 	case <-ctx.Done():
 		if ctx.Err() == context.DeadlineExceeded {
-			return HookResult{Decision: HookDecisionTimeout, Message: fmt.Sprintf("hook timed out after %dms", timeoutMS)}
+			return HookResult{Decision: HookDecisionTimeout, Message: hookTimeoutMessage(timeout)}
 		}
 		return HookResult{Decision: HookDecisionError, Message: ctx.Err().Error()}
 	}
@@ -778,7 +764,7 @@ func hookEntryFromResolved(h ResolvedHook, states HookStates, ordinal int) HookL
 		Match:       strings.TrimSpace(h.Match),
 		Command:     strings.TrimSpace(h.Command),
 		Description: strings.TrimSpace(h.Description),
-		TimeoutMS:   resolveTimeoutMS(h, h.Event),
+		TimeoutSec:  hookTimeoutSeconds(resolveHookTimeout(h.TimeoutSec)),
 		CWD:         strings.TrimSpace(h.CWD),
 		Enabled:     true,
 	}
@@ -796,13 +782,11 @@ func hookEntryFromHandler(h HookHandler, states HookStates, ordinal int) HookLis
 		Source:      core.FirstNonEmpty(strings.TrimSpace(h.Source), "plugin"),
 		Match:       strings.TrimSpace(h.Match),
 		Description: strings.TrimSpace(h.Description),
-		TimeoutMS:   h.TimeoutMS,
+		TimeoutSec:  h.TimeoutSec,
 		Enabled:     true,
 		Managed:     true,
 	}
-	if entry.TimeoutMS <= 0 {
-		entry.TimeoutMS = int(defaultHookTimeouts[h.Event] / time.Millisecond)
-	}
+	entry.TimeoutSec = hookTimeoutSeconds(resolveHookTimeout(entry.TimeoutSec))
 	entry.Hash = hookContentHash(entry)
 	entry.Key = hookStableKey(entry, ordinal)
 	entry.Trust, entry.Enabled, entry.Active = hookTrustForEntry(entry, states)
@@ -843,7 +827,7 @@ func hookContentHash(entry HookListEntry) string {
 		entry.Command,
 		entry.Description,
 		entry.CWD,
-		fmt.Sprintf("%d", entry.TimeoutMS),
+		fmt.Sprintf("%d", entry.TimeoutSec),
 	}, "\x00")
 	sum := sha256.Sum256([]byte(body))
 	return hex.EncodeToString(sum[:])
@@ -1036,14 +1020,26 @@ func joinNonEmpty(a, b string) string {
 	return a + "\n" + b
 }
 
-func resolveTimeoutMS(h ResolvedHook, event HookEvent) int {
-	if h.TimeoutMS > 0 {
-		return h.TimeoutMS
+func resolveHookTimeout(timeoutSec int) time.Duration {
+	if timeoutSec <= 0 {
+		return DefaultHookTimeout
 	}
-	if d, ok := defaultHookTimeouts[event]; ok {
-		return int(d / time.Millisecond)
+	timeout := time.Duration(timeoutSec) * time.Second
+	if timeout < MinimumHookTimeout {
+		return MinimumHookTimeout
 	}
-	return int((10 * time.Second) / time.Millisecond)
+	return timeout
+}
+
+func hookTimeoutSeconds(timeout time.Duration) int {
+	if timeout <= 0 {
+		return 0
+	}
+	return int(timeout.Round(time.Second) / time.Second)
+}
+
+func hookTimeoutMessage(timeout time.Duration) string {
+	return fmt.Sprintf("hook timed out after %s", timeout.Truncate(time.Millisecond))
 }
 
 func resolveCWD(workspaceRoot, hookCWD string) string {
@@ -1075,15 +1071,9 @@ func isBlockingEvent(event HookEvent) bool {
 
 func decideHookOutcome(event HookEvent, res HookSpawnResult) HookDecision {
 	if res.SpawnErr != nil {
-		if isBlockingEvent(event) {
-			return HookDecisionBlock
-		}
 		return HookDecisionError
 	}
 	if res.TimedOut {
-		if isBlockingEvent(event) {
-			return HookDecisionBlock
-		}
 		return HookDecisionTimeout
 	}
 	if res.ExitCode == 0 {
@@ -1122,8 +1112,8 @@ func (c *cappedBuffer) Write(p []byte) (int, error) {
 func defaultHookSpawner(parent context.Context, in HookSpawnInput) HookSpawnResult {
 	ctx := parent
 	cancel := func() {}
-	if in.TimeoutMS > 0 {
-		ctx, cancel = context.WithTimeout(parent, time.Duration(in.TimeoutMS)*time.Millisecond)
+	if in.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(parent, in.Timeout)
 	}
 	defer cancel()
 

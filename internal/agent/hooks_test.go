@@ -219,6 +219,54 @@ func TestLoadHooksProjectThenLocalThenGlobalOrder(t *testing.T) {
 	}
 }
 
+func TestHookConfigTimeoutIsSeconds(t *testing.T) {
+	root := t.TempDir()
+	ws := filepath.Join(root, "ws")
+	if err := os.MkdirAll(filepath.Join(ws, ".whale"), 0o755); err != nil {
+		t.Fatalf("mkdir workspace hooks failed: %v", err)
+	}
+	cfg := "[[hooks.PreToolUse]]\ncommand = \"echo project\"\ntimeout = 2\n"
+	if err := os.WriteFile(filepath.Join(ws, ".whale", "config.toml"), []byte(cfg), 0o600); err != nil {
+		t.Fatalf("write project config failed: %v", err)
+	}
+	hooks, _, err := LoadHooks(ws, "")
+	if err != nil {
+		t.Fatalf("load hooks failed: %v", err)
+	}
+	if len(hooks) != 1 {
+		t.Fatalf("expected 1 hook, got %d", len(hooks))
+	}
+	r := NewHookRunner(hooks, ws)
+	r.spawner = func(_ context.Context, in HookSpawnInput) HookSpawnResult {
+		if in.Timeout != 2*time.Second {
+			t.Fatalf("timeout = %s, want 2s", in.Timeout)
+		}
+		return HookSpawnResult{ExitCode: 0}
+	}
+	report := r.RunHook(context.Background(), HookPayload{Event: HookEventPreToolUse, ToolName: "bash"})
+	if report.Blocked {
+		t.Fatalf("unexpected block: %+v", report)
+	}
+}
+
+func TestHookDefaultTimeoutMatchesCodexCommandDefault(t *testing.T) {
+	r := NewHookRunner([]ResolvedHook{{HookConfig: HookConfig{Command: "echo default"}, Event: HookEventSessionStart}}, ".")
+	r.spawner = func(_ context.Context, in HookSpawnInput) HookSpawnResult {
+		if in.Timeout != 600*time.Second {
+			t.Fatalf("timeout = %s, want 600s", in.Timeout)
+		}
+		return HookSpawnResult{ExitCode: 0}
+	}
+	report := r.RunHook(context.Background(), NewSessionStartPayload("s1", "."))
+	if report.Blocked {
+		t.Fatalf("unexpected block: %+v", report)
+	}
+	entries := r.ListHooks()
+	if len(entries) != 1 || entries[0].TimeoutSec != 600 {
+		t.Fatalf("entry timeout = %+v, want 600s", entries)
+	}
+}
+
 func TestHookRunnerListHooksMarksConfigHooksForReview(t *testing.T) {
 	r := NewHookRunnerWithState([]ResolvedHook{{
 		HookConfig: HookConfig{Command: "echo project", Description: "project hook"},
@@ -343,8 +391,8 @@ func TestHookRunnerStructuredJSONPassDoesNotOverrideTimeout(t *testing.T) {
 	if !report.Blocked {
 		t.Fatalf("timeout should fail closed even with partial JSON pass: %+v", report)
 	}
-	if got := report.Outcomes[0].Decision; got != HookDecisionBlock {
-		t.Fatalf("decision = %q, want block", got)
+	if got := report.Outcomes[0].Decision; got != HookDecisionTimeout {
+		t.Fatalf("decision = %q, want timeout", got)
 	}
 	if got := report.Outcomes[0].Message; got != "partial allow" {
 		t.Fatalf("message = %q", got)
@@ -452,10 +500,10 @@ func TestHookRunnerPluginHandlerTimeoutDoesNotWaitForReturn(t *testing.T) {
 	entered := make(chan struct{})
 	release := make(chan struct{})
 	r.AddHandlers(HookHandler{
-		Event:     HookEventPreToolUse,
-		Name:      "slow-plugin-hook",
-		Source:    "plugin:test",
-		TimeoutMS: 10,
+		Event:      HookEventPreToolUse,
+		Name:       "slow-plugin-hook",
+		Source:     "plugin:test",
+		TimeoutSec: 1,
 		Run: func(context.Context, HookPayload) HookResult {
 			close(entered)
 			<-release
@@ -467,7 +515,7 @@ func TestHookRunnerPluginHandlerTimeoutDoesNotWaitForReturn(t *testing.T) {
 	elapsed := time.Since(start)
 	close(release)
 	<-entered
-	if elapsed > 250*time.Millisecond {
+	if elapsed > 1500*time.Millisecond {
 		t.Fatalf("plugin hook timeout waited for handler return: %s", elapsed)
 	}
 	if len(report.Outcomes) != 1 || report.Outcomes[0].Decision != HookDecisionTimeout {

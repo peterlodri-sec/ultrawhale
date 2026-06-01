@@ -77,6 +77,10 @@ Config files are merged: `defaults < global < project shared < project local < C
 tools = ["web_search", "web_fetch"]
 ```
 
+### Add Hooks
+
+Need to run scripts when a session starts, when the user submits a prompt, before or after tools run, or before Whale ends a turn? See [Hooks](hooks.en.md).
+
 ---
 
 ## Reference
@@ -129,14 +133,6 @@ enabled = []                           # force-enable even if project disables
 disabled = []                          # plugins to disable
 enabled = []                           # force-enable
 
-[[hooks.PreToolUse]]
-match = "shell_run"                    # optional; only PreToolUse/PostToolUse match by tool name
-command = ""                           # shell command before matching tool calls
-
-[[hooks.PostToolUse]]
-match = "shell_run"
-command = ""                           # shell command after matching tool calls
-
 [logging]
 level = "info"                         # debug | info | warn | error
 ```
@@ -149,27 +145,6 @@ level = "info"                         # debug | info | warn | error
 | `WHALE_HOME` | Global data directory (`~/.whale`) |
 | `HTTP_PROXY` / `HTTPS_PROXY` | Proxy settings in config |
 | `WHALE_MCP_CONFIG` | MCP config file path |
-
-### Shell hooks
-
-Hooks run shell commands on lifecycle events:
-
-```toml
-[[hooks.PreToolUse]]
-match = "shell_run"
-command = "echo 'about to run a tool call'"
-
-[[hooks.PostToolUse]]
-match = "shell_run"
-command = "echo 'tool finished'"
-
-[[hooks.UserPromptSubmit]]
-command = "echo '{\"decision\":\"pass\"}'"
-```
-
-Supported events are `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, and `Stop`. All events run at runtime and surface hook started/completed status in the TUI.
-
-Hooks can return JSON on stdout with fields like `decision`, `reason`, `updated_input`, or `additional_context` to influence Whale's behavior. `PreToolUse`, `PermissionRequest`, and `UserPromptSubmit` can block the next action; `PreCompact` `additional_context` is added to the compact summary prompt. Project hooks are untrusted until reviewed; run `/hooks` in the TUI to inspect installed hooks and `/hooks trust all`, `/hooks trust <key>`, `/hooks disable <key>`, or `/hooks enable <key>` to manage workspace hook state.
 
 ### Worktrees
 

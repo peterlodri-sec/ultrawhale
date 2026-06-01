@@ -316,8 +316,8 @@ func renderHookRow(hook protocol.HookEntry, selected bool, width int) []string {
 	if hook.Command != "" {
 		details = append(details, "command="+hook.Command)
 	}
-	if hook.TimeoutMS > 0 {
-		details = append(details, fmt.Sprintf("timeout=%dms", hook.TimeoutMS))
+	if hook.TimeoutSec > 0 {
+		details = append(details, fmt.Sprintf("timeout=%ds", hook.TimeoutSec))
 	}
 	out := []string{head}
 	detailWidth := width - 8

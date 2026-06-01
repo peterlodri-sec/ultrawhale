@@ -245,7 +245,7 @@ func protocolHooks(entries []agent.HookListEntry) *protocol.HooksManagerState {
 			Match:       entry.Match,
 			Command:     entry.Command,
 			Description: entry.Description,
-			TimeoutMS:   entry.TimeoutMS,
+			TimeoutSec:  entry.TimeoutSec,
 			CWD:         entry.CWD,
 			Hash:        entry.Hash,
 			Enabled:     entry.Enabled,
