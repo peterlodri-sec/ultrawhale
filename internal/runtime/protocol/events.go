@@ -117,7 +117,7 @@ type HookEntry struct {
 	Match       string `json:"match,omitempty"`
 	Command     string `json:"command,omitempty"`
 	Description string `json:"description,omitempty"`
-	TimeoutMS   int    `json:"timeout_ms,omitempty"`
+	TimeoutSec  int    `json:"timeout_sec,omitempty"`
 	CWD         string `json:"cwd,omitempty"`
 	Hash        string `json:"hash,omitempty"`
 	Enabled     bool   `json:"enabled"`

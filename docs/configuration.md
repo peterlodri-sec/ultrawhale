@@ -77,6 +77,10 @@ model = "deepseek-reasoner"
 tools = ["web_search", "web_fetch"]
 ```
 
+### 接入 Hooks
+
+需要在会话开始、用户提交 prompt、工具执行前后或结束前运行脚本？见 [Hooks 文档](hooks.md)。
+
 ---
 
 ## 参考
@@ -129,14 +133,6 @@ enabled = []                           # 强制启用的技能
 disabled = []                          # 禁用的插件
 enabled = []                           # 强制启用的插件
 
-[[hooks.PreToolUse]]
-match = "shell_run"                    # 可选；仅 PreToolUse/PostToolUse 按工具名匹配
-command = ""                           # 每次匹配工具调用前执行的 shell 命令
-
-[[hooks.PostToolUse]]
-match = "shell_run"
-command = ""                           # 每次匹配工具调用后执行的 shell 命令
-
 [logging]
 level = "info"                         # debug | info | warn | error
 ```
@@ -149,27 +145,6 @@ level = "info"                         # debug | info | warn | error
 | `WHALE_HOME` | 全局数据目录（`~/.whale`） |
 | `HTTP_PROXY` / `HTTPS_PROXY` | 配置中的代理设置 |
 | `WHALE_MCP_CONFIG` | MCP 配置文件路径 |
-
-### Shell 钩子
-
-在生命周期事件上执行 shell 命令：
-
-```toml
-[[hooks.PreToolUse]]
-match = "shell_run"
-command = "echo '即将执行工具调用'"
-
-[[hooks.PostToolUse]]
-match = "shell_run"
-command = "echo '工具执行完毕'"
-
-[[hooks.UserPromptSubmit]]
-command = "echo '{\"decision\":\"pass\"}'"
-```
-
-支持的事件包括 `PreToolUse`、`PermissionRequest`、`PostToolUse`、`PreCompact`、`PostCompact`、`SessionStart`、`UserPromptSubmit`、`SubagentStart`、`SubagentStop` 和 `Stop`，运行时都会执行并在 TUI 中显示 hook started/completed 状态。
-
-钩子可以通过 stdout 返回 JSON，包含 `decision`、`reason`、`updated_input`、`additional_context` 等字段来影响 Whale 的行为。`PreToolUse`、`PermissionRequest` 和 `UserPromptSubmit` 可以阻止后续动作；`PreCompact` 的 `additional_context` 会加入本次 compact summary prompt。项目配置中的 hooks 默认需要信任后才会运行；在 TUI 中执行 `/hooks` 查看清单和 review 状态，执行 `/hooks trust all`、`/hooks trust <key>`、`/hooks disable <key>` 或 `/hooks enable <key>` 管理当前工作区的 hook 状态。
 
 ### 工作目录（Worktree）
 
