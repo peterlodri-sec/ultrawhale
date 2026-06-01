@@ -103,6 +103,10 @@ func (m *model) handleServiceEvent(ev protocol.Event) (tea.Cmd, bool, bool) {
 		m.handleToolCallEvent(ev)
 	case protocol.EventToolResult:
 		return m.handleToolResultEvent(ev), false, false
+	case protocol.EventHookStarted:
+		m.handleHookStartedEvent(ev)
+	case protocol.EventHookCompleted:
+		m.handleHookCompletedEvent(ev)
 	case protocol.EventTaskStarted:
 		m.handleTaskStartedEvent(ev)
 	case protocol.EventTaskProgress:

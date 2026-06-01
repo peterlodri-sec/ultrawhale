@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,78 @@ func TestHookRunnerPostToolWarnByExitCode2(t *testing.T) {
 	}
 	if len(report.Outcomes) != 1 || report.Outcomes[0].Decision != HookDecisionWarn {
 		t.Fatalf("unexpected outcomes: %+v", report.Outcomes)
+	}
+}
+
+func TestHookRunnerObserverSeesStartedThenCompleted(t *testing.T) {
+	r := NewHookRunner([]ResolvedHook{{HookConfig: HookConfig{Command: "ok", Description: "test hook"}, Event: HookEventSessionStart}}, ".")
+	r.spawner = func(_ context.Context, _ HookSpawnInput) HookSpawnResult {
+		return HookSpawnResult{ExitCode: 0, Stdout: "done"}
+	}
+	var stages []HookRunStage
+	var infos []HookEventInfo
+	report := r.RunHookWithObserver(context.Background(), NewSessionStartPayload("s1", "."), func(stage HookRunStage, info HookEventInfo) {
+		stages = append(stages, stage)
+		infos = append(infos, info)
+	})
+	if report.Blocked {
+		t.Fatal("session start hook should not block")
+	}
+	if len(stages) != 2 || stages[0] != HookRunStarted || stages[1] != HookRunCompleted {
+		t.Fatalf("unexpected lifecycle stages: %+v", stages)
+	}
+	if infos[0].ID == "" || infos[0].ID != infos[1].ID || infos[0].Event != HookEventSessionStart || infos[0].Name != "test hook" {
+		t.Fatalf("unexpected lifecycle info: %+v", infos)
+	}
+}
+
+func TestHookRunnerObserverEmitsSingleTerminalStageForNonPassDecisions(t *testing.T) {
+	tests := []struct {
+		name   string
+		event  HookEvent
+		result HookSpawnResult
+		want   HookRunStage
+	}{
+		{
+			name:   "block",
+			event:  HookEventPreToolUse,
+			result: HookSpawnResult{ExitCode: 2, Stderr: "blocked"},
+			want:   HookRunBlocked,
+		},
+		{
+			name:   "warn",
+			event:  HookEventPostToolUse,
+			result: HookSpawnResult{ExitCode: 2, Stderr: "warned"},
+			want:   HookRunWarned,
+		},
+		{
+			name:   "error",
+			event:  HookEventPostToolUse,
+			result: HookSpawnResult{ExitCode: -1, SpawnErr: errors.New("spawn failed")},
+			want:   HookRunFailed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewHookRunner([]ResolvedHook{{HookConfig: HookConfig{Command: tt.name}, Event: tt.event}}, ".")
+			r.spawner = func(_ context.Context, _ HookSpawnInput) HookSpawnResult {
+				return tt.result
+			}
+			var stages []HookRunStage
+			r.RunHookWithObserver(context.Background(), HookPayload{Event: tt.event, ToolName: "bash"}, func(stage HookRunStage, _ HookEventInfo) {
+				stages = append(stages, stage)
+			})
+			want := []HookRunStage{HookRunStarted, tt.want}
+			if len(stages) != len(want) {
+				t.Fatalf("unexpected lifecycle stages: got %+v want %+v", stages, want)
+			}
+			for i := range want {
+				if stages[i] != want[i] {
+					t.Fatalf("unexpected lifecycle stages: got %+v want %+v", stages, want)
+				}
+			}
+		})
 	}
 }
 
@@ -143,6 +216,58 @@ func TestLoadHooksProjectThenLocalThenGlobalOrder(t *testing.T) {
 	}
 	if hooks[0].Command != "echo project" || hooks[1].Command != "echo project-local" || hooks[2].Command != "echo global" {
 		t.Fatalf("unexpected order: %+v", hooks)
+	}
+}
+
+func TestHookRunnerListHooksMarksConfigHooksForReview(t *testing.T) {
+	r := NewHookRunnerWithState([]ResolvedHook{{
+		HookConfig: HookConfig{Command: "echo project", Description: "project hook"},
+		Event:      HookEventPreToolUse,
+		Source:     ".whale/config.toml",
+	}}, ".", HookStates{})
+	r.AddHandlers(HookHandler{
+		Event:  HookEventStop,
+		Name:   "managed.stop",
+		Source: "plugin:test",
+		Run: func(context.Context, HookPayload) HookResult {
+			return HookResult{Decision: HookDecisionPass}
+		},
+	})
+	entries := r.ListHooks()
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 hooks, got %+v", entries)
+	}
+	if entries[0].Trust != HookTrustUntrusted || entries[0].Active {
+		t.Fatalf("config hook should need review and be inactive: %+v", entries[0])
+	}
+	if entries[1].Trust != HookTrustManaged || !entries[1].Active {
+		t.Fatalf("plugin hook should be managed and active: %+v", entries[1])
+	}
+}
+
+func TestTrustedHookStatesActivateCurrentHashAndBlockModifiedHash(t *testing.T) {
+	r := NewHookRunnerWithState([]ResolvedHook{{
+		HookConfig: HookConfig{Command: "echo one"},
+		Event:      HookEventPreToolUse,
+		Source:     "source",
+	}}, ".", HookStates{})
+	entries := r.ListHooks()
+	states := TrustHookStates(entries, nil, nil)
+	trusted := NewHookRunnerWithState([]ResolvedHook{{
+		HookConfig: HookConfig{Command: "echo one"},
+		Event:      HookEventPreToolUse,
+		Source:     "source",
+	}}, ".", states).ListHooks()[0]
+	if trusted.Trust != HookTrustTrusted || !trusted.Active {
+		t.Fatalf("trusted current hook should be active: %+v", trusted)
+	}
+	modified := NewHookRunnerWithState([]ResolvedHook{{
+		HookConfig: HookConfig{Command: "echo two"},
+		Event:      HookEventPreToolUse,
+		Source:     "source",
+	}}, ".", states).ListHooks()[0]
+	if modified.Trust != HookTrustModified || modified.Active {
+		t.Fatalf("modified hook should require review: %+v", modified)
 	}
 }
 

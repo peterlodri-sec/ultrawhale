@@ -105,6 +105,7 @@ type App struct {
 	taskTools             []core.Tool
 	workflowTools         []core.Tool
 	hooks                 []agent.ResolvedHook
+	hookStates            agent.HookStates
 	hookRunner            *agent.HookRunner
 	hookSources           []string
 	currentMode           session.Mode

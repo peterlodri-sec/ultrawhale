@@ -40,6 +40,7 @@ func DefaultSlashCommands() []SlashCommandSpec {
 		}},
 		{Name: "/skills", Description: "Show available skills", AutoRun: true},
 		{Name: "/plugins", Description: "Manage plugins", AutoRun: true},
+		{Name: "/hooks", Description: "View and trust lifecycle hooks", ArgumentHint: "[trust all|trust <hook-key>...]", AutoRun: true},
 		{Name: "/memory", Description: "Manage memory entries", ArgumentHint: "[list|path|show <scope/name>|forget <scope/name>]", Options: []SlashCommandOption{
 			{Token: "list", Description: "List remembered entries", AutoRun: true},
 			{Token: "path", Description: "Show memory storage path", AutoRun: true},

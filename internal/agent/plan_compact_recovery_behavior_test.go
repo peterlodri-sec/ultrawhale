@@ -227,6 +227,31 @@ func TestCompactSessionRewritesToSummaryOnly(t *testing.T) {
 	}
 }
 
+func TestPreCompactHookContextIsIncludedInSummaryPrompt(t *testing.T) {
+	store := NewInMemoryStore()
+	_, _ = store.Create(context.Background(), Message{SessionID: "s-compact-hook", Role: RoleUser, Text: "keep this"})
+	prov := &autoCompactProvider{}
+	runner := NewHookRunner(nil, ".")
+	runner.AddHandlers(HookHandler{
+		Event: HookEventPreCompact,
+		Name:  "compact context",
+		Run: func(context.Context, HookPayload) HookResult {
+			return HookResult{Decision: HookDecisionPass, AdditionalContext: "remember hook context"}
+		},
+	})
+	a := NewAgentWithRegistry(prov, store, NewToolRegistry(nil), WithHookRunner(runner))
+	if _, err := a.CompactSession(context.Background(), "s-compact-hook"); err != nil {
+		t.Fatalf("compact failed: %v", err)
+	}
+	if len(prov.histories) == 0 {
+		t.Fatal("expected summary provider call")
+	}
+	lastHistory := prov.histories[0]
+	if len(lastHistory) == 0 || !strings.Contains(lastHistory[len(lastHistory)-1].Text, "remember hook context") {
+		t.Fatalf("expected PreCompact context in summary prompt, got %+v", lastHistory)
+	}
+}
+
 func TestPlanModeAllowsReadOnlyToolsWithoutChecklistPlan(t *testing.T) {
 	store := NewInMemoryStore()
 	a := NewAgentWithRegistry(

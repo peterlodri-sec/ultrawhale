@@ -233,6 +233,38 @@ func (m *model) handleToolResultEvent(ev protocol.Event) tea.Cmd {
 	return nil
 }
 
+func (m *model) handleHookStartedEvent(ev protocol.Event) {
+	m.clearProviderRetryStatus()
+	m.status = ev.Text
+	m.addLog(logEntry{Kind: "hook_started", Source: hookLogSource(ev), Summary: ev.Text, Raw: fmt.Sprintf("%+v", ev.Hook)})
+}
+
+func (m *model) handleHookCompletedEvent(ev protocol.Event) {
+	m.clearProviderRetryStatus()
+	m.status = ev.Text
+	if shouldAppendHookNotice(ev) {
+		m.appendNotice(ev.Text)
+	}
+	m.addLog(logEntry{Kind: "hook_completed", Source: hookLogSource(ev), Summary: ev.Text, Raw: fmt.Sprintf("%+v", ev.Hook)})
+}
+
+func shouldAppendHookNotice(ev protocol.Event) bool {
+	if ev.Hook == nil {
+		return strings.TrimSpace(ev.Text) != ""
+	}
+	return ev.Hook.Status == "blocked" || ev.Hook.Status == "failed" || ev.Hook.Status == "warning" || strings.TrimSpace(ev.Hook.Message) != ""
+}
+
+func hookLogSource(ev protocol.Event) string {
+	if ev.Hook == nil {
+		return "hook"
+	}
+	if strings.TrimSpace(ev.Hook.Event) != "" {
+		return ev.Hook.Event
+	}
+	return "hook"
+}
+
 func (m *model) handleTaskStartedEvent(ev protocol.Event) {
 	m.clearProviderRetryStatus()
 	m.status = ev.Text
@@ -458,6 +490,7 @@ func (m *model) handleClearScreenEvent() tea.Cmd {
 }
 
 func (m *model) handleSessionHydratedEvent(ev protocol.Event) tea.Cmd {
+	preserveHooksStartupReview := m.mode == modeHooksStartupReview || (m.mode == modeHooksManager && m.hooksManager.startupReviewOpen)
 	m.mode = modeChat
 	m.resumeMenu = false
 	isRewind := metadataBool(ev.Metadata["rewind"])
@@ -504,6 +537,9 @@ func (m *model) handleSessionHydratedEvent(ev protocol.Event) tea.Cmd {
 		*m.startupHeaderOnce = true
 	}
 	m.status = "ready"
+	if preserveHooksStartupReview {
+		m.mode = modeHooksStartupReview
+	}
 	return eventCmd
 }
 

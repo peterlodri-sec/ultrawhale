@@ -44,7 +44,7 @@ func (a *App) SetPluginEnabled(id string, enabled bool) (string, error) {
 		return "", err
 	}
 	pm := plugins.NewManager(plugins.Context{DataDir: a.cfg.DataDir, WorkspaceRoot: a.workspaceRoot}, a.cfg.PluginsDisabled)
-	hookRunner := agent.NewHookRunner(a.hooks, a.workspaceRoot)
+	hookRunner := agent.NewHookRunnerWithState(a.hooks, a.workspaceRoot, a.hookStates)
 	hookRunner.AddHandlers(pm.Hooks()...)
 	a.toolMu.Lock()
 	a.pluginManager = pm
