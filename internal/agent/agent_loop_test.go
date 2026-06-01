@@ -87,6 +87,35 @@ func TestAgentMaxToolCallsDropsExcessAndForcesSummary(t *testing.T) {
 	}
 }
 
+func TestAgentMaxTurnsForcesSummaryAfterToolRound(t *testing.T) {
+	store := NewInMemoryStore()
+	prov := &mockProvider{}
+	a := NewAgent(prov, store, []Tool{echoTool{}})
+	WithMaxTurns(1)(a)
+
+	events, err := a.RunStream(context.Background(), "s-turn-cap", "go")
+	if err != nil {
+		t.Fatalf("RunStream: %v", err)
+	}
+	var forced bool
+	for ev := range events {
+		switch ev.Type {
+		case AgentEventTypeForcedSummaryStarted:
+			if ev.Content == "turn cap reached" {
+				forced = true
+			}
+		case AgentEventTypeError:
+			t.Fatalf("unexpected error: %v", ev.Err)
+		}
+	}
+	if !forced {
+		t.Fatal("expected forced summary when max turns reached after tool round")
+	}
+	if prov.calls != 2 {
+		t.Fatalf("provider calls = %d, want 2 including forced summary", prov.calls)
+	}
+}
+
 func TestAgentLoopWithToolRoundTrip(t *testing.T) {
 	store := NewInMemoryStore()
 	prov := &mockProvider{}

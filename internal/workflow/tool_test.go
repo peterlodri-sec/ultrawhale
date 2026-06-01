@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -48,6 +49,16 @@ func TestWorkflowToolDescriptionPrefersNamedCatalogWorkflows(t *testing.T) {
 	desc := NewTool(nil).Description()
 	for _, want := range []string{
 		"names/describes an available workflow",
+		"create, generate, or write a new workflow",
+		"do not inspect existing workflow directories or load skills first",
+		"set saveAs",
+		"Claude Code compatibility",
+		"capability-defined workers",
+		"Use phase('Name') only as a statement",
+		"Await async workflow primitives before reading their results",
+		"Use agent(prompt, { label, phase, schema",
+		"Do not set opts.model",
+		"returning a final JSON-serializable result",
 		"Do not first inspect files",
 		"include args only when the user supplied useful input",
 		"Do not ask for a missing args value",
@@ -57,6 +68,51 @@ func TestWorkflowToolDescriptionPrefersNamedCatalogWorkflows(t *testing.T) {
 		if !strings.Contains(desc, want) {
 			t.Fatalf("description missing %q:\n%s", want, desc)
 		}
+	}
+}
+
+func TestWorkflowToolSavesGeneratedWorkflowBeforeLaunch(t *testing.T) {
+	root := t.TempDir()
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.Library = NewLibraryWithRoots([]LibraryRoot{{Path: root, Source: "project", Rank: 0}})
+	tool := NewTool(runner, func() string { return "parent-session" })
+	script := `export const meta = { name: 'generated-review', description: 'generated review' }
+log('saved ' + args.topic)
+`
+	b, err := json.Marshal(map[string]any{
+		"script": script,
+		"saveAs": "generated-review",
+		"args":   map[string]any{"topic": "ok"},
+	})
+	if err != nil {
+		t.Fatalf("marshal input: %v", err)
+	}
+
+	res, err := tool.Run(context.Background(), core.ToolCall{ID: "tool-1", Name: "workflow", Input: string(b)})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected tool error: %s", res.Content)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok || !env.Success {
+		t.Fatalf("unexpected envelope: %s", res.Content)
+	}
+	wantPath := filepath.Join(root, "generated-review.js")
+	if env.Data["scriptPath"] != wantPath {
+		t.Fatalf("scriptPath = %v, want %s", env.Data["scriptPath"], wantPath)
+	}
+	runID := RunID(env.Data["runId"].(string))
+	waitRunStatus(t, store, runID, RunStatusCompleted)
+	events, err := store.List(context.Background(), runID)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if !hasLog(events, "saved ok") {
+		t.Fatalf("expected saved workflow log, events=%+v", events)
 	}
 }
 

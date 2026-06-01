@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/usewhale/whale/internal/core"
@@ -28,11 +29,18 @@ func (t Tool) Description() string {
 		"Launch a restricted Whale workflow script asynchronously for decomposable multi-agent work such as fan-out research, repository inspection, or multi-perspective review.",
 		"Use this when the user explicitly asks for a workflow, fan-out, multi-agent orchestration, or names/describes an available workflow from the system prompt catalog.",
 		"When the user clearly asks to run a named workflow, launch it directly. Do not first inspect files, search the workspace, or block launch because you think an expected input might be missing unless the user asked for a preflight check.",
-		"Use ordinary tools instead for a single quick read, edit, or answer.",
+		"When the user clearly asks to create, generate, or write a new workflow, do not inspect existing workflow directories or load skills first. Generate a Claude Code-compatible raw JavaScript workflow script, pass it as script, and set saveAs to the same kebab-case value as meta.name. The tool will save it under the project .whale/workflows directory before launching it.",
+		"Use ordinary tools instead for a single quick read, edit, shell-dependent task, or answer.",
 		"When an available named workflow fits, pass name instead of generating a new script; include args only when the user supplied useful input or the workflow contract clearly requires it. Do not ask for a missing args value merely because the args field exists. Use scriptPath for an existing file; generate script only for an explicit ad-hoc workflow with no matching named workflow.",
-		"Workflow scripts are not Node scripts: export const meta must be a pure literal first statement; meta/args/budget/phase/log/agent/workflow/parallel/pipeline are runtime globals; host APIs like require/process/fetch are unavailable.",
+		"Workflow scripts are not Node scripts: export const meta must be a pure literal first statement; phases must be objects like { title: 'Review', detail: '...' }; meta/args/budget/phase/log/agent/workflow/parallel/pipeline are runtime globals; host APIs like require/process/fetch/Date.now/Math.random/new Date are unavailable.",
+		"Use phase('Name') only as a statement. Do not call phase('Name', async () => ...); phase() is not a wrapper and returns nothing.",
+		"Await async workflow primitives before reading their results: const result = await agent(...), await parallel(...), await pipeline(...), or await workflow(...). Inside parallel(), thunks may return agent(...).",
+		"Use agent(prompt, { label, phase, schema, max_tool_calls?, agent?, tools?, disallowedTools?, effort?, permissionMode?, maxTurns? }). The first argument is the full prompt; put labels in opts.label. Do not pass opts.system, opts.prompt, or opts.structured. Do not set opts.model unless the user explicitly asks for a provider-supported model; otherwise let Whale use the current model.",
+		"For Claude Code compatibility, do not use Whale-only workflow APIs or fields in generated scripts. Use standard JSON Schema for structured output; enum-only schema properties must also include type: \"string\".",
+		"End generated workflows by returning a final JSON-serializable result, usually the synthesis/report object.",
 		"Use parallel() with thunks, not promises: () => agent(...). Give every agent() a short unique label, include enough context in each prompt, use JSON Schema for structured output, and add a synthesis/verification agent when combining branches.",
-		"File, shell, and network effects must happen through agent() leaves. Returns an async launch receipt; tell the user only that /workflows opens the workflow panel. Do not mention /workflows with run ids or hidden subcommands.",
+		"Workflow agent leaves are capability-defined workers. Use agent definitions and opts.tools/opts.disallowedTools to state required capabilities. Supported capabilities include workspace.read, workspace.write, shell.read, shell.run, web.search, web.fetch, and mcp.read; shell.run or workspace.write require an explicit non-read-only permissionMode. If a needed capability is not exposed by the runtime, make the workflow report the missing evidence instead of assuming shell, edit, or host access.",
+		"Returns an async launch receipt; tell the user only that /workflows opens the workflow panel. Do not mention /workflows with run ids or hidden subcommands.",
 	}, " ")
 }
 
@@ -45,6 +53,10 @@ func (t Tool) Parameters() map[string]any {
 				"type":        "string",
 				"maxLength":   MaxWorkflowScriptBytes,
 				"description": "Self-contained workflow script beginning with a pure literal export const meta = {...}. Use phase(), log(), agent(), workflow(), parallel(thunks), pipeline(), args, and budget; every agent should have a short label.",
+			},
+			"saveAs": map[string]any{
+				"type":        "string",
+				"description": "Optional kebab-case workflow name used only when the user asks to create a new workflow. Requires script, must match meta.name, saves to project .whale/workflows/<name>.js, then launches that named workflow.",
 			},
 			"scriptPath": map[string]any{
 				"type":        "string",
@@ -78,6 +90,16 @@ func (t Tool) Run(ctx context.Context, call core.ToolCall) (core.ToolResult, err
 	if err := json.Unmarshal([]byte(call.Input), &input); err != nil {
 		return workflowToolError(call, "invalid_input", err.Error())
 	}
+	if strings.TrimSpace(input.SaveAs) != "" {
+		saved, err := t.saveGenerated(ctx, input)
+		if err != nil {
+			return workflowToolError(call, "workflow_save_failed", err.Error())
+		}
+		input.Name = saved.Definition.Name
+		input.Script = ""
+		input.ScriptPath = ""
+		input.SaveAs = ""
+	}
 	out, err := t.runner.StartWorkflow(ctx, t.parentSessionID(), input)
 	if err != nil {
 		return workflowToolError(call, "workflow_failed", err.Error())
@@ -97,6 +119,19 @@ func (t Tool) Run(ctx context.Context, call core.ToolCall) (core.ToolResult, err
 		return core.ToolResult{}, err
 	}
 	return core.ToolResult{ToolCallID: call.ID, Name: call.Name, Content: content, Metadata: workflowToolMetadata(out)}, nil
+}
+
+func (t Tool) saveGenerated(ctx context.Context, input WorkflowInput) (ResolvedScript, error) {
+	if t.runner == nil || t.runner.Library == nil {
+		return ResolvedScript{}, errors.New("workflow library is not configured")
+	}
+	if strings.TrimSpace(input.Script) == "" {
+		return ResolvedScript{}, errors.New("saveAs requires script")
+	}
+	if strings.TrimSpace(input.Name) != "" || strings.TrimSpace(input.ScriptPath) != "" {
+		return ResolvedScript{}, errors.New("saveAs cannot be combined with name or scriptPath")
+	}
+	return t.runner.Library.SaveGenerated(ctx, input.Script, input.SaveAs)
 }
 
 func (t Tool) parentSessionID() string {

@@ -15,6 +15,9 @@ import (
 const WorkflowFileExt = ".js"
 
 var workflowNamePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+var workflowPhaseWrapperPattern = regexp.MustCompile("\\bphase\\s*\\(\\s*['\"`][^'\"`]*['\"`]\\s*,")
+var workflowBareAsyncAssignmentPattern = regexp.MustCompile(`(?m)^\s*(?:const|let|var)\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=\s*(?:agent|parallel|pipeline|workflow)\s*\(`)
+var workflowClaudeModelPattern = regexp.MustCompile(`(?i)\b(?:claude|sonnet|opus|haiku)\b`)
 
 type Library struct {
 	Roots []LibraryRoot
@@ -189,6 +192,77 @@ func (l *Library) Resolve(ctx context.Context, name string) (ResolvedScript, err
 		return ResolvedScript{Definition: def, Script: string(b)}, nil
 	}
 	return ResolvedScript{}, fmt.Errorf("workflow not found: %s", name)
+}
+
+func (l *Library) SaveGenerated(ctx context.Context, script, saveAs string) (ResolvedScript, error) {
+	if err := ctx.Err(); err != nil {
+		return ResolvedScript{}, err
+	}
+	if l == nil {
+		return ResolvedScript{}, errors.New("workflow library is not configured")
+	}
+	parsed, err := parseWorkflowScript(script)
+	if err != nil {
+		return ResolvedScript{}, err
+	}
+	if err := validateWorkflowCompile(parsed.Executable); err != nil {
+		return ResolvedScript{}, err
+	}
+	if err := validateGeneratedWorkflowScript(parsed.Executable); err != nil {
+		return ResolvedScript{}, err
+	}
+	name := strings.TrimSpace(saveAs)
+	if name == "" {
+		name = strings.TrimSpace(parsed.Meta.Name)
+	}
+	if !ValidWorkflowName(name) {
+		return ResolvedScript{}, fmt.Errorf("invalid workflow name %q: must be kebab-case", name)
+	}
+	if parsed.Meta.Name != name {
+		return ResolvedScript{}, fmt.Errorf("saveAs %q must match meta.name %q", name, parsed.Meta.Name)
+	}
+	root, ok := l.projectRoot()
+	if !ok {
+		return ResolvedScript{}, errors.New("project workflow root is not configured")
+	}
+	if err := os.MkdirAll(root.Path, 0o755); err != nil {
+		return ResolvedScript{}, fmt.Errorf("create workflow root %s: %w", root.Path, err)
+	}
+	path := filepath.Join(root.Path, name+WorkflowFileExt)
+	if _, err := os.Stat(path); err == nil {
+		return ResolvedScript{}, fmt.Errorf("workflow already exists: %s", path)
+	} else if err != nil && !os.IsNotExist(err) {
+		return ResolvedScript{}, fmt.Errorf("stat workflow %s: %w", path, err)
+	}
+	if err := os.WriteFile(path, []byte(strings.TrimSpace(script)+"\n"), 0o644); err != nil {
+		return ResolvedScript{}, fmt.Errorf("write workflow %s: %w", path, err)
+	}
+	return l.Resolve(ctx, name)
+}
+
+func validateGeneratedWorkflowScript(code string) error {
+	if workflowPhaseWrapperPattern.MatchString(code) {
+		return errors.New("generated workflow must call phase('Name') as a statement; phase() is not a callback/wrapper and must not receive a second argument")
+	}
+	if workflowBareAsyncAssignmentPattern.MatchString(code) {
+		return errors.New("generated workflow must await async workflow primitives before reading their result: use const result = await agent(...), await parallel(...), await pipeline(...), or await workflow(...)")
+	}
+	if strings.Contains(code, "structured:") {
+		return errors.New("generated workflow agent opts must use schema, not structured")
+	}
+	if workflowClaudeModelPattern.MatchString(code) {
+		return errors.New("generated workflow must not hard-code Claude model names; omit the model field unless the user explicitly requests a provider-supported model")
+	}
+	return nil
+}
+
+func (l *Library) projectRoot() (LibraryRoot, bool) {
+	for _, root := range l.Roots {
+		if root.Source == "project" && strings.TrimSpace(root.Path) != "" {
+			return root, true
+		}
+	}
+	return LibraryRoot{}, false
 }
 
 func scanWorkflowRoot(ctx context.Context, root LibraryRoot) ([]Definition, error) {

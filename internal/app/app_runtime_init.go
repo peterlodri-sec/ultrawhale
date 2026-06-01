@@ -9,7 +9,9 @@ import (
 	"github.com/usewhale/whale/internal/defaults"
 	"github.com/usewhale/whale/internal/llm"
 	"github.com/usewhale/whale/internal/policy"
+	"github.com/usewhale/whale/internal/skills"
 	"github.com/usewhale/whale/internal/tasks"
+	"github.com/usewhale/whale/internal/tools"
 	"github.com/usewhale/whale/internal/workflow"
 )
 
@@ -48,28 +50,68 @@ func initAppRuntime(cfg Config, sessionInit appSessionInit, toolInit appToolInit
 			StreamIdleTimeout: cfg.RetryStreamIdleTimeout,
 		})
 	}
+	providerFactoryWithOptions := func(req tasks.ProviderRequest) (llm.Provider, error) {
+		model := strings.TrimSpace(req.Model)
+		if model == "" {
+			model = defaults.DefaultModel
+		}
+		reqEffort := normalizeEffort(core.FirstNonEmpty(strings.TrimSpace(req.Effort), effort))
+		return newDeepSeekProvider(providerOptions{
+			APIKey:            apiKey,
+			BaseURL:           cfg.APIBaseURL,
+			Model:             model,
+			ReasoningEffort:   reqEffort,
+			ThinkingEnabled:   thinking,
+			MaxTokens:         req.MaxTokens,
+			RetryPolicy:       retryPolicyFromConfig(cfg),
+			StreamMaxAttempts: cfg.RetryStreamMaxAttempts,
+			StreamIdleTimeout: cfg.RetryStreamIdleTimeout,
+		})
+	}
+	workspaceTools := func(workspace tasks.ToolWorkspace) (*core.ToolRegistry, error) {
+		toolset, err := tools.NewToolset(workspace.WorkspaceRoot)
+		if err != nil {
+			return nil, err
+		}
+		toolset.SetWorktreeContext(workspace.WorktreeRoot, workspace.OriginalWorkspace)
+		toolset.SetSkillDisabled(cfg.SkillsDisabled)
+		if toolInit.pluginManager != nil {
+			toolset.SetExtraSkills(toolInit.pluginManager.Skills())
+		}
+		toolset.SetWebFetchExtractor(newDeepSeekWebFetchExtractor(webFetchExtractorOptions{
+			APIKey:  apiKey,
+			BaseURL: cfg.APIBaseURL,
+		}))
+		return core.NewToolRegistryChecked(toolset.Tools())
+	}
+	extraSkills := []*skills.Skill(nil)
+	if toolInit.pluginManager != nil {
+		extraSkills = toolInit.pluginManager.Skills()
+	}
 	taskRunner := tasks.NewRunner(tasks.RunnerConfig{
-		ProviderFactory:      providerFactory,
-		ParentTools:          toolInit.baseToolRegistry,
-		MessageStore:         sessionInit.msgStore,
-		SessionsDir:          sessionInit.sessionsDir,
-		ParentSessionID:      sessionInit.sessionID,
-		ParentSessionIDFunc:  parentSessionIDFunc,
-		WorkspaceRoot:        workspaceRoot,
-		MemoryEnabled:        cfg.MemoryEnabled,
-		MemoryMaxChars:       cfg.MemoryMaxChars,
-		MemoryFileOrder:      parseCSVList(cfg.MemoryFileOrder),
-		AutoCompact:          cfg.AutoCompact,
-		AutoCompactThreshold: cfg.AutoCompactThreshold,
-		DefaultModel:         defaults.DefaultModel,
-		DefaultEffort:        effort,
-		DefaultMaxTokens:     tasks.DefaultMaxTokens,
-		DefaultMaxToolIters:  tasks.DefaultMaxToolIters,
-		SummaryMaxChars:      tasks.DefaultSummaryMaxChar,
-		UsageLogPath:         filepath.Join(cfg.DataDir, "usage.jsonl"),
-		ApprovalFunc:         approvalFunc,
-		ParentPolicy:         policy.RulePolicy{Default: cfg.PermissionDefault, Rules: append([]policy.PermissionRule{}, cfg.PermissionRules...), WorkspaceRoot: workspaceRoot},
-		AgentDefinitions:     taskAgentDefinitions(toolInit.pluginAgents),
+		ProviderFactory:            providerFactory,
+		ProviderFactoryWithOptions: providerFactoryWithOptions,
+		ParentTools:                toolInit.baseToolRegistry,
+		WorkspaceTools:             workspaceTools,
+		AgentDefinitions:           tasks.NewAgentDefinitionLibrary(workspaceRoot),
+		MessageStore:               sessionInit.msgStore,
+		SessionsDir:                sessionInit.sessionsDir,
+		ParentSessionID:            sessionInit.sessionID,
+		ParentSessionIDFunc:        parentSessionIDFunc,
+		WorkspaceRoot:              workspaceRoot,
+		MemoryEnabled:              cfg.MemoryEnabled,
+		MemoryMaxChars:             cfg.MemoryMaxChars,
+		MemoryFileOrder:            parseCSVList(cfg.MemoryFileOrder),
+		SkillsDisabled:             cfg.SkillsDisabled,
+		ExtraSkills:                extraSkills,
+		AutoCompact:                cfg.AutoCompact,
+		AutoCompactThreshold:       cfg.AutoCompactThreshold,
+		DefaultModel:               defaults.DefaultModel,
+		DefaultMaxTokens:           tasks.DefaultMaxTokens,
+		DefaultMaxToolIters:        tasks.DefaultMaxToolIters,
+		SummaryMaxChars:            tasks.DefaultSummaryMaxChar,
+		UsageLogPath:               filepath.Join(cfg.DataDir, "usage.jsonl"),
+		ApprovalFunc:               approvalFunc,
 	})
 	taskTools := tasks.NewTools(taskRunner)
 	workflowStore, err := workflow.NewFileRunEventStore(cfg.DataDir)

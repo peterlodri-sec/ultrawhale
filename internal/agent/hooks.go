@@ -7,6 +7,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,6 +98,8 @@ type HookListEntry struct {
 	Source      string          `json:"source,omitempty"`
 	Match       string          `json:"match,omitempty"`
 	Command     string          `json:"command,omitempty"`
+	Prompt      string          `json:"prompt,omitempty"`
+	URL         string          `json:"url,omitempty"`
 	Description string          `json:"description,omitempty"`
 	TimeoutSec  int             `json:"timeout_sec,omitempty"`
 	CWD         string          `json:"cwd,omitempty"`
@@ -106,11 +111,22 @@ type HookListEntry struct {
 }
 
 type HookConfig struct {
-	Match       string `json:"match,omitempty" toml:"match,omitempty"`
-	Command     string `json:"command" toml:"command,omitempty"`
-	Description string `json:"description,omitempty" toml:"description,omitempty"`
-	TimeoutSec  int    `json:"timeout,omitempty" toml:"timeout,omitempty"`
-	CWD         string `json:"cwd,omitempty" toml:"cwd,omitempty"`
+	Type           string            `json:"type,omitempty" toml:"type,omitempty"`
+	Match          string            `json:"match,omitempty" toml:"match,omitempty"`
+	If             string            `json:"if,omitempty" toml:"if,omitempty"`
+	Command        string            `json:"command" toml:"command,omitempty"`
+	Prompt         string            `json:"prompt,omitempty" toml:"prompt,omitempty"`
+	URL            string            `json:"url,omitempty" toml:"url,omitempty"`
+	Model          string            `json:"model,omitempty" toml:"model,omitempty"`
+	Description    string            `json:"description,omitempty" toml:"description,omitempty"`
+	TimeoutSec     int               `json:"timeout,omitempty" toml:"timeout,omitempty"`
+	CWD            string            `json:"cwd,omitempty" toml:"cwd,omitempty"`
+	Shell          string            `json:"shell,omitempty" toml:"shell,omitempty"`
+	Once           bool              `json:"once,omitempty" toml:"once,omitempty"`
+	Async          bool              `json:"async,omitempty" toml:"async,omitempty"`
+	AsyncRewake    bool              `json:"asyncRewake,omitempty" toml:"asyncRewake,omitempty"`
+	Headers        map[string]string `json:"headers,omitempty" toml:"headers,omitempty"`
+	AllowedEnvVars []string          `json:"allowedEnvVars,omitempty" toml:"allowedEnvVars,omitempty"`
 }
 
 type HookSettings struct {
@@ -294,6 +310,7 @@ type HookHandler struct {
 
 type HookSpawnInput struct {
 	Command string
+	Shell   string
 	CWD     string
 	Stdin   string
 	Timeout time.Duration
@@ -309,6 +326,7 @@ type HookSpawnResult struct {
 }
 
 type HookSpawner func(ctx context.Context, in HookSpawnInput) HookSpawnResult
+type HookExecutor func(ctx context.Context, cfg HookConfig, payload HookPayload) HookResult
 
 type HookRunStage string
 
@@ -323,12 +341,15 @@ const (
 type HookRunObserver func(HookRunStage, HookEventInfo)
 
 type HookRunner struct {
-	hooks     []ResolvedHook
-	handlers  []HookHandler
-	states    HookStates
-	spawner   HookSpawner
-	workspace string
-	outputCap int
+	hooks          []ResolvedHook
+	handlers       []HookHandler
+	states         HookStates
+	spawner        HookSpawner
+	promptExecutor HookExecutor
+	agentExecutor  HookExecutor
+	workspace      string
+	outputCap      int
+	onceRun        map[string]bool
 }
 
 func NewHookRunner(hooks []ResolvedHook, workspace string) *HookRunner {
@@ -337,7 +358,7 @@ func NewHookRunner(hooks []ResolvedHook, workspace string) *HookRunner {
 
 func NewHookRunnerWithState(hooks []ResolvedHook, workspace string, states HookStates) *HookRunner {
 	cp := append([]ResolvedHook(nil), hooks...)
-	return &HookRunner{hooks: cp, states: cloneHookStates(states), workspace: workspace, spawner: defaultHookSpawner, outputCap: DefaultHookOutputCapBytes}
+	return &HookRunner{hooks: cp, states: cloneHookStates(states), workspace: workspace, spawner: defaultHookSpawner, outputCap: DefaultHookOutputCapBytes, onceRun: map[string]bool{}}
 }
 
 func (r *HookRunner) AddHandlers(handlers ...HookHandler) {
@@ -356,6 +377,14 @@ func (r *HookRunner) AddHandlers(handlers ...HookHandler) {
 		}
 		r.handlers = append(r.handlers, h)
 	}
+}
+
+func (r *HookRunner) SetExecutors(promptExecutor, agentExecutor HookExecutor) {
+	if r == nil {
+		return
+	}
+	r.promptExecutor = promptExecutor
+	r.agentExecutor = agentExecutor
 }
 
 func (r *HookRunner) Empty() bool {
@@ -415,8 +444,18 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 		if !matchesHook(h, payload.ToolName) {
 			continue
 		}
-		runID := newHookRunID(payload.Event, "command", ordinal)
-		name := core.FirstNonEmpty(strings.TrimSpace(h.Description), strings.TrimSpace(h.Command))
+		if h.Once && r.onceRun[hookOnceKey(h)] {
+			continue
+		}
+		if !matchesHookCondition(h, payload) {
+			continue
+		}
+		if h.Once {
+			r.onceRun[hookOnceKey(h)] = true
+		}
+		kind := hookRuntimeType(h)
+		runID := newHookRunID(payload.Event, kind, ordinal)
+		name := hookDisplayName(h)
 		source := core.FirstNonEmpty(strings.TrimSpace(h.Source), "config")
 		if observer != nil {
 			observer(HookRunStarted, HookEventInfo{
@@ -429,34 +468,32 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 		}
 		start := time.Now()
 		timeout := resolveHookTimeout(h.TimeoutSec)
-		cwd := resolveCWD(r.workspace, h.CWD)
-		stdin := payloadToJSONLine(payload)
-		res := r.spawner(ctx, HookSpawnInput{Command: h.Command, CWD: cwd, Stdin: stdin, Timeout: timeout})
-		parsed := shellHookResult(payload.Event, res)
-		oc := HookOutcome{
-			Hook:       h,
-			ID:         runID,
-			Name:       name,
-			Source:     source,
-			Command:    strings.TrimSpace(h.Command),
-			Decision:   parsed.Decision,
-			ExitCode:   res.ExitCode,
-			Stdout:     strings.TrimSpace(res.Stdout),
-			Stderr:     strings.TrimSpace(res.Stderr),
-			Message:    strings.TrimSpace(parsed.Message),
-			DurationMS: time.Since(start).Milliseconds(),
-			Truncated:  res.Truncated,
-
-			AdditionalContext: strings.TrimSpace(parsed.AdditionalContext),
-			UpdatedInput:      strings.TrimSpace(parsed.UpdatedInput),
-			Metadata:          parsed.Metadata,
+		if h.Async && kind == "command" {
+			cwd := resolveCWD(r.workspace, h.CWD)
+			stdin := payloadToJSONLine(payload)
+			spawn := HookSpawnInput{Command: h.Command, Shell: h.Shell, CWD: cwd, Stdin: stdin, Timeout: timeout}
+			go func() {
+				_ = r.spawner(context.Background(), spawn)
+			}()
+			oc := HookOutcome{
+				Hook:       h,
+				ID:         runID,
+				Name:       name,
+				Source:     source,
+				Command:    strings.TrimSpace(h.Command),
+				Decision:   HookDecisionPass,
+				Message:    "async hook launched",
+				DurationMS: time.Since(start).Milliseconds(),
+				Metadata:   map[string]any{"async": true, "asyncRewake": h.AsyncRewake},
+			}
+			appendHookOutcome(&out, oc)
+			emitHookOutcome(observer, payload.Event, oc)
+			continue
 		}
-		if oc.Stderr == "" && res.SpawnErr != nil {
-			oc.Stderr = res.SpawnErr.Error()
-		}
-		if oc.Stderr == "" && res.TimedOut {
-			oc.Stderr = hookTimeoutMessage(timeout)
-		}
+		oc := r.runResolvedHook(ctx, payload, h, kind, timeout, start)
+		oc.ID = runID
+		oc.Name = name
+		oc.Source = source
 		appendHookOutcome(&out, oc)
 		emitHookOutcome(observer, payload.Event, oc)
 		applyHookUpdatedInput(&payload, oc.UpdatedInput)
@@ -515,6 +552,159 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 			if out.Blocked || out.Halted {
 				break
 			}
+		}
+	}
+	return out
+}
+
+func (r *HookRunner) runResolvedHook(ctx context.Context, payload HookPayload, h ResolvedHook, kind string, timeout time.Duration, start time.Time) HookOutcome {
+	runCtx := ctx
+	cancel := func() {}
+	if timeout > 0 {
+		runCtx, cancel = context.WithTimeout(ctx, timeout)
+	}
+	defer cancel()
+	var res HookResult
+	var exitCode int
+	var truncated bool
+	switch kind {
+	case "http":
+		res = runHTTPHook(runCtx, h.HookConfig, payload)
+	case "prompt":
+		if r.promptExecutor == nil {
+			res = HookResult{Decision: HookDecisionError, Message: "prompt hook executor is not configured"}
+		} else {
+			res = r.promptExecutor(runCtx, h.HookConfig, payload)
+		}
+	case "agent":
+		if r.agentExecutor == nil {
+			res = HookResult{Decision: HookDecisionError, Message: "agent hook executor is not configured"}
+		} else {
+			res = r.agentExecutor(runCtx, h.HookConfig, payload)
+		}
+	default:
+		cwd := resolveCWD(r.workspace, h.CWD)
+		spawnRes := r.spawner(runCtx, HookSpawnInput{Command: h.Command, Shell: h.Shell, CWD: cwd, Stdin: payloadToJSONLine(payload), Timeout: timeout})
+		res = shellHookResult(payload.Event, spawnRes)
+		exitCode = spawnRes.ExitCode
+		truncated = spawnRes.Truncated
+		if res.Stderr == "" && spawnRes.SpawnErr != nil {
+			res.Stderr = spawnRes.SpawnErr.Error()
+		}
+		if res.Stderr == "" && spawnRes.TimedOut {
+			res.Stderr = hookTimeoutMessage(timeout)
+		}
+	}
+	return HookOutcome{
+		Hook:              h,
+		Name:              hookDisplayName(h),
+		Source:            core.FirstNonEmpty(strings.TrimSpace(h.Source), "config"),
+		Command:           strings.TrimSpace(h.Command),
+		Decision:          res.Decision,
+		ExitCode:          exitCode,
+		Stdout:            strings.TrimSpace(res.Stdout),
+		Stderr:            strings.TrimSpace(res.Stderr),
+		Message:           strings.TrimSpace(res.Message),
+		DurationMS:        time.Since(start).Milliseconds(),
+		Truncated:         truncated,
+		AdditionalContext: strings.TrimSpace(res.AdditionalContext),
+		UpdatedInput:      strings.TrimSpace(res.UpdatedInput),
+		Metadata:          res.Metadata,
+	}
+}
+
+func hookRuntimeType(h ResolvedHook) string {
+	t := strings.ToLower(strings.TrimSpace(h.Type))
+	switch t {
+	case "prompt", "http", "agent":
+		return t
+	default:
+		return "command"
+	}
+}
+
+func hookDisplayName(h ResolvedHook) string {
+	switch hookRuntimeType(h) {
+	case "http":
+		return core.FirstNonEmpty(strings.TrimSpace(h.Description), strings.TrimSpace(h.URL), "http hook")
+	case "prompt":
+		return core.FirstNonEmpty(strings.TrimSpace(h.Description), firstLine(h.Prompt), "prompt hook")
+	case "agent":
+		return core.FirstNonEmpty(strings.TrimSpace(h.Description), firstLine(h.Prompt), "agent hook")
+	default:
+		return core.FirstNonEmpty(strings.TrimSpace(h.Description), strings.TrimSpace(h.Command), "command hook")
+	}
+}
+
+func firstLine(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	if idx := strings.IndexByte(s, '\n'); idx >= 0 {
+		return strings.TrimSpace(s[:idx])
+	}
+	return s
+}
+
+func runHTTPHook(ctx context.Context, cfg HookConfig, payload HookPayload) HookResult {
+	rawURL := strings.TrimSpace(cfg.URL)
+	if rawURL == "" {
+		return HookResult{Decision: HookDecisionError, Message: "http hook requires url"}
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return HookResult{Decision: HookDecisionError, Message: "http hook url must be http or https"}
+	}
+	body := map[string]any{"payload": payload}
+	if env := allowedHookEnv(cfg.AllowedEnvVars); len(env) > 0 {
+		body["env"] = env
+	}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return HookResult{Decision: HookDecisionError, Message: err.Error()}
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(b))
+	if err != nil {
+		return HookResult{Decision: HookDecisionError, Message: err.Error()}
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	for k, v := range cfg.Headers {
+		k = strings.TrimSpace(k)
+		if k != "" {
+			req.Header.Set(k, v)
+		}
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return HookResult{Decision: HookDecisionError, Message: err.Error()}
+	}
+	defer res.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(res.Body, DefaultHookOutputCapBytes+1))
+	if err != nil {
+		return HookResult{Decision: HookDecisionError, Message: err.Error()}
+	}
+	stdout := string(data)
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return HookResult{Decision: HookDecisionError, Message: fmt.Sprintf("http hook returned %s", res.Status), Stdout: strings.TrimSpace(stdout)}
+	}
+	parsedResult, ok := parseHookJSONOutput(payload.Event, stdout)
+	if !ok {
+		return HookResult{Decision: HookDecisionPass, Stdout: strings.TrimSpace(stdout)}
+	}
+	return parsedResult
+}
+
+func allowedHookEnv(names []string) map[string]string {
+	out := map[string]string{}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if v, ok := os.LookupEnv(name); ok {
+			out[name] = v
 		}
 	}
 	return out
@@ -687,13 +877,26 @@ func ResolveHooks(st HookSettings, source string) []ResolvedHook {
 		ev := info.Event
 		list := st.Hooks[ev]
 		for _, cfg := range list {
-			if strings.TrimSpace(cfg.Command) == "" {
+			if !hasRunnableHookConfig(cfg) {
 				continue
 			}
 			out = append(out, ResolvedHook{HookConfig: cfg, Event: ev, Source: source})
 		}
 	}
 	return out
+}
+
+func hasRunnableHookConfig(cfg HookConfig) bool {
+	switch strings.ToLower(strings.TrimSpace(cfg.Type)) {
+	case "", "command", "shell":
+		return strings.TrimSpace(cfg.Command) != ""
+	case "http":
+		return strings.TrimSpace(cfg.URL) != ""
+	case "prompt", "agent":
+		return strings.TrimSpace(cfg.Prompt) != ""
+	default:
+		return false
+	}
 }
 
 func HookNeedsReview(entry HookListEntry) bool {
@@ -756,14 +959,17 @@ func SetHookEnabledStates(entries []HookListEntry, states HookStates, keys []str
 }
 
 func hookEntryFromResolved(h ResolvedHook, states HookStates, ordinal int) HookListEntry {
-	name := core.FirstNonEmpty(strings.TrimSpace(h.Description), strings.TrimSpace(h.Command))
+	typ := hookRuntimeType(h)
+	name := hookDisplayName(h)
 	entry := HookListEntry{
 		Event:       h.Event,
-		Type:        "command",
+		Type:        typ,
 		Name:        name,
 		Source:      core.FirstNonEmpty(strings.TrimSpace(h.Source), "config"),
 		Match:       strings.TrimSpace(h.Match),
 		Command:     strings.TrimSpace(h.Command),
+		Prompt:      strings.TrimSpace(h.Prompt),
+		URL:         strings.TrimSpace(h.URL),
 		Description: strings.TrimSpace(h.Description),
 		TimeoutSec:  hookTimeoutSeconds(resolveHookTimeout(h.TimeoutSec)),
 		CWD:         strings.TrimSpace(h.CWD),
@@ -827,6 +1033,8 @@ func hookContentHash(entry HookListEntry) string {
 		entry.Source,
 		entry.Match,
 		entry.Command,
+		entry.Prompt,
+		entry.URL,
 		entry.Description,
 		entry.CWD,
 		fmt.Sprintf("%d", entry.TimeoutSec),
@@ -874,6 +1082,25 @@ func cloneHookStates(in HookStates) HookStates {
 
 func matchesHook(h ResolvedHook, toolName string) bool {
 	return matchesHookPattern(h.Event, h.Match, toolName)
+}
+
+func matchesHookCondition(h ResolvedHook, payload HookPayload) bool {
+	cond := strings.TrimSpace(h.If)
+	if cond == "" {
+		return true
+	}
+	if payload.ToolName != "" && matchesHookPattern(h.Event, cond, payload.ToolName) {
+		return true
+	}
+	re, err := regexp.Compile("^(?:" + cond + ")$")
+	if err != nil {
+		return false
+	}
+	return re.MatchString(string(payload.Event))
+}
+
+func hookOnceKey(h ResolvedHook) string {
+	return strings.Join([]string{strings.TrimSpace(h.Source), string(h.Event), strings.TrimSpace(h.Match), strings.TrimSpace(h.If), strings.TrimSpace(h.Command), strings.TrimSpace(h.Prompt), strings.TrimSpace(h.URL)}, "\x00")
 }
 
 func matchesHookPattern(event HookEvent, match, toolName string) bool {
@@ -1068,7 +1295,7 @@ func payloadToJSONLine(payload HookPayload) string {
 }
 
 func isBlockingEvent(event HookEvent) bool {
-	return event == HookEventPreToolUse || event == HookEventPermissionRequest || event == HookEventUserPromptSubmit
+	return event == HookEventPreToolUse || event == HookEventPermissionRequest || event == HookEventUserPromptSubmit || event == HookEventSubagentStart
 }
 
 func decideHookOutcome(event HookEvent, res HookSpawnResult) HookDecision {
@@ -1119,7 +1346,7 @@ func defaultHookSpawner(parent context.Context, in HookSpawnInput) HookSpawnResu
 	}
 	defer cancel()
 
-	spec, err := shell.Resolve(in.Command)
+	spec, err := resolveHookShell(in.Shell, in.Command)
 	if err != nil {
 		return HookSpawnResult{ExitCode: -1, SpawnErr: err}
 	}
@@ -1159,5 +1386,24 @@ func defaultHookSpawner(parent context.Context, in HookSpawnInput) HookSpawnResu
 		TimedOut:  timedOut,
 		SpawnErr:  spawnErr,
 		Truncated: outBuf.truncated || errBuf.truncated,
+	}
+}
+
+func resolveHookShell(shellName, command string) (shell.Spec, error) {
+	switch strings.ToLower(strings.TrimSpace(shellName)) {
+	case "", "default":
+		return shell.Resolve(command)
+	case "bash":
+		return shell.Spec{Kind: shell.KindPOSIX, DisplayName: "bash", Bin: "bash", Args: []string{"-lc", command}}, nil
+	case "sh":
+		return shell.Spec{Kind: shell.KindPOSIX, DisplayName: "sh", Bin: "sh", Args: []string{"-lc", command}}, nil
+	case "zsh":
+		return shell.Spec{Kind: shell.KindPOSIX, DisplayName: "zsh", Bin: "zsh", Args: []string{"-lc", command}}, nil
+	case "pwsh", "powershell":
+		return shell.Spec{Kind: shell.KindPowerShell, DisplayName: "PowerShell", Bin: strings.TrimSpace(shellName), Args: []string{"-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command}}, nil
+	case "cmd", "cmd.exe":
+		return shell.Spec{Kind: shell.KindCmd, DisplayName: "cmd.exe", Bin: "cmd.exe", Args: []string{"/d", "/c", command}}, nil
+	default:
+		return shell.Spec{}, fmt.Errorf("unsupported hook shell %q", strings.TrimSpace(shellName))
 	}
 }
