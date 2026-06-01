@@ -61,6 +61,7 @@ func New(ctx context.Context, cfg Config, start StartOptions) (*App, error) {
 		taskTools:             append([]core.Tool{}, runtimeInit.taskTools...),
 		workflowTools:         append([]core.Tool{}, runtimeInit.workflowTools...),
 		hooks:                 toolInit.hooks,
+		hookStates:            toolInit.hookStates,
 		hookRunner:            toolInit.hookRunner,
 		hookSources:           toolInit.hookSources,
 		currentMode:           sessionInit.mode,

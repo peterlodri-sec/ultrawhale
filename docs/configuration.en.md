@@ -129,9 +129,13 @@ enabled = []                           # force-enable even if project disables
 disabled = []                          # plugins to disable
 enabled = []                           # force-enable
 
-[hooks]
-pre_tool = [""]                        # shell commands before every tool call
-post_tool = [""]                       # shell commands after every tool call
+[[hooks.PreToolUse]]
+match = "shell_run"                    # optional; only PreToolUse/PostToolUse match by tool name
+command = ""                           # shell command before matching tool calls
+
+[[hooks.PostToolUse]]
+match = "shell_run"
+command = ""                           # shell command after matching tool calls
 
 [logging]
 level = "info"                         # debug | info | warn | error
@@ -148,16 +152,24 @@ level = "info"                         # debug | info | warn | error
 
 ### Shell hooks
 
-Hooks run shell commands before/after every tool call:
+Hooks run shell commands on lifecycle events:
 
 ```toml
-[hooks]
-pre_tool = ["echo 'about to run: $TOOL_NAME'"]
-post_tool = ["echo 'tool finished: $TOOL_NAME'"]
+[[hooks.PreToolUse]]
+match = "shell_run"
+command = "echo 'about to run a tool call'"
+
+[[hooks.PostToolUse]]
+match = "shell_run"
+command = "echo 'tool finished'"
+
+[[hooks.UserPromptSubmit]]
+command = "echo '{\"decision\":\"pass\"}'"
 ```
 
-Hooks can return JSON on stdout with fields like `decision`, `reason`, or `updated_input`
-to influence Whale's behavior.
+Supported events are `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, and `Stop`. All events run at runtime and surface hook started/completed status in the TUI.
+
+Hooks can return JSON on stdout with fields like `decision`, `reason`, `updated_input`, or `additional_context` to influence Whale's behavior. `PreToolUse`, `PermissionRequest`, and `UserPromptSubmit` can block the next action; `PreCompact` `additional_context` is added to the compact summary prompt. Project hooks are untrusted until reviewed; run `/hooks` in the TUI to inspect installed hooks and `/hooks trust all`, `/hooks trust <key>`, `/hooks disable <key>`, or `/hooks enable <key>` to manage workspace hook state.
 
 ### Worktrees
 

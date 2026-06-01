@@ -32,6 +32,8 @@ const (
 	modeSkillsMenu
 	modeSkillsManager
 	modePluginsManager
+	modeHooksManager
+	modeHooksStartupReview
 	modeReviewMenu
 	modeReviewBranchPicker
 	modeReviewCommitPicker
@@ -171,7 +173,8 @@ type model struct {
 		matches  []int
 		selected int
 	}
-	reviewMenu struct {
+	hooksManager hooksManagerState
+	reviewMenu   struct {
 		selected int
 	}
 	reviewTargetPicker reviewTargetPickerState

@@ -133,5 +133,31 @@ func (s *Service) Dispatch(in Intent) {
 			return
 		}
 		s.emit(Event{Kind: EventPluginsManagerUpdated, Plugins: protocolPlugins(s.PluginsForManager())})
+	case IntentRequestHooksManage:
+		s.emitHooksManagerUpdated()
+	case IntentSetHookEnabled:
+		if _, err := s.app.SetHookEnabled([]string{in.HookKey}, in.HookEnabled); err != nil {
+			s.emit(Event{Kind: EventError, Text: err.Error()})
+			return
+		}
+		s.emitHooksManagerUpdated()
+	case IntentTrustHook:
+		if _, err := s.app.TrustHooks([]string{in.HookKey}); err != nil {
+			s.emit(Event{Kind: EventError, Text: err.Error()})
+			return
+		}
+		s.emitHooksManagerUpdated()
+	case IntentTrustHooks:
+		if _, err := s.app.TrustHooks(nil); err != nil {
+			s.emit(Event{Kind: EventError, Text: err.Error()})
+			return
+		}
+		s.emitHooksManagerUpdated()
+	case IntentResolveHooksStartupReview:
+		s.resolveHooksStartupReview(in.HooksReviewAction)
 	}
+}
+
+func (s *Service) emitHooksManagerUpdated() {
+	s.emit(Event{Kind: EventHooksManagerUpdated, Hooks: protocolHooks(s.app.HookEntries())})
 }

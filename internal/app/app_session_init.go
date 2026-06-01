@@ -30,6 +30,7 @@ type appToolInit struct {
 	baseTools        []core.Tool
 	baseToolRegistry *core.ToolRegistry
 	hooks            []agent.ResolvedHook
+	hookStates       agent.HookStates
 	hookRunner       *agent.HookRunner
 	hookSources      []string
 }

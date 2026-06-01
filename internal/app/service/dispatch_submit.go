@@ -219,7 +219,7 @@ func (s *Service) applySubmitHooks(state *submitState) bool {
 	if state.skipHooks {
 		return false
 	}
-	blocked, out, updated := s.app.RunUserPromptSubmitHook(state.line)
+	blocked, out, updated := s.app.RunUserPromptSubmitHookWithObserver(state.line, s.hookObserver())
 	state.line = updated
 	if out != "" {
 		s.emit(Event{Kind: EventInfo, Text: out})

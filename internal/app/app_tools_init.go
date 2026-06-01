@@ -38,7 +38,11 @@ func initAppTools(cfg Config, start StartOptions, workspaceRoot string) (appTool
 	if hookLoadErr != nil {
 		return appToolInit{}, fmt.Errorf("load hooks failed: %w", hookLoadErr)
 	}
-	hookRunner := agent.NewHookRunner(hooks, workspaceRoot)
+	hookStates, err := LoadHookStates(cfg.DataDir, workspaceRoot)
+	if err != nil {
+		return appToolInit{}, fmt.Errorf("load hook state failed: %w", err)
+	}
+	hookRunner := agent.NewHookRunnerWithState(hooks, workspaceRoot, hookStates)
 	hookRunner.AddHandlers(pluginManager.Hooks()...)
 	return appToolInit{
 		toolset:          toolset,
@@ -48,6 +52,7 @@ func initAppTools(cfg Config, start StartOptions, workspaceRoot string) (appTool
 		baseTools:        baseTools,
 		baseToolRegistry: baseToolRegistry,
 		hooks:            hooks,
+		hookStates:       hookStates,
 		hookRunner:       hookRunner,
 		hookSources:      hookSources,
 	}, nil
