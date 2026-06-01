@@ -1298,7 +1298,7 @@ func TestBuildStatusLocalResultIncludesStructuredFields(t *testing.T) {
 	if result == nil || result.Kind != "status" || result.Title != "Status" {
 		t.Fatalf("unexpected status local result: %+v", result)
 	}
-	for _, want := range []string{"Session", "Mode", "Permissions", "Model", "Effort", "Thinking", "Context window", "Usage", "Budget limit"} {
+	for _, want := range []string{"Session", "Mode", "Auto-accept", "Model", "Effort", "Thinking", "Context window", "Usage", "Budget limit"} {
 		if !localResultHasField(result, want) {
 			t.Fatalf("expected local result field %q, got %+v", want, result.Fields)
 		}
