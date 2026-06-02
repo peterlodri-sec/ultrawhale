@@ -33,6 +33,7 @@ const (
 	modeSkillsMenu
 	modeSkillsManager
 	modePluginsManager
+	modeConfigManager
 	modeHooksManager
 	modeHooksStartupReview
 	modeReviewMenu
@@ -182,8 +183,9 @@ type model struct {
 		detail   bool
 		offset   int
 	}
-	hooksManager hooksManagerState
-	reviewMenu   struct {
+	configManager configManagerState
+	hooksManager  hooksManagerState
+	reviewMenu    struct {
 		selected int
 	}
 	reviewTargetPicker reviewTargetPickerState

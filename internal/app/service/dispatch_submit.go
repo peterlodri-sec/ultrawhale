@@ -84,6 +84,9 @@ func (s *Service) handleSubmitMenuCommand(state *submitState) bool {
 	case "/plugins":
 		s.emit(Event{Kind: EventPluginsManagerUpdated, Plugins: protocolPlugins(s.PluginsForManager()), Open: true})
 		return true
+	case "/config":
+		s.emitConfigManagerUpdated(true)
+		return true
 	case "/review":
 		s.emit(Event{Kind: EventReviewRequested})
 		return true

@@ -86,6 +86,10 @@ func (s *Service) handleLocalSubmit(line string) {
 		s.emit(Event{Kind: EventPluginsManagerUpdated, Plugins: protocolPlugins(s.PluginsForManager()), Open: true})
 		return
 	}
+	if line == "/config" {
+		s.emitConfigManagerUpdated(true)
+		return
+	}
 	if line == "/hooks" {
 		s.emitHooksManagerUpdated()
 		return

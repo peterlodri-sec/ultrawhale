@@ -111,6 +111,9 @@ func (a *App) ensureAgent() (*agent.Agent, error) {
 				if a.workflowRunner == nil || a.workflowRunner.Library == nil {
 					return ""
 				}
+				if !a.cfg.WorkflowsEnabled || !a.cfg.WorkflowKeywordTrigger {
+					return ""
+				}
 				return workflow.RenderPromptCatalog(context.Background(), a.workflowRunner.Library, workflow.DefaultPromptCatalogLimit)
 			}),
 			agent.WithProjectMemory(a.cfg.MemoryEnabled, a.cfg.MemoryMaxChars, parseCSVList(a.cfg.MemoryFileOrder), a.workspaceRoot),
