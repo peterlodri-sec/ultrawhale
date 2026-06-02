@@ -233,6 +233,9 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 					history = append(history, assistant, *toolMsg)
 				}
 				if turnState.hasPending() {
+					if !emit(AgentEvent{Type: AgentEventTypeResponseReset}) {
+						return
+					}
 					continue
 				}
 				done := assistant
@@ -300,11 +303,19 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 					emit(AgentEvent{Type: AgentEventTypeDone, Message: &sum})
 					return
 				}
+				if turnState.hasPending() {
+					if !emit(AgentEvent{Type: AgentEventTypeResponseReset}) {
+						return
+					}
+				}
 				continue
 			}
 			if turnState.hasPending() {
 				rt.Log.Append(assistant)
 				history = append(history, assistant)
+				if !emit(AgentEvent{Type: AgentEventTypeResponseReset}) {
+					return
+				}
 				continue
 			}
 			emit(AgentEvent{Type: AgentEventTypeDone, Message: &assistant})

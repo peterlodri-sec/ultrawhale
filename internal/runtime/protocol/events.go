@@ -18,6 +18,7 @@ const (
 	EventPlanCompleted        EventKind = "plan_completed"
 	EventPlanUpdate           EventKind = "plan_update"
 	EventProviderRetry        EventKind = "provider_retry"
+	EventResponseReset        EventKind = "response_reset"
 	EventToolCall             EventKind = "tool_call"
 	EventToolResult           EventKind = "tool_result"
 	EventHookStarted          EventKind = "hook_started"

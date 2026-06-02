@@ -47,6 +47,7 @@ const (
 	AgentEventTypePlanUpdate             AgentEventType = "plan_update"
 	AgentEventTypePlanStepBlocked        AgentEventType = "plan_step_blocked"
 	AgentEventTypeProviderRetryScheduled AgentEventType = "provider_retry_scheduled"
+	AgentEventTypeResponseReset          AgentEventType = "response_reset"
 	AgentEventTypeToolRecoveryScheduled  AgentEventType = "tool_recovery_scheduled"
 	AgentEventTypeToolRecoveryAttempt    AgentEventType = "tool_recovery_attempt"
 	AgentEventTypeToolRecoveryExhausted  AgentEventType = "tool_recovery_exhausted"

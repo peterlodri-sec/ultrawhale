@@ -79,6 +79,8 @@ func (m *model) handleServiceEvent(ev protocol.Event) (tea.Cmd, bool, bool) {
 		m.handlePlanUpdateEvent(ev)
 	case protocol.EventProviderRetry:
 		m.handleProviderRetryEvent(ev)
+	case protocol.EventResponseReset:
+		m.handleResponseResetEvent(ev)
 	case protocol.EventInfo:
 		m.handleInfoEvent(ev)
 	case protocol.EventError:
@@ -366,6 +368,19 @@ func (m *model) resetTurnVisibility() {
 }
 
 func (m *model) resetLiveAttemptForProviderRetry() {
+	m.resetLiveAttempt()
+}
+
+func (m *model) resetLiveAttemptForResponseReset() {
+	if m.assembler != nil {
+		m.assembler.Reset()
+	}
+	m.discardCurrentTurnModelOutput()
+	m.resetTurnVisibility()
+	m.refreshLiveViewportContent()
+}
+
+func (m *model) resetLiveAttempt() {
 	if m.assembler != nil {
 		m.assembler.Reset()
 	}

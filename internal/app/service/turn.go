@@ -168,6 +168,10 @@ func (s *Service) runTurnWith(start func(context.Context) (<-chan agent.AgentEve
 				}
 				s.emit(providerRetryEvent(ev.ProviderRetry))
 			}
+		case agent.AgentEventTypeResponseReset:
+			deltas.flushReliable()
+			last = ""
+			s.emit(Event{Kind: EventResponseReset})
 		case agent.AgentEventTypeToolCall:
 			if ev.ToolCall != nil {
 				deltas.flushReliable()

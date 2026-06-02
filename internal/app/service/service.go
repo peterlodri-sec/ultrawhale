@@ -101,6 +101,7 @@ const (
 	EventPlanCompleted                 = protocol.EventPlanCompleted
 	EventPlanUpdate                    = protocol.EventPlanUpdate
 	EventProviderRetry                 = protocol.EventProviderRetry
+	EventResponseReset                 = protocol.EventResponseReset
 	EventToolCall                      = protocol.EventToolCall
 	EventToolResult                    = protocol.EventToolResult
 	EventHookStarted                   = protocol.EventHookStarted

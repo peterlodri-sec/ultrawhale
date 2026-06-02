@@ -199,10 +199,17 @@ func TestActiveTurnInjectedInputContinuesCurrentTurn(t *testing.T) {
 		t.Fatal("expected input to inject into active turn")
 	}
 	close(prov.releaseFirst)
+	var sawResponseReset bool
 	for ev := range events {
+		if ev.Type == AgentEventTypeResponseReset {
+			sawResponseReset = true
+		}
 		if ev.Type == AgentEventTypeError {
 			t.Fatalf("unexpected error: %v", ev.Err)
 		}
+	}
+	if !sawResponseReset {
+		t.Fatal("expected response reset before continuing with injected input")
 	}
 
 	calls, inputs := prov.snapshot()

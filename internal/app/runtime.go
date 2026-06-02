@@ -171,10 +171,10 @@ func (a *App) InjectTurnInput(ctx context.Context, input string, opts agent.RunO
 }
 
 func (a *App) InjectTurnInputWithHidden(ctx context.Context, visibleInput, hiddenInput string, opts agent.RunOptions) (bool, error) {
-	if strings.TrimSpace(visibleInput) != "" {
+	opts = a.applyRunOptionsDefaults(opts)
+	if !opts.HiddenInput && strings.TrimSpace(visibleInput) != "" {
 		_, _ = session.PatchSessionMeta(a.sessionsDir, a.sessionID, session.SessionMetaPatch{Title: visibleInput})
 	}
-	opts = a.applyRunOptionsDefaults(opts)
 	ag, err := a.ensureAgent()
 	if err != nil {
 		return false, err
