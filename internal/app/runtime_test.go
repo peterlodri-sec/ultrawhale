@@ -131,6 +131,59 @@ func TestOfficialPluginNoopStopHooksDoNotRenderOutput(t *testing.T) {
 	}
 }
 
+func TestRuntimeRespectsWorkflowToggles(t *testing.T) {
+	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
+	workspace := t.TempDir()
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(workspace); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldwd) }()
+
+	cfg := DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	disabled := false
+	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{Workflows: FileWorkflowsConfig{Enabled: &disabled}}); err != nil {
+		t.Fatalf("SaveConfigFile disabled workflows: %v", err)
+	}
+	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New disabled workflows: %v", err)
+	}
+	defer app.Close()
+	if app.toolRegistry.Get("workflow") != nil {
+		t.Fatal("workflow tool should not be registered when workflows are disabled")
+	}
+
+	cfg = DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	if err := os.Remove(ProjectConfigPath(workspace)); err != nil {
+		t.Fatalf("remove project config: %v", err)
+	}
+	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{Workflows: FileWorkflowsConfig{KeywordTriggerEnabled: &disabled}}); err != nil {
+		t.Fatalf("SaveConfigFile disabled keyword trigger: %v", err)
+	}
+	app, err = New(t.Context(), cfg, StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New disabled keyword trigger: %v", err)
+	}
+	defer app.Close()
+	if app.toolRegistry.Get("workflow") == nil {
+		t.Fatal("workflow tool should remain registered when only keyword trigger is disabled")
+	}
+	spec, ok := app.toolRegistry.Spec("workflow")
+	if !ok {
+		t.Fatal("workflow tool spec not found")
+	}
+	desc := spec.Description
+	if strings.Contains(desc, "system prompt catalog") {
+		t.Fatalf("workflow tool description should not advertise catalog when keyword trigger is disabled: %s", desc)
+	}
+}
+
 func TestNewSessionStoresWorktreeMeta(t *testing.T) {
 	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
 	workspace := t.TempDir()

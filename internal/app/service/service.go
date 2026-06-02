@@ -40,6 +40,8 @@ const (
 	IntentSetSkillEnabled           IntentKind = "set_skill_enabled"
 	IntentSetPluginEnabled          IntentKind = "set_plugin_enabled"
 	IntentRequestHooksManage        IntentKind = "request_hooks_manage"
+	IntentRequestConfigManage       IntentKind = "request_config_manage"
+	IntentApplyConfigSettings       IntentKind = "apply_config_settings"
 	IntentSetHookEnabled            IntentKind = "set_hook_enabled"
 	IntentTrustHook                 IntentKind = "trust_hook"
 	IntentTrustHooks                IntentKind = "trust_hooks"
@@ -71,6 +73,7 @@ type Intent struct {
 	HookKey            string
 	HookEnabled        bool
 	HooksReviewAction  string
+	ConfigUpdates      []protocol.ConfigSettingUpdate
 	SkillBinding       *app.SkillBinding
 	WorktreeAction     string
 	WorkflowRunID      string
@@ -130,6 +133,7 @@ const (
 	EventSkillsSelectionRequested      = protocol.EventSkillsSelectionRequested
 	EventSkillsManagerUpdated          = protocol.EventSkillsManagerUpdated
 	EventPluginsManagerUpdated         = protocol.EventPluginsManagerUpdated
+	EventConfigManagerUpdated          = protocol.EventConfigManagerUpdated
 	EventHooksManagerUpdated           = protocol.EventHooksManagerUpdated
 	EventHooksStartupReviewRequested   = protocol.EventHooksStartupReviewRequested
 	EventReviewRequested               = protocol.EventReviewRequested

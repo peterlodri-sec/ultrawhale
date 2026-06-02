@@ -60,6 +60,7 @@ const (
 	EventSkillsSelectionRequested      EventKind = "skills_selection_requested"
 	EventSkillsManagerUpdated          EventKind = "skills_manager_updated"
 	EventPluginsManagerUpdated         EventKind = "plugins_manager_updated"
+	EventConfigManagerUpdated          EventKind = "config_manager_updated"
 	EventHooksManagerUpdated           EventKind = "hooks_manager_updated"
 	EventHooksStartupReviewRequested   EventKind = "hooks_startup_review_requested"
 	EventReviewRequested               EventKind = "review_requested"
@@ -104,11 +105,27 @@ type Event struct {
 	Hook             *HookRun             `json:"hook,omitempty"`
 	Skills           []SkillView          `json:"skills,omitempty"`
 	Plugins          []PluginStatus       `json:"plugins,omitempty"`
+	Config           *ConfigManagerState  `json:"config,omitempty"`
 	Open             bool                 `json:"open,omitempty"`
 	Hooks            *HooksManagerState   `json:"hooks,omitempty"`
 	WorktreeExit     *WorktreeExitSummary `json:"worktree_exit,omitempty"`
 	SessionID        string               `json:"session_id,omitempty"`
 	Messages         []Message            `json:"messages,omitempty"`
+}
+
+type ConfigManagerState struct {
+	Items []ConfigSettingView `json:"items,omitempty"`
+}
+
+type ConfigSettingView struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type"`
+	Value       string `json:"value"`
+	Default     string `json:"default,omitempty"`
+	Scope       string `json:"scope,omitempty"`
+	Source      string `json:"source,omitempty"`
 }
 
 type HooksManagerState struct {

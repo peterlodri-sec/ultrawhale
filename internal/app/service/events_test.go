@@ -821,6 +821,64 @@ func TestPluginsCommandOpensManagerAndToggleUpdatesRuntime(t *testing.T) {
 	}
 }
 
+func TestConfigCommandOpensManagerAndAppliesWorkflowSetting(t *testing.T) {
+	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
+	work := t.TempDir()
+	t.Chdir(work)
+	cfg := app.DefaultConfig()
+	cfg.DataDir = t.TempDir()
+	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer svc.Close()
+	waitForServiceEvent(t, svc, EventSessionHydrated)
+
+	svc.Dispatch(Intent{Kind: IntentSubmit, Input: "/config"})
+	ev := waitForServiceEvent(t, svc, EventConfigManagerUpdated)
+	if !ev.Open {
+		t.Fatalf("expected /config to open manager: %+v", ev)
+	}
+	if ev.Config == nil || !hasConfigSetting(ev.Config, "workflows.keyword_trigger_enabled", "true") {
+		t.Fatalf("expected workflow keyword setting, got %+v", ev.Config)
+	}
+
+	svc.Dispatch(Intent{Kind: IntentApplyConfigSettings, ConfigUpdates: []protocol.ConfigSettingUpdate{{ID: "workflows.keyword_trigger_enabled", Value: "false"}}})
+	result := waitForServiceEvent(t, svc, EventLocalSubmitResult)
+	if result.Status != "ok" || !strings.Contains(result.Text, "Workflow keyword trigger") {
+		t.Fatalf("unexpected config apply result: %+v", result)
+	}
+	ev = waitForServiceEvent(t, svc, EventConfigManagerUpdated)
+	if ev.Config == nil || !hasConfigSetting(ev.Config, "workflows.keyword_trigger_enabled", "false") {
+		t.Fatalf("expected updated workflow keyword setting, got %+v", ev.Config)
+	}
+	if !hasConfigSetting(ev.Config, "workflows.enabled", "true") {
+		t.Fatalf("updating keyword trigger should not disable workflows: %+v", ev.Config)
+	}
+	loaded, ok, err := app.LoadConfigFile(app.ProjectLocalConfigPath(work))
+	if err != nil {
+		t.Fatalf("LoadConfigFile: %v", err)
+	}
+	if !ok {
+		t.Fatal("expected project-local config to be written")
+	}
+	if loaded.Workflows.KeywordTriggerEnabled == nil || *loaded.Workflows.KeywordTriggerEnabled {
+		t.Fatalf("keyword trigger not persisted: %+v", loaded.Workflows.KeywordTriggerEnabled)
+	}
+}
+
+func hasConfigSetting(state *protocol.ConfigManagerState, id, value string) bool {
+	if state == nil {
+		return false
+	}
+	for _, item := range state.Items {
+		if item.ID == id && item.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
 func hasServicePlugin(all []plugins.PluginStatus, id string, enabled bool) bool {
 	for _, plugin := range all {
 		if plugin.Manifest.ID == id {

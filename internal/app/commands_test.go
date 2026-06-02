@@ -194,6 +194,7 @@ func TestClassifySubmitSlashCommands(t *testing.T) {
 		{line: "/open .", want: appcommands.SubmitLocalUI},
 		{line: "/open My Folder/file.txt", want: appcommands.SubmitLocalUI},
 		{line: "/skills", want: appcommands.SubmitLocalUI},
+		{line: "/config", want: appcommands.SubmitLocalUI},
 		{line: "/plugins", want: appcommands.SubmitLocalUI},
 		{line: "/review", want: appcommands.SubmitLocalUI},
 		{line: "/review local", want: appcommands.SubmitTurnStarting},

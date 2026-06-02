@@ -28,6 +28,7 @@ func (s *Service) DispatchProtocol(in protocol.Intent) {
 		HookKey:            in.HookKey,
 		HookEnabled:        in.HookEnabled,
 		HooksReviewAction:  in.HooksReviewAction,
+		ConfigUpdates:      in.ConfigUpdates,
 		SkillBinding:       appSkillBinding(in.SkillBinding),
 		WorktreeAction:     in.WorktreeAction,
 		WorkflowRunID:      in.WorkflowRunID,
@@ -91,6 +92,10 @@ func serviceIntentKind(kind protocol.IntentKind) IntentKind {
 		return IntentSetPluginEnabled
 	case protocol.IntentRequestHooksManage:
 		return IntentRequestHooksManage
+	case protocol.IntentRequestConfigManage:
+		return IntentRequestConfigManage
+	case protocol.IntentApplyConfigSettings:
+		return IntentApplyConfigSettings
 	case protocol.IntentSetHookEnabled:
 		return IntentSetHookEnabled
 	case protocol.IntentTrustHook:
