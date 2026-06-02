@@ -238,7 +238,17 @@ func (s *Service) runTurnWith(start func(context.Context) (<-chan agent.AgentEve
 			}
 		case agent.AgentEventTypeUserInputSubmitted, agent.AgentEventTypeUserInputCancelled:
 			deltas.flushReliable()
-			s.emit(Event{Kind: EventUserInputDone})
+			doneEvent := Event{Kind: EventUserInputDone}
+			if ev.Type == agent.AgentEventTypeUserInputCancelled {
+				doneEvent.Status = "canceled"
+			} else {
+				doneEvent.Status = "submitted"
+			}
+			if ev.ToolCall != nil {
+				doneEvent.ToolCallID = ev.ToolCall.ID
+				doneEvent.ToolName = ev.ToolCall.Name
+			}
+			s.emit(doneEvent)
 		case agent.AgentEventTypeDone:
 			if ev.Message != nil {
 				if last == "" {

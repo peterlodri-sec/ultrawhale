@@ -934,7 +934,7 @@ func TestBusyLocalCommandResultKeepsPendingToolCallLive(t *testing.T) {
 		Text:   "Status\n\nsession: test-session",
 	}))
 	m = next.(model)
-	if !m.hasPendingToolCalls() {
+	if !m.hasPendingLifecycleItems() {
 		t.Fatal("local result must not clear pending tool calls")
 	}
 

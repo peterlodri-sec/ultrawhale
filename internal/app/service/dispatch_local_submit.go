@@ -209,6 +209,7 @@ func (s *Service) emitWorkflowPanel(runID string) {
 		return
 	}
 	out := s.app.WorkflowPanelLocalResult(strings.TrimSpace(runID))
+	s.emitWorkflowSnapshotForResult(out)
 	s.emit(Event{Kind: EventWorkflowPanel, Text: out.PlainText, LocalResult: protocolLocalResult(out)})
 }
 
@@ -223,6 +224,7 @@ func (s *Service) cancelWorkflowRun(runID string) {
 		s.emit(Event{Kind: EventError, Text: err.Error()})
 		return
 	}
+	s.emitWorkflowSnapshotForResult(out)
 	s.emit(Event{Kind: EventWorkflowPanel, Text: out.PlainText, LocalResult: protocolLocalResult(out)})
 }
 
@@ -245,6 +247,7 @@ func (s *Service) startWorkflow(name, args, resumeFromRunID string, trust bool, 
 		return
 	}
 	s.maybeWatchWorkflowRun(out)
+	s.emitWorkflowSnapshotForResult(out)
 	ev := localSubmitResultEvent("info", out.PlainText)
 	ev.LocalResult = protocolLocalResult(out)
 	s.emit(ev)

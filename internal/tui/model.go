@@ -15,6 +15,7 @@ import (
 	"github.com/usewhale/whale/internal/notification"
 	appcommands "github.com/usewhale/whale/internal/runtime/commands"
 	"github.com/usewhale/whale/internal/runtime/protocol"
+	"github.com/usewhale/whale/internal/runtime/timeline"
 	"github.com/usewhale/whale/internal/tui/composer"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
@@ -69,7 +70,7 @@ type model struct {
 	viewport               viewport.Model
 	chat                   chatList
 	assembler              *tuirender.Assembler
-	pendingToolCalls       map[string]struct{}
+	timeline               *timeline.TurnTimelineBuilder
 	transcript             []tuirender.UIMessage
 	sessionID              string
 	startupHeaderPrinted   bool
@@ -328,7 +329,7 @@ func newModel(rt Runtime, modelName, effort, thinking string) model {
 		viewport:          vp,
 		chat:              newChatList(),
 		assembler:         tuirender.NewAssembler(),
-		pendingToolCalls:  map[string]struct{}{},
+		timeline:          timeline.NewTurnTimelineBuilder(),
 		startupHeaderOnce: new(bool),
 		status:            "ready",
 		followTail:        true,
