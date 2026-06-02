@@ -163,7 +163,8 @@ func TestRuntimeRespectsWorkflowToggles(t *testing.T) {
 	if err := os.Remove(ProjectConfigPath(workspace)); err != nil {
 		t.Fatalf("remove project config: %v", err)
 	}
-	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{Workflows: FileWorkflowsConfig{KeywordTriggerEnabled: &disabled}}); err != nil {
+	enabled := true
+	if err := SaveConfigFile(ProjectConfigPath(workspace), FileConfig{Workflows: FileWorkflowsConfig{Enabled: &enabled, KeywordTriggerEnabled: &disabled}}); err != nil {
 		t.Fatalf("SaveConfigFile disabled keyword trigger: %v", err)
 	}
 	app, err = New(t.Context(), cfg, StartOptions{NewSession: true})

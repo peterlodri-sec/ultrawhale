@@ -1475,7 +1475,6 @@ func TestBuildMCPLocalResultIncludesCommandHeadersAndToolNames(t *testing.T) {
 func TestExecuteLocalMCPReturnsStructuredLocalResult(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
-	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -2532,7 +2531,6 @@ func countWorkflowEvents(events []workflow.RunEvent, typ string) int {
 func TestExecuteLocalStatsReturnsStructuredLocalResult(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
-	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)

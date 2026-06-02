@@ -825,6 +825,10 @@ func TestConfigCommandOpensManagerAndAppliesWorkflowSetting(t *testing.T) {
 	t.Setenv("DEEPSEEK_API_KEY", "sk-test")
 	work := t.TempDir()
 	t.Chdir(work)
+	enabled := true
+	if err := app.SaveConfigFile(app.ProjectLocalConfigPath(work), app.FileConfig{Workflows: app.FileWorkflowsConfig{Enabled: &enabled}}); err != nil {
+		t.Fatalf("SaveConfigFile: %v", err)
+	}
 	cfg := app.DefaultConfig()
 	cfg.DataDir = t.TempDir()
 	svc, err := New(t.Context(), cfg, app.StartOptions{NewSession: true})

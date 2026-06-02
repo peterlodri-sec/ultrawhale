@@ -835,7 +835,9 @@ func TestConfigExplicitWorkflowDisablesOverrideFileConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = dir
 	cfg.WorkflowsEnabled = false
+	cfg.WorkflowsEnabledExplicit = true
 	cfg.WorkflowKeywordTrigger = false
+	cfg.WorkflowKeywordTriggerExplicit = true
 	loaded, err := LoadAndApplyConfig(cfg, workspace)
 	if err != nil {
 		t.Fatalf("LoadAndApplyConfig: %v", err)
