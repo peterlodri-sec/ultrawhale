@@ -132,7 +132,7 @@ tools = []                             # hide built-in tools by name
 config_path = ""                       # custom MCP config path
 
 	[workflows]
-	enabled = true                         # enable the workflow runtime/tool
+	enabled = false                        # enable the workflow runtime/tool
 	keyword_trigger_enabled = true         # allow workflow catalog hints to trigger automatic use
 	max_concurrency = 3                    # parallel agent limit
 

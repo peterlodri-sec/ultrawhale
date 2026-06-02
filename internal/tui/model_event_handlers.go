@@ -122,6 +122,13 @@ func (m *model) handleLocalSubmitResultEvent(ev protocol.Event) tea.Cmd {
 	if role == "" {
 		role = "info"
 	}
+	if m.handleConfigManagerSubmitResult(ev) {
+		m.addLog(logEntry{Kind: role, Source: "system", Summary: ev.Text, Raw: ev.Text})
+		if role == "error" {
+			m.status = "error"
+		}
+		return nil
+	}
 	if !isEnvironmentInventoryBlock(ev.Text) {
 		m.appendLocalCommandEcho(m.popLocalSubmitCommand())
 		if ev.LocalResult != nil && ev.LocalResult.Kind == "workflow-launch" {

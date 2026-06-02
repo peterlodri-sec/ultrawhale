@@ -132,7 +132,7 @@ tools = []                             # 按名称隐藏内置工具
 config_path = ""                       # 自定义 MCP 配置路径
 
 	[workflows]
-	enabled = true                         # 是否启用 workflow runtime/tool
+	enabled = false                        # 是否启用 workflow runtime/tool
 	keyword_trigger_enabled = true         # 是否允许 workflow 目录提示触发自动使用
 	max_concurrency = 3                    # 并行 agent 数
 

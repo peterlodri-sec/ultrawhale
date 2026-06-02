@@ -592,6 +592,30 @@ func TestConfigManagerEscDiscardsPendingChanges(t *testing.T) {
 	}
 }
 
+func TestConfigManagerShowsApplyResultInline(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.handleServiceEvent(protocol.Event{
+		Kind: protocol.EventConfigManagerUpdated,
+		Open: true,
+		Config: &protocol.ConfigManagerState{Items: []protocol.ConfigSettingView{
+			{ID: "workflows.enabled", Label: "Dynamic workflows", Type: "bool", Value: "false", Scope: "project local", Source: "project local"},
+		}},
+	})
+	before := len(m.transcript)
+	m, _ = updateTestModel(t, m, svcMsg(protocol.Event{
+		Kind:   protocol.EventLocalSubmitResult,
+		Status: "ok",
+		Text:   "updated 1 config setting(s): Dynamic workflows\nconfig: /workspace/.whale/config.local.toml",
+	}))
+	if len(m.transcript) != before {
+		t.Fatalf("config apply result should stay inline, before=%d after=%d", before, len(m.transcript))
+	}
+	rendered := xansi.Strip(m.renderConfigManager())
+	if !strings.Contains(rendered, "saved: updated 1 config setting(s): Dynamic workflows") {
+		t.Fatalf("expected inline saved status, got:\n%s", rendered)
+	}
+}
+
 func TestPluginsManagerDetailView(t *testing.T) {
 	m, intents := newModelWithDispatchSpy()
 	m.width = 96

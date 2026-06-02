@@ -1475,6 +1475,7 @@ func TestBuildMCPLocalResultIncludesCommandHeadersAndToolNames(t *testing.T) {
 func TestExecuteLocalMCPReturnsStructuredLocalResult(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1497,6 +1498,7 @@ func TestBuildWorkflowsLocalResultIncludesRecentRuns(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1553,6 +1555,7 @@ log('ok')
 	})
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1578,6 +1581,7 @@ func TestExecuteLocalWorkflowRunReturnsStructuredLocalResult(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1853,6 +1857,7 @@ func TestWorkflowTerminalLocalResultDoesNotRepeatLongSummaryAsIdentity(t *testin
 	t.Setenv("HOME", t.TempDir())
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1896,6 +1901,7 @@ func TestWorkflowRunLocalResultSurfacesFailureReason(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1931,6 +1937,7 @@ func TestWorkflowRunLocalResultSurfacesFailureReason(t *testing.T) {
 func TestNewRegistersWorkflowToolAsWriteCapable(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1952,6 +1959,7 @@ func TestNewRegistersWorkflowToolAsWriteCapable(t *testing.T) {
 func TestRefreshMCPToolsKeepsWorkflowTool(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -1972,6 +1980,7 @@ func TestRefreshMCPToolsKeepsWorkflowTool(t *testing.T) {
 func TestExecuteLocalWorkflowsReturnsUsageErrorForExtraArgs(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -2523,6 +2532,7 @@ func countWorkflowEvents(events []workflow.RunEvent, typ string) int {
 func TestExecuteLocalStatsReturnsStructuredLocalResult(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.DataDir = t.TempDir()
+	cfg.WorkflowsEnabled = true
 	app, err := New(t.Context(), cfg, StartOptions{NewSession: true})
 	if err != nil {
 		t.Fatalf("New: %v", err)
