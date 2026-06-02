@@ -89,6 +89,8 @@ func (m *model) handleServiceEvent(ev protocol.Event) (tea.Cmd, bool, bool) {
 		return m.handleLocalSubmitResultEvent(ev), false, false
 	case protocol.EventWorkflowPanel:
 		return m.handleWorkflowPanelEvent(ev.LocalResult), false, false
+	case protocol.EventWorkflowSnapshot:
+		m.handleWorkflowSnapshotEvent(ev)
 	case protocol.EventWorkflowTerminal:
 		m.handleWorkflowTerminalEvent(ev)
 	case protocol.EventDiffResult:
@@ -125,8 +127,12 @@ func (m *model) handleServiceEvent(ev protocol.Event) (tea.Cmd, bool, bool) {
 		m.handleMCPCompleteEvent(ev)
 	case protocol.EventApprovalRequired:
 		m.handleApprovalRequiredEvent(ev)
+	case protocol.EventApprovalDecision:
+		m.handleApprovalDecisionEvent(ev)
 	case protocol.EventUserInputRequired:
 		m.handleUserInputRequiredEvent(ev)
+	case protocol.EventUserInputDone:
+		m.handleUserInputDoneEvent(ev)
 	case protocol.EventSessionsListed:
 		m.handleSessionsListedEvent(ev)
 	case protocol.EventRewindMessagesListed:
@@ -384,6 +390,7 @@ func (m *model) resetLiveAttempt() {
 	if m.assembler != nil {
 		m.assembler.Reset()
 	}
+	m.resetTimeline()
 	m.resetTurnVisibility()
 	m.refreshLiveViewportContent()
 }

@@ -29,6 +29,7 @@ const (
 	EventMCPStatus            EventKind = "mcp_status"
 	EventMCPComplete          EventKind = "mcp_complete"
 	EventApprovalRequired     EventKind = "approval_required"
+	EventApprovalDecision     EventKind = "approval_decision"
 	EventUserInputRequired    EventKind = "user_input_required"
 	EventUserInputDone        EventKind = "user_input_done"
 	EventSessionsListed       EventKind = "sessions_listed"
@@ -49,6 +50,7 @@ const (
 	EventSessionHydrated      EventKind = "session_hydrated"
 	EventRewindMessagesListed EventKind = "rewind_messages_listed"
 	EventWorkflowPanel        EventKind = "workflow_panel"
+	EventWorkflowSnapshot     EventKind = "workflow_snapshot"
 	EventWorkflowTerminal     EventKind = "workflow_terminal"
 )
 
@@ -66,6 +68,16 @@ const (
 
 type Event struct {
 	Kind             EventKind            `json:"kind"`
+	TurnID           string               `json:"turn_id,omitempty"`
+	ItemID           string               `json:"item_id,omitempty"`
+	ParentID         string               `json:"parent_id,omitempty"`
+	ApprovalID       string               `json:"approval_id,omitempty"`
+	Decision         string               `json:"decision,omitempty"`
+	DecisionScope    string               `json:"decision_scope,omitempty"`
+	ApprovalKeys     []string             `json:"approval_keys,omitempty"`
+	WorkflowRunID    string               `json:"workflow_run_id,omitempty"`
+	Sequence         int64                `json:"sequence,omitempty"`
+	StartedAt        time.Time            `json:"started_at,omitempty"`
 	Text             string               `json:"text,omitempty"`
 	ClientInputID    string               `json:"client_input_id,omitempty"`
 	ToolCallID       string               `json:"tool_call_id,omitempty"`

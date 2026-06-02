@@ -247,9 +247,9 @@ func TestProviderRetryStreamResetClearsLiveAttempt(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	m.handleServiceEvent(protocol.Event{Kind: protocol.EventAssistantDelta, Text: "old answer"})
 	m.handleServiceEvent(protocol.Event{Kind: protocol.EventReasoningDelta, Text: "old thought"})
-	m.appendToolCall("tc-old", "shell_run", `{"command":"date"}`)
+	m.handleServiceEvent(protocol.Event{Kind: protocol.EventToolCall, ToolCallID: "tc-old", ToolName: "shell_run", Text: `shell_run: {"command":"date"}`})
 
-	if len(m.assembler.Snapshot()) == 0 {
+	if len(m.liveTranscriptMessages()) == 0 {
 		t.Fatal("expected live attempt content before retry reset")
 	}
 	if m.busyTokenCount == 0 {
@@ -261,8 +261,8 @@ func TestProviderRetryStreamResetClearsLiveAttempt(t *testing.T) {
 		Metadata: map[string]any{"delay_ms": int64(1000), "stage": "stream", "stream_reset": true},
 	})
 
-	if got := len(m.assembler.Snapshot()); got != 0 {
-		t.Fatalf("expected live attempt cleared, got %+v", m.assembler.Snapshot())
+	if got := len(m.liveTranscriptMessages()); got != 0 {
+		t.Fatalf("expected live attempt cleared, got %+v", m.liveTranscriptMessages())
 	}
 	if m.visibleAssistantThisTurn != "" || m.sawAssistantThisTurn || m.sawReasoningThisTurn {
 		t.Fatalf("turn visibility not reset: visible=%q assistant=%v reasoning=%v", m.visibleAssistantThisTurn, m.sawAssistantThisTurn, m.sawReasoningThisTurn)
@@ -284,7 +284,7 @@ func TestResponseResetClearsLiveAndCommittedCurrentTurnOutput(t *testing.T) {
 	m.beginTurnTranscript()
 	m.handleServiceEvent(protocol.Event{Kind: protocol.EventAssistantDelta, Text: "old answer"})
 	m.handleServiceEvent(protocol.Event{Kind: protocol.EventReasoningDelta, Text: "old thought"})
-	m.appendToolCall("tc-old", "shell_run", `{"command":"date"}`)
+	m.handleServiceEvent(protocol.Event{Kind: protocol.EventToolCall, ToolCallID: "tc-old", ToolName: "shell_run", Text: `shell_run: {"command":"date"}`})
 	m.commitLiveTranscript(false)
 
 	before := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
