@@ -6,10 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/core"
 	"github.com/usewhale/whale/internal/llm"
+	"github.com/usewhale/whale/internal/session"
+	"github.com/usewhale/whale/internal/telemetry"
 )
 
 func runSubagentStartHooks(ctx context.Context, hooks []agent.ResolvedHook, sessionID, workspaceRoot, role, model, permissionMode, prompt string, promptExecutor, agentExecutor agent.HookExecutor) (string, error) {
@@ -106,6 +109,7 @@ func (r *Runner) hookModelExecutor(defaultModel, defaultEffort, hookKind string)
 		if err != nil {
 			return agent.HookResult{Decision: agent.HookDecisionError, Message: err.Error()}
 		}
+		r.recordHookModelUsage(payload, model, hookKind, usage)
 		res := parseHookModelResult(payload.Event, content)
 		if res.Metadata == nil {
 			res.Metadata = map[string]any{}
@@ -115,6 +119,30 @@ func (r *Runner) hookModelExecutor(defaultModel, defaultEffort, hookKind string)
 		res.Metadata["usage"] = usage
 		return res
 	}
+}
+
+func (r *Runner) recordHookModelUsage(payload agent.HookPayload, model, hookKind string, usage llm.Usage) {
+	if r == nil {
+		return
+	}
+	cost := telemetry.EstimateTurnUSD(model, usage)
+	if cost <= 0 {
+		return
+	}
+	if strings.TrimSpace(r.sessionsDir) != "" && strings.TrimSpace(payload.SessionID) != "" {
+		_, _ = session.UpdateSessionMeta(r.sessionsDir, payload.SessionID, func(meta *session.SessionMeta) {
+			meta.TotalCostUSD += cost
+		})
+	}
+	if strings.TrimSpace(r.usageLogPath) == "" {
+		return
+	}
+	_ = telemetry.AppendUsage(r.usageLogPath, payload.SessionID, model, "", usage, cost, time.Now(), telemetry.UsageMetadata{
+		Kind:                "subagent",
+		ParentSessionID:     r.currentParentSessionID(),
+		SubagentRole:        strings.TrimSpace(payload.SubagentRole),
+		SubagentTaskPreview: "hook:" + hookKind,
+	})
 }
 
 func buildHookModelPrompt(cfg agent.HookConfig, payload agent.HookPayload, hookKind string) string {
@@ -131,15 +159,20 @@ func buildHookModelPrompt(cfg agent.HookConfig, payload agent.HookPayload, hookK
 func completeHookModel(ctx context.Context, provider llm.Provider, prompt string) (string, llm.Usage, error) {
 	var content strings.Builder
 	var usage llm.Usage
-	sawDelta := false
-	for ev := range provider.StreamResponse(ctx, []core.Message{{Role: core.RoleUser, Text: prompt}}, nil) {
+	var events <-chan llm.ProviderEvent
+	if prefixProvider, ok := provider.(llm.PrefixCompletionProvider); ok {
+		events = prefixProvider.StreamResponseWithPrefix(ctx, []core.Message{{Role: core.RoleUser, Text: prompt}}, "{", nil)
+	} else {
+		events = provider.StreamResponse(ctx, []core.Message{{Role: core.RoleUser, Text: prompt}}, nil)
+	}
+	for ev := range events {
 		switch ev.Type {
 		case llm.EventContentDelta:
 			content.WriteString(ev.Content)
-			sawDelta = true
 		case llm.EventComplete:
 			if ev.Response != nil {
-				if !sawDelta && strings.TrimSpace(ev.Response.Content) != "" {
+				if strings.TrimSpace(ev.Response.Content) != "" {
+					content.Reset()
 					content.WriteString(ev.Response.Content)
 				}
 				usage = addUsage(usage, ev.Response.Usage)

@@ -46,6 +46,7 @@ type Config struct {
 	RetryStreamMaxAttempts   int
 	RetryStreamIdleTimeout   time.Duration
 	RetryMaxDelay            time.Duration
+	DeepSeekPrefixCompletion bool
 	MaxParallelSubagents     int
 	MCPConfigPath            string
 	APIBaseURL               string

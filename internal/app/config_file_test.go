@@ -24,6 +24,7 @@ func TestConfigFileRoundTrip(t *testing.T) {
 		Model:           "deepseek-v4-pro",
 		ReasoningEffort: "max",
 		ThinkingEnabled: &enabled,
+		Experimental:    FileExperimentalConfig{DeepSeekPrefixCompletion: &enabled},
 		UI:              FileUIConfig{ViewMode: ViewModeFocus, ShowReasoning: &showReasoning, CheckForUpdateOnStartup: &checkUpdates},
 		API:             FileAPIConfig{BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1/"},
 		Permissions: FilePermissionsConfig{
@@ -62,6 +63,9 @@ func TestConfigFileRoundTrip(t *testing.T) {
 	if loaded.ThinkingEnabled == nil || !*loaded.ThinkingEnabled {
 		t.Fatal("thinking_enabled: want true")
 	}
+	if loaded.Experimental.DeepSeekPrefixCompletion == nil || !*loaded.Experimental.DeepSeekPrefixCompletion {
+		t.Fatal("experimental.deepseek_prefix_completion: want true")
+	}
 	if loaded.API.BaseURL != "https://dashscope.aliyuncs.com/compatible-mode/v1/" {
 		t.Fatalf("api base_url: %+v", loaded.API)
 	}
@@ -89,6 +93,27 @@ func TestApplyFileConfigSupportsMaxParallelSubagents(t *testing.T) {
 	}
 	if cfg.MaxParallelSubagents != 3 {
 		t.Fatalf("max parallel subagents: want 3, got %d", cfg.MaxParallelSubagents)
+	}
+}
+
+func TestApplyFileConfigSupportsDeepSeekPrefixCompletion(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.DeepSeekPrefixCompletion {
+		t.Fatal("deepseek prefix completion should default to disabled")
+	}
+	enabled := true
+	if err := ApplyFileConfig(&cfg, FileConfig{Experimental: FileExperimentalConfig{DeepSeekPrefixCompletion: &enabled}}); err != nil {
+		t.Fatalf("ApplyFileConfig: %v", err)
+	}
+	if !cfg.DeepSeekPrefixCompletion {
+		t.Fatal("expected deepseek prefix completion to be enabled")
+	}
+	disabled := false
+	if err := ApplyFileConfig(&cfg, FileConfig{Experimental: FileExperimentalConfig{DeepSeekPrefixCompletion: &disabled}}); err != nil {
+		t.Fatalf("ApplyFileConfig: %v", err)
+	}
+	if cfg.DeepSeekPrefixCompletion {
+		t.Fatal("expected deepseek prefix completion to be disabled")
 	}
 }
 
