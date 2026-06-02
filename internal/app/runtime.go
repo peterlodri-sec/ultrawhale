@@ -80,14 +80,15 @@ func (a *App) ensureAgent() (*agent.Agent, error) {
 			pluginBlocks = a.pluginManager.StartupBlocks(a.ctx)
 		}
 		provider, err := newDeepSeekProvider(providerOptions{
-			APIKey:            a.apiKey,
-			BaseURL:           a.cfg.APIBaseURL,
-			Model:             a.model,
-			ReasoningEffort:   a.reasoningEffort,
-			ThinkingEnabled:   a.thinkingEnabled,
-			RetryPolicy:       retryPolicyFromConfig(a.cfg),
-			StreamMaxAttempts: a.cfg.RetryStreamMaxAttempts,
-			StreamIdleTimeout: a.cfg.RetryStreamIdleTimeout,
+			APIKey:                   a.apiKey,
+			BaseURL:                  a.cfg.APIBaseURL,
+			Model:                    a.model,
+			ReasoningEffort:          a.reasoningEffort,
+			ThinkingEnabled:          a.thinkingEnabled,
+			RetryPolicy:              retryPolicyFromConfig(a.cfg),
+			StreamMaxAttempts:        a.cfg.RetryStreamMaxAttempts,
+			StreamIdleTimeout:        a.cfg.RetryStreamIdleTimeout,
+			DeepSeekPrefixCompletion: a.cfg.DeepSeekPrefixCompletion,
 		})
 		if err != nil {
 			return nil, err

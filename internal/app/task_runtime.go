@@ -27,15 +27,16 @@ func (a *App) rebuildTaskRuntimeLocked() error {
 			model = defaults.DefaultModel
 		}
 		return newDeepSeekProvider(providerOptions{
-			APIKey:            apiKey,
-			BaseURL:           cfg.APIBaseURL,
-			Model:             model,
-			ReasoningEffort:   effort,
-			ThinkingEnabled:   thinking,
-			MaxTokens:         maxTokens,
-			RetryPolicy:       retryPolicyFromConfig(cfg),
-			StreamMaxAttempts: cfg.RetryStreamMaxAttempts,
-			StreamIdleTimeout: cfg.RetryStreamIdleTimeout,
+			APIKey:                   apiKey,
+			BaseURL:                  cfg.APIBaseURL,
+			Model:                    model,
+			ReasoningEffort:          effort,
+			ThinkingEnabled:          thinking,
+			MaxTokens:                maxTokens,
+			RetryPolicy:              retryPolicyFromConfig(cfg),
+			StreamMaxAttempts:        cfg.RetryStreamMaxAttempts,
+			StreamIdleTimeout:        cfg.RetryStreamIdleTimeout,
+			DeepSeekPrefixCompletion: cfg.DeepSeekPrefixCompletion,
 		})
 	}
 	providerFactoryWithOptions := func(req tasks.ProviderRequest) (llm.Provider, error) {
@@ -45,15 +46,16 @@ func (a *App) rebuildTaskRuntimeLocked() error {
 		}
 		reqEffort := normalizeEffort(core.FirstNonEmpty(strings.TrimSpace(req.Effort), effort))
 		return newDeepSeekProvider(providerOptions{
-			APIKey:            apiKey,
-			BaseURL:           cfg.APIBaseURL,
-			Model:             model,
-			ReasoningEffort:   reqEffort,
-			ThinkingEnabled:   thinking,
-			MaxTokens:         req.MaxTokens,
-			RetryPolicy:       retryPolicyFromConfig(cfg),
-			StreamMaxAttempts: cfg.RetryStreamMaxAttempts,
-			StreamIdleTimeout: cfg.RetryStreamIdleTimeout,
+			APIKey:                   apiKey,
+			BaseURL:                  cfg.APIBaseURL,
+			Model:                    model,
+			ReasoningEffort:          reqEffort,
+			ThinkingEnabled:          thinking,
+			MaxTokens:                req.MaxTokens,
+			RetryPolicy:              retryPolicyFromConfig(cfg),
+			StreamMaxAttempts:        cfg.RetryStreamMaxAttempts,
+			StreamIdleTimeout:        cfg.RetryStreamIdleTimeout,
+			DeepSeekPrefixCompletion: cfg.DeepSeekPrefixCompletion,
 		})
 	}
 	workspaceTools := func(workspace tasks.ToolWorkspace) (*core.ToolRegistry, error) {

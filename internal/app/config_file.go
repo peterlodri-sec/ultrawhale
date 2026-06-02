@@ -23,19 +23,20 @@ type FileConfig struct {
 	ReasoningEffort string `toml:"reasoning_effort,omitempty"`
 	ThinkingEnabled *bool  `toml:"thinking_enabled,omitempty"`
 
-	Permissions FilePermissionsConfig         `toml:"permissions,omitempty"`
-	UI          FileUIConfig                  `toml:"ui,omitempty"`
-	API         FileAPIConfig                 `toml:"api,omitempty"`
-	Retry       FileRetryConfig               `toml:"retry,omitempty"`
-	Tasks       FileTasksConfig               `toml:"tasks,omitempty"`
-	Budget      FileBudgetConfig              `toml:"budget,omitempty"`
-	MCP         FileMCPConfig                 `toml:"mcp,omitempty"`
-	Context     FileContextConfig             `toml:"context,omitempty"`
-	ProjectDoc  FileProjectDocConfig          `toml:"project_doc,omitempty"`
-	Skills      FileSkillsConfig              `toml:"skills,omitempty"`
-	Plugins     FilePluginsConfig             `toml:"plugins,omitempty"`
-	Workflows   FileWorkflowsConfig           `toml:"workflows,omitempty"`
-	Hooks       map[string][]agent.HookConfig `toml:"hooks,omitempty"`
+	Permissions  FilePermissionsConfig         `toml:"permissions,omitempty"`
+	UI           FileUIConfig                  `toml:"ui,omitempty"`
+	API          FileAPIConfig                 `toml:"api,omitempty"`
+	Retry        FileRetryConfig               `toml:"retry,omitempty"`
+	Experimental FileExperimentalConfig        `toml:"experimental,omitempty"`
+	Tasks        FileTasksConfig               `toml:"tasks,omitempty"`
+	Budget       FileBudgetConfig              `toml:"budget,omitempty"`
+	MCP          FileMCPConfig                 `toml:"mcp,omitempty"`
+	Context      FileContextConfig             `toml:"context,omitempty"`
+	ProjectDoc   FileProjectDocConfig          `toml:"project_doc,omitempty"`
+	Skills       FileSkillsConfig              `toml:"skills,omitempty"`
+	Plugins      FilePluginsConfig             `toml:"plugins,omitempty"`
+	Workflows    FileWorkflowsConfig           `toml:"workflows,omitempty"`
+	Hooks        map[string][]agent.HookConfig `toml:"hooks,omitempty"`
 }
 
 type FileUIConfig struct {
@@ -68,6 +69,10 @@ type FileRetryConfig struct {
 	StreamMaxAttempts *int   `toml:"stream_max_attempts,omitempty"`
 	StreamIdleTimeout string `toml:"stream_idle_timeout,omitempty"`
 	MaxDelay          string `toml:"max_delay,omitempty"`
+}
+
+type FileExperimentalConfig struct {
+	DeepSeekPrefixCompletion *bool `toml:"deepseek_prefix_completion,omitempty"`
 }
 
 type FileTasksConfig struct {
