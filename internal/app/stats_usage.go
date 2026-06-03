@@ -16,6 +16,7 @@ func readUsageStats(path string, now time.Time) usageStats {
 		ByModel:  map[string]*usageModelStats{},
 		Buckets:  usageBuckets(now),
 	}
+	cacheBreaks := newCacheBreakDetector()
 	f, err := os.Open(path)
 	if err != nil {
 		return stats
@@ -32,6 +33,7 @@ func readUsageStats(path string, now time.Time) usageStats {
 		if !isSupportedUsageModel(rec.Model) {
 			continue
 		}
+		cacheBreaks.Add(rec)
 		stats.Turns++
 		if rec.Session != "" {
 			stats.Sessions[rec.Session] = true
@@ -77,6 +79,7 @@ func readUsageStats(path string, now time.Time) usageStats {
 		rec.CostUSD = cost
 		stats.Recent = appendRecentUsage(stats.Recent, rec)
 	}
+	stats.CacheDiagnostics = cacheBreaks.Diagnostics()
 	return stats
 }
 

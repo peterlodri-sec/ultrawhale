@@ -566,7 +566,7 @@ func TestHandleLocalCommandStats(t *testing.T) {
 		"- repair rate: 50.0%",
 		"- top repair: markdown_autolink_path · 1",
 		"- top invalid tool: write · 1",
-		"More: /stats usage, /stats tools, /stats repair, /stats recent, /stats profile, /stats all",
+		"More: /stats usage, /stats cache, /stats tools, /stats repair, /stats recent, /stats profile, /stats all",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("expected stats to contain %q, got:\n%s", want, out)

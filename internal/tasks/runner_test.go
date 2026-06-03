@@ -724,6 +724,21 @@ func TestChildAskPolicyRequiresApprovalForMutableTools(t *testing.T) {
 	if !editDecision.Allow || !editDecision.RequiresApproval {
 		t.Fatalf("ask write should require approval, got %+v", editDecision)
 	}
+	exactPolicy := childToolPolicy(nil, AgentPermissionAsk, "/repo", []string{"shell_run", "write_file"})
+	exactShellDecision := exactPolicy.Decide(
+		core.ToolSpec{Name: "shell_run"},
+		core.ToolCall{Name: "shell_run", Input: `{"command":"go test ./..."}`},
+	)
+	if !exactShellDecision.Allow || !exactShellDecision.RequiresApproval {
+		t.Fatalf("ask exact shell selector should require approval, got %+v", exactShellDecision)
+	}
+	exactWriteDecision := exactPolicy.Decide(
+		core.ToolSpec{Name: "write_file"},
+		core.ToolCall{Name: "write_file", Input: `{"file_path":"out.txt","content":"x"}`},
+	)
+	if !exactWriteDecision.Allow || !exactWriteDecision.RequiresApproval {
+		t.Fatalf("ask exact write selector should require approval, got %+v", exactWriteDecision)
+	}
 	denied := p.Decide(
 		core.ToolSpec{Name: "shell_run"},
 		core.ToolCall{Name: "shell_run", Input: `{"command":"rm -rf /tmp/x"}`},

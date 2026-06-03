@@ -29,6 +29,7 @@ type usageStats struct {
 	Buckets                  []usageBucketStats
 	ByModel                  map[string]*usageModelStats
 	Recent                   []telemetry.UsageRecord
+	CacheDiagnostics         cacheDiagnostics
 }
 
 type usageBucketStats struct {
@@ -228,4 +229,28 @@ type sessionUsageSummary struct {
 	SubagentRequestHashes map[string]bool
 	SubagentSystemHashes  map[string]bool
 	SubagentToolsHashes   map[string]bool
+}
+
+type cacheDiagnostics struct {
+	Breaks []cacheBreak
+	Counts map[string]int
+}
+
+type cacheBreak struct {
+	TS              int64
+	Session         string
+	Key             string
+	Model           string
+	RequestKind     string
+	PreviousHit     int
+	CurrentHit      int
+	CurrentMiss     int
+	PromptTokens    int
+	Cause           string
+	Details         string
+	ChangedTools    []string
+	AddedTools      []string
+	RemovedTools    []string
+	PreviousRequest string
+	CurrentRequest  string
 }

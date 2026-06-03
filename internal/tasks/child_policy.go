@@ -34,6 +34,9 @@ func (p childToolApprovalPolicy) requiresApproval(spec core.ToolSpec, call core.
 		return false
 	}
 	caps := childCapabilitySet(p.ToolSelectors)
+	if caps[strings.TrimSpace(spec.Name)] {
+		return true
+	}
 	if caps[CapabilityWorkspaceWrite] && slices.Contains(spec.Capabilities, CapabilityWorkspaceWrite) {
 		return true
 	}

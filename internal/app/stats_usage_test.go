@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/usewhale/whale/internal/telemetry"
 )
@@ -72,5 +73,119 @@ func TestSessionUsageSummaryReportsSubagentShapeDriftOnlyWhenHashesChange(t *tes
 	}
 	if strings.Contains(drift, "tools") {
 		t.Fatalf("stable tools hash should not be reported as drift: %s", drift)
+	}
+}
+
+func TestUsageStatsCacheDiagnosticsReportsToolShapeBreak(t *testing.T) {
+	dir := t.TempDir()
+	usagePath := filepath.Join(dir, "usage.jsonl")
+	ts := time.Date(2026, 5, 12, 10, 0, 0, 0, time.Local)
+
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		TS:              ts.UnixMilli(),
+		Session:         "s-cache",
+		Model:           "deepseek-v4-flash",
+		PromptTokens:    12000,
+		PromptCacheHit:  10000,
+		PromptCacheMiss: 2000,
+		CacheShape: &telemetry.CacheShape{
+			RequestKind: "agent",
+			SystemHash:  "system-a",
+			RuntimeHash: "runtime-a",
+			ToolsHash:   "tools-a",
+			LogTailHash: "tail-a",
+			RequestHash: "request-a",
+			ToolSegments: []telemetry.CacheShapeSegment{
+				{Name: "read_file", Hash: "read-a"},
+				{Name: "mcp__fs__read", Hash: "mcp-a"},
+			},
+		},
+	})
+	writeUsageRecord(t, usagePath, telemetry.UsageRecord{
+		TS:              ts.Add(time.Minute).UnixMilli(),
+		Session:         "s-cache",
+		Model:           "deepseek-v4-flash",
+		PromptTokens:    12000,
+		PromptCacheHit:  6000,
+		PromptCacheMiss: 6000,
+		CacheShape: &telemetry.CacheShape{
+			RequestKind: "agent",
+			SystemHash:  "system-a",
+			RuntimeHash: "runtime-a",
+			ToolsHash:   "tools-b",
+			LogTailHash: "tail-a",
+			RequestHash: "request-b",
+			ToolSegments: []telemetry.CacheShapeSegment{
+				{Name: "read_file", Hash: "read-b"},
+				{Name: "mcp__fs__read", Hash: "mcp-b"},
+			},
+		},
+	})
+
+	stats := readUsageStats(usagePath, ts.Add(2*time.Minute))
+	if got := totalCacheBreaks(stats.CacheDiagnostics); got != 1 {
+		t.Fatalf("cache break count = %d, want 1", got)
+	}
+	if got := stats.CacheDiagnostics.Counts["tools changed"]; got != 1 {
+		t.Fatalf("tools changed count = %d, want 1", got)
+	}
+	text := strings.Join(formatCacheDiagnostics(stats.CacheDiagnostics), "\n")
+	for _, want := range []string{
+		"Break causes",
+		"tools changed: 1",
+		"cache hit 10K -> 6K",
+		"changed mcp, read_file",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("cache diagnostics missing %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "mcp__fs__read") {
+		t.Fatalf("cache diagnostics should sanitize MCP tool names:\n%s", text)
+	}
+
+	a := &App{cfg: Config{DataDir: dir}, sessionsDir: filepath.Join(dir, "sessions")}
+	view := a.buildStatsViewAt("cache", ts.Add(2*time.Minute))
+	for _, want := range []string{
+		"Cache diagnostics",
+		"Recent breaks",
+		"tools changed",
+	} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("stats cache view missing %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestCacheBreakDetectorClassifiesUnchangedShapeAsServerSideOrTTL(t *testing.T) {
+	detector := newCacheBreakDetector()
+	shape := &telemetry.CacheShape{
+		RequestKind: "agent",
+		SystemHash:  "system-a",
+		RuntimeHash: "runtime-a",
+		ToolsHash:   "tools-a",
+		LogTailHash: "tail-a",
+		RequestHash: "request-a",
+	}
+	detector.Add(telemetry.UsageRecord{
+		Session:        "s-cache",
+		Model:          "deepseek-v4-flash",
+		PromptCacheHit: 10000,
+		CacheShape:     shape,
+	})
+	detector.Add(telemetry.UsageRecord{
+		Session:         "s-cache",
+		Model:           "deepseek-v4-flash",
+		PromptCacheHit:  6000,
+		PromptCacheMiss: 6000,
+		CacheShape:      shape,
+	})
+
+	diag := detector.Diagnostics()
+	if got := totalCacheBreaks(diag); got != 1 {
+		t.Fatalf("cache break count = %d, want 1", got)
+	}
+	if got := diag.Breaks[0].Cause; got != "likely server-side or TTL" {
+		t.Fatalf("cause = %q, want likely server-side or TTL", got)
 	}
 }

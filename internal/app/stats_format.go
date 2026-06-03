@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/usewhale/whale/internal/defaults"
 )
 
@@ -19,6 +21,9 @@ func formatUsageStats(stats usageStats) []string {
 	}
 	if stats.PrefixCompletionRequests > 0 {
 		lines = append(lines, fmt.Sprintf("- Prefix completion: %d requests", stats.PrefixCompletionRequests))
+	}
+	if summary := cacheDiagnosticsSummary(stats.CacheDiagnostics); summary != "" {
+		lines = append(lines, "- cache diagnostics: "+summary)
 	}
 	if stats.SubagentTurns > 0 {
 		lines = append(lines, fmt.Sprintf("- subagents: %d turns · %s tokens · $%.4f", stats.SubagentTurns, formatCount(stats.SubagentPromptTokens+stats.SubagentOutputTokens), stats.SubagentCostUSD))
@@ -221,8 +226,48 @@ func formatStatsOverview(usage usageStats, toolInput toolInputStats) []string {
 	if tool := topInvalidTool(toolInput.ByTool); tool != nil {
 		lines = append(lines, fmt.Sprintf("- top invalid tool: %s · %d", tool.Tool, tool.Invalid))
 	}
-	lines = append(lines, "", "More: /stats usage, /stats tools, /stats repair, /stats recent, /stats profile, /stats all")
+	lines = append(lines, "", "More: /stats usage, /stats cache, /stats tools, /stats repair, /stats recent, /stats profile, /stats all")
 	return lines
+}
+
+func formatCacheDiagnostics(diag cacheDiagnostics) []string {
+	lines := []string{fmt.Sprintf("- breaks: %d", totalCacheBreaks(diag))}
+	if len(diag.Counts) > 0 {
+		lines = append(lines, "", "Break causes")
+		for _, kv := range topCounts(diag.Counts, statsRecentLimit) {
+			lines = append(lines, fmt.Sprintf("- %s: %d", kv.Key, kv.Value))
+		}
+	}
+	if len(diag.Breaks) > 0 {
+		lines = append(lines, "", "Recent breaks")
+		for _, br := range reverseCacheBreaks(diag.Breaks) {
+			lines = append(lines, fmt.Sprintf("- %s · %s", formatTS(br.TS), formatCacheBreakDetail(br)))
+		}
+	}
+	return lines
+}
+
+func formatCacheBreakDetail(br cacheBreak) string {
+	parts := []string{
+		nonEmpty(br.Session, "(unknown session)"),
+		nonEmpty(br.Model, "(unknown model)"),
+		nonEmpty(br.RequestKind, "agent"),
+		fmt.Sprintf("cache hit %s -> %s", formatCount(br.PreviousHit), formatCount(br.CurrentHit)),
+		fmt.Sprintf("miss %s", formatCount(br.CurrentMiss)),
+		nonEmpty(br.Cause, "unknown"),
+	}
+	if detail := strings.TrimSpace(br.Details); detail != "" {
+		parts = append(parts, detail)
+	}
+	return strings.Join(parts, " · ")
+}
+
+func reverseCacheBreaks(in []cacheBreak) []cacheBreak {
+	out := make([]cacheBreak, len(in))
+	for i := range in {
+		out[i] = in[len(in)-1-i]
+	}
+	return out
 }
 
 func formatRecentStats(usage usageStats, toolInput toolInputStats) []string {
