@@ -321,6 +321,19 @@ func recordAgentEvent(turn int, ev agent.AgentEvent) (transcriptRecord, bool) {
 		}
 		rec.Model = ev.CacheMetrics.Model
 		rec.PrefixHash = ev.CacheMetrics.PrefixFingerprint
+		if ev.CacheMetrics.CacheShape != nil {
+			rec.CacheShape = map[string]any{
+				"system_hash":           ev.CacheMetrics.CacheShape.SystemHash,
+				"tools_hash":            ev.CacheMetrics.CacheShape.ToolsHash,
+				"fewshot_hash":          ev.CacheMetrics.CacheShape.FewShotHash,
+				"assistant_prefix_hash": ev.CacheMetrics.CacheShape.AssistantPrefixHash,
+				"log_head_hash":         ev.CacheMetrics.CacheShape.LogHeadHash,
+				"log_tail_hash":         ev.CacheMetrics.CacheShape.LogTailHash,
+				"request_hash":          ev.CacheMetrics.CacheShape.RequestHash,
+				"log_messages":          ev.CacheMetrics.CacheShape.LogMessages,
+				"tail_messages":         ev.CacheMetrics.CacheShape.TailMessages,
+			}
+		}
 		rec.PromptTokens = ev.CacheMetrics.PromptTokens
 		rec.CachedTokens = ev.CacheMetrics.CachedTokens
 		rec.CacheHitRatio = ev.CacheMetrics.CacheHitRatio

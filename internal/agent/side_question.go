@@ -84,7 +84,7 @@ func (a *Agent) RunSideQuestionWithOptions(ctx context.Context, sessionID, quest
 				}
 			}
 		}
-		a.recordTurnCost(sessionID, lastUsage, lastModel, rt.Prefix.Fingerprint())
+		a.recordTurnCost(sessionID, lastUsage, lastModel, rt.Prefix.Fingerprint(), nil)
 		text := strings.TrimSpace(response.String())
 		if sawToolUse && text == "" {
 			text = "(The model tried to call a tool instead of answering directly. Try rephrasing or ask in the main conversation.)"

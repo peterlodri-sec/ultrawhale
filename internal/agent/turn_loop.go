@@ -205,7 +205,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 			if a.maxToolCalls > 0 {
 				remainingToolCalls = a.maxToolCalls - toolCalls
 			}
-			assistant, toolMsg, usage, modelName, abortTurn, attemptedToolCalls, sErr := a.streamAndHandle(ctx, sessionID, checkpointMessageID, history, rt, out, turnPolicy, toolSnapshot, remainingToolCalls, opts)
+			assistant, toolMsg, usage, modelName, cacheShape, abortTurn, attemptedToolCalls, sErr := a.streamAndHandle(ctx, sessionID, checkpointMessageID, history, rt, out, turnPolicy, toolSnapshot, remainingToolCalls, opts)
 			if sErr != nil {
 				if errors.Is(sErr, context.Canceled) || errors.Is(sErr, context.DeadlineExceeded) {
 					a.persistInterruptedTurnMarker(sessionID)
@@ -216,11 +216,11 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 				return
 			}
 			modelTurns++
-			turnCost := a.recordTurnCost(sessionID, usage, modelName, rt.Prefix.Fingerprint())
+			turnCost := a.recordTurnCost(sessionID, usage, modelName, rt.Prefix.Fingerprint(), cacheShape)
 			if !emit(AgentEvent{Type: AgentEventTypeUsage, Usage: &UsageInfo{Model: modelName, Usage: usage}}) {
 				return
 			}
-			if m := buildPrefixCacheMetrics(modelName, usage, rt.Prefix.Fingerprint()); m != nil {
+			if m := buildPrefixCacheMetrics(modelName, usage, rt.Prefix.Fingerprint(), cacheShape); m != nil {
 				if !emit(AgentEvent{Type: AgentEventTypePrefixCacheMetrics, CacheMetrics: m}) {
 					return
 				}

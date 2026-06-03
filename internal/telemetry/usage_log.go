@@ -12,29 +12,42 @@ import (
 )
 
 type UsageRecord struct {
-	TS                       int64   `json:"ts"`
-	Session                  string  `json:"session"`
-	Model                    string  `json:"model"`
-	PrefixFingerprint        string  `json:"prefix_fingerprint,omitempty"`
-	PromptTokens             int     `json:"prompt_tokens"`
-	CompletionTokens         int     `json:"completion_tokens"`
-	PromptCacheHit           int     `json:"prompt_cache_hit_tokens"`
-	PromptCacheMiss          int     `json:"prompt_cache_miss_tokens"`
-	PrefixCompletionRequests int     `json:"prefix_completion_requests,omitempty"`
-	CacheHitRatio            float64 `json:"cache_hit_ratio,omitempty"`
-	ReasoningReplayTok       int     `json:"reasoning_replay_tokens,omitempty"`
-	ToolResultRawChars       int     `json:"tool_result_raw_chars,omitempty"`
-	ToolResultReplayChars    int     `json:"tool_result_replay_chars,omitempty"`
-	ToolResultRawTokens      int     `json:"tool_result_raw_tokens,omitempty"`
-	ToolResultReplayTokens   int     `json:"tool_result_replay_tokens,omitempty"`
-	ToolResultTokensSaved    int     `json:"tool_result_tokens_saved,omitempty"`
-	ToolResultsCompacted     int     `json:"tool_results_compacted,omitempty"`
-	Kind                     string  `json:"kind,omitempty"`
-	ParentSessionID          string  `json:"parent_session_id,omitempty"`
-	SubagentRole             string  `json:"subagent_role,omitempty"`
-	SubagentTaskPreview      string  `json:"subagent_task_preview,omitempty"`
-	CacheSavingsUSD          float64 `json:"cache_savings_usd,omitempty"`
-	CostUSD                  float64 `json:"cost_usd"`
+	TS                       int64       `json:"ts"`
+	Session                  string      `json:"session"`
+	Model                    string      `json:"model"`
+	PrefixFingerprint        string      `json:"prefix_fingerprint,omitempty"`
+	CacheShape               *CacheShape `json:"cache_shape,omitempty"`
+	PromptTokens             int         `json:"prompt_tokens"`
+	CompletionTokens         int         `json:"completion_tokens"`
+	PromptCacheHit           int         `json:"prompt_cache_hit_tokens"`
+	PromptCacheMiss          int         `json:"prompt_cache_miss_tokens"`
+	PrefixCompletionRequests int         `json:"prefix_completion_requests,omitempty"`
+	CacheHitRatio            float64     `json:"cache_hit_ratio,omitempty"`
+	ReasoningReplayTok       int         `json:"reasoning_replay_tokens,omitempty"`
+	ToolResultRawChars       int         `json:"tool_result_raw_chars,omitempty"`
+	ToolResultReplayChars    int         `json:"tool_result_replay_chars,omitempty"`
+	ToolResultRawTokens      int         `json:"tool_result_raw_tokens,omitempty"`
+	ToolResultReplayTokens   int         `json:"tool_result_replay_tokens,omitempty"`
+	ToolResultTokensSaved    int         `json:"tool_result_tokens_saved,omitempty"`
+	ToolResultsCompacted     int         `json:"tool_results_compacted,omitempty"`
+	Kind                     string      `json:"kind,omitempty"`
+	ParentSessionID          string      `json:"parent_session_id,omitempty"`
+	SubagentRole             string      `json:"subagent_role,omitempty"`
+	SubagentTaskPreview      string      `json:"subagent_task_preview,omitempty"`
+	CacheSavingsUSD          float64     `json:"cache_savings_usd,omitempty"`
+	CostUSD                  float64     `json:"cost_usd"`
+}
+
+type CacheShape struct {
+	SystemHash          string `json:"system_hash,omitempty"`
+	ToolsHash           string `json:"tools_hash,omitempty"`
+	FewShotHash         string `json:"fewshot_hash,omitempty"`
+	AssistantPrefixHash string `json:"assistant_prefix_hash,omitempty"`
+	LogHeadHash         string `json:"log_head_hash,omitempty"`
+	LogTailHash         string `json:"log_tail_hash,omitempty"`
+	RequestHash         string `json:"request_hash,omitempty"`
+	LogMessages         int    `json:"log_messages,omitempty"`
+	TailMessages        int    `json:"tail_messages,omitempty"`
 }
 
 type UsageMetadata struct {
@@ -59,7 +72,7 @@ func DefaultUsageLogPath() string {
 	return filepath.Join(home, ".whale", "usage.jsonl")
 }
 
-func AppendUsage(path, sessionID, model, prefixFingerprint string, usage llm.Usage, cost float64, now time.Time, metadata ...UsageMetadata) error {
+func AppendUsage(path, sessionID, model, prefixFingerprint string, usage llm.Usage, cost float64, now time.Time, cacheShape *CacheShape, metadata ...UsageMetadata) error {
 	if path == "" {
 		path = DefaultUsageLogPath()
 	}
@@ -77,6 +90,7 @@ func AppendUsage(path, sessionID, model, prefixFingerprint string, usage llm.Usa
 		Session:                  sessionID,
 		Model:                    model,
 		PrefixFingerprint:        prefixFingerprint,
+		CacheShape:               CloneCacheShape(cacheShape),
 		PromptTokens:             usage.PromptTokens,
 		CompletionTokens:         usage.CompletionTokens,
 		PromptCacheHit:           usage.PromptCacheHitTokens,
@@ -115,6 +129,14 @@ func AppendUsage(path, sessionID, model, prefixFingerprint string, usage llm.Usa
 		return err
 	}
 	return compactUsageLogIfLarge(path, now)
+}
+
+func CloneCacheShape(in *CacheShape) *CacheShape {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	return &out
 }
 
 func lockUsageLogPath(path string) (func(), error) {

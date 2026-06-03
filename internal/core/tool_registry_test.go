@@ -18,6 +18,35 @@ func (t snapshotTestTool) Run(_ context.Context, call ToolCall) (ToolResult, err
 }
 func (t snapshotTestTool) Parameters() map[string]any { return t.params }
 
+type dynamicParamsTool struct {
+	name  string
+	calls int
+}
+
+func (t *dynamicParamsTool) Name() string { return t.name }
+func (t *dynamicParamsTool) Run(_ context.Context, call ToolCall) (ToolResult, error) {
+	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok"}, nil
+}
+func (t *dynamicParamsTool) Parameters() map[string]any {
+	t.calls++
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"value": map[string]any{"const": t.calls},
+		},
+	}
+}
+
+type nilParamsTool struct {
+	name string
+}
+
+func (t nilParamsTool) Name() string { return t.name }
+func (t nilParamsTool) Run(_ context.Context, call ToolCall) (ToolResult, error) {
+	return ToolResult{ToolCallID: call.ID, Name: call.Name, Content: "ok"}, nil
+}
+func (t nilParamsTool) Parameters() map[string]any { return nil }
+
 func TestToolRegistrySnapshotIsStableAfterReplace(t *testing.T) {
 	reg := NewToolRegistry([]Tool{snapshotTestTool{name: "old", content: "old-ok"}})
 	snap := reg.Snapshot()
@@ -38,6 +67,54 @@ func TestToolRegistrySnapshotIsStableAfterReplace(t *testing.T) {
 	}
 	if res.IsError || !strings.Contains(res.Content, "old-ok") {
 		t.Fatalf("unexpected snapshot dispatch result: %+v", res)
+	}
+}
+
+func TestToolRegistryToolsUseFrozenSpecs(t *testing.T) {
+	tool := &dynamicParamsTool{name: "dynamic"}
+	reg := NewToolRegistry([]Tool{tool})
+	providerTools := reg.Tools()
+	if len(providerTools) != 1 {
+		t.Fatalf("tools len = %d, want 1", len(providerTools))
+	}
+
+	first := DescribeTool(providerTools[0]).Parameters
+	second := DescribeTool(providerTools[0]).Parameters
+	firstProps := first["properties"].(map[string]any)
+	secondProps := second["properties"].(map[string]any)
+	firstValue := firstProps["value"].(map[string]any)
+	secondValue := secondProps["value"].(map[string]any)
+	if firstValue["const"] != secondValue["const"] {
+		t.Fatalf("provider tool schema changed: %+v != %+v", first, second)
+	}
+	if tool.calls != 1 {
+		t.Fatalf("dynamic Parameters called %d times, want 1", tool.calls)
+	}
+}
+
+func TestToolRegistryToolsNormalizeNilParameterSpecs(t *testing.T) {
+	reg := NewToolRegistry([]Tool{nilParamsTool{name: "empty"}})
+	providerTools := reg.Tools()
+	if len(providerTools) != 1 {
+		t.Fatalf("tools len = %d, want 1", len(providerTools))
+	}
+
+	params := DescribeTool(providerTools[0]).Parameters
+	if params == nil {
+		t.Fatal("provider tool parameters are nil")
+	}
+	if got := params["type"]; got != "object" {
+		t.Fatalf("parameters type = %v, want object", got)
+	}
+	props, ok := params["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("parameters properties = %T, want map[string]any", params["properties"])
+	}
+	if len(props) != 0 {
+		t.Fatalf("properties len = %d, want 0", len(props))
+	}
+	if got := params["additionalProperties"]; got != true {
+		t.Fatalf("additionalProperties = %v, want true", got)
 	}
 }
 

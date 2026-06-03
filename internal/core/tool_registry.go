@@ -139,8 +139,77 @@ func (r *ToolRegistry) Tools() []Tool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]Tool, 0, len(r.ordered))
-	out = append(out, r.ordered...)
+	for _, t := range r.ordered {
+		wrapped := frozenSpecTool{
+			tool: t,
+			spec: r.specs[t.Name()],
+		}
+		if wrapped.spec.ReadOnlyCheck != nil {
+			out = append(out, frozenSpecReadOnlyCheckTool{frozenSpecTool: wrapped})
+			continue
+		}
+		out = append(out, wrapped)
+	}
 	return out
+}
+
+type frozenSpecTool struct {
+	tool Tool
+	spec ToolSpec
+}
+
+func (t frozenSpecTool) Name() string {
+	return t.spec.Name
+}
+
+func (t frozenSpecTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+	return t.tool.Run(ctx, call)
+}
+
+func (t frozenSpecTool) RunWithProgress(ctx context.Context, call ToolCall, progress func(ToolProgress)) (ToolResult, error) {
+	if runner, ok := t.tool.(ToolProgressRunner); ok {
+		return runner.RunWithProgress(ctx, call, progress)
+	}
+	return t.tool.Run(ctx, call)
+}
+
+func (t frozenSpecTool) Preview(ctx context.Context, call ToolCall) (map[string]any, error) {
+	if previewer, ok := t.tool.(ToolPreviewer); ok {
+		return previewer.Preview(ctx, call)
+	}
+	return nil, nil
+}
+
+func (t frozenSpecTool) Description() string {
+	return t.spec.Description
+}
+
+func (t frozenSpecTool) Parameters() map[string]any {
+	return cloneSchemaMap(t.spec.Parameters)
+}
+
+func (t frozenSpecTool) ReadOnly() bool {
+	return t.spec.ReadOnly
+}
+
+func (t frozenSpecTool) Capabilities() []string {
+	return append([]string(nil), t.spec.Capabilities...)
+}
+
+func (t frozenSpecTool) ApprovalHint() string {
+	return t.spec.ApprovalHint
+}
+
+func (t frozenSpecTool) SupportsParallel() bool {
+	return t.spec.SupportsParallel
+}
+
+type frozenSpecReadOnlyCheckTool struct {
+	frozenSpecTool
+}
+
+func (t frozenSpecReadOnlyCheckTool) ReadOnlyCheck(args map[string]any) bool {
+	return t.spec.ReadOnlyCheck(args)
 }
 
 func (r *ToolRegistry) Specs() []ToolSpec {
@@ -597,12 +666,48 @@ func validateToolInput(parameters map[string]any, raw string) error {
 
 func normalizeToolSchema(parameters map[string]any) map[string]any {
 	if parameters == nil {
-		return nil
+		return map[string]any{
+			"type":                 "object",
+			"properties":           map[string]any{},
+			"additionalProperties": true,
+		}
+	}
+	if _, ok := parameters["type"]; !ok {
+		parameters["type"] = "object"
+	}
+	if _, ok := parameters["properties"]; !ok {
+		parameters["properties"] = map[string]any{}
 	}
 	if _, ok := parameters["additionalProperties"]; !ok {
 		parameters["additionalProperties"] = true
 	}
 	return parameters
+}
+
+func cloneSchemaMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = cloneSchemaValue(v)
+	}
+	return out
+}
+
+func cloneSchemaValue(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		return cloneSchemaMap(x)
+	case []any:
+		out := make([]any, 0, len(x))
+		for _, item := range x {
+			out = append(out, cloneSchemaValue(item))
+		}
+		return out
+	default:
+		return x
+	}
 }
 
 func coerceStringSlice(v any) ([]string, bool) {
