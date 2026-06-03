@@ -2122,20 +2122,20 @@ func TestExecuteLocalDeepResearchStartsBuiltinWorkflow(t *testing.T) {
 	if len(requests) != 9 {
 		t.Fatalf("requests = %+v", requests)
 	}
-	if got := strings.Join(requests[0].Capabilities, ","); got != "" {
-		t.Fatalf("scope capabilities = %#v", requests[0].Capabilities)
+	if got := strings.Join(requests[0].Tools, ","); got != "" {
+		t.Fatalf("scope tools = %#v", requests[0].Tools)
 	}
-	if got := strings.Join(requests[1].Capabilities, ","); got != "web.search" {
-		t.Fatalf("search capabilities = %#v", requests[1].Capabilities)
+	if got := strings.Join(requests[1].Tools, ","); got != "web.search" {
+		t.Fatalf("search tools = %#v", requests[1].Tools)
 	}
-	if got := strings.Join(requests[4].Capabilities, ","); got != "web.fetch" {
-		t.Fatalf("fetch capabilities = %#v", requests[4].Capabilities)
+	if got := strings.Join(requests[4].Tools, ","); got != "web.fetch" {
+		t.Fatalf("fetch tools = %#v", requests[4].Tools)
 	}
-	if got := strings.Join(requests[5].Capabilities, ","); got != "web.search" {
-		t.Fatalf("verify capabilities = %#v", requests[5].Capabilities)
+	if got := strings.Join(requests[5].Tools, ","); got != "web.search" {
+		t.Fatalf("verify tools = %#v", requests[5].Tools)
 	}
-	if got := strings.Join(requests[len(requests)-1].Capabilities, ","); got != "" {
-		t.Fatalf("synthesize capabilities = %#v", requests[len(requests)-1].Capabilities)
+	if got := strings.Join(requests[len(requests)-1].Tools, ","); got != "" {
+		t.Fatalf("synthesize tools = %#v", requests[len(requests)-1].Tools)
 	}
 	if requests[1].WorkflowName != workflow.BuiltinDeepResearchName || requests[1].WorkflowRunID == "" || requests[1].WorkflowPhase != "Search" {
 		t.Fatalf("missing workflow context on request: %+v", requests[1])
@@ -2489,9 +2489,9 @@ type deepResearchTestSpawner struct {
 }
 
 func (s *deepResearchTestSpawner) AllowedSubagentTools(req tasks.SpawnSubagentRequest) ([]string, error) {
-	out := make([]string, 0, len(req.Capabilities))
-	for _, cap := range req.Capabilities {
-		out = append(out, "allowed:"+cap)
+	out := make([]string, 0, len(req.Tools))
+	for _, tool := range req.Tools {
+		out = append(out, "allowed:"+tool)
 	}
 	return out, nil
 }

@@ -126,6 +126,7 @@ func readSessionUsageSummary(path, sessionID string) sessionUsageSummary {
 			out.SubagentTurns++
 			out.SubagentTokens += rec.PromptTokens + rec.CompletionTokens
 			out.SubagentCostUSD += cost
+			out.addSubagentCacheShape(rec.CacheShape)
 		}
 	}
 	return out
@@ -146,8 +147,48 @@ func formatSessionUsageSummary(summary sessionUsageSummary) string {
 	}
 	if summary.SubagentTurns > 0 {
 		parts = append(parts, fmt.Sprintf("subagents %d turns/%s/$%.4f", summary.SubagentTurns, formatCount(summary.SubagentTokens), summary.SubagentCostUSD))
+		if drift := summary.subagentCacheShapeDrift(); drift != "" {
+			parts = append(parts, "subagent shape drift "+drift)
+		}
 	}
 	return strings.Join(parts, " · ")
+}
+
+func (s *sessionUsageSummary) addSubagentCacheShape(shape *telemetry.CacheShape) {
+	if shape == nil {
+		return
+	}
+	addSessionShapeHash(&s.SubagentRequestHashes, shape.RequestHash)
+	addSessionShapeHash(&s.SubagentSystemHashes, shape.SystemHash)
+	addSessionShapeHash(&s.SubagentToolsHashes, shape.ToolsHash)
+}
+
+func addSessionShapeHash(dst *map[string]bool, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	if *dst == nil {
+		*dst = map[string]bool{}
+	}
+	(*dst)[value] = true
+}
+
+func (s sessionUsageSummary) subagentCacheShapeDrift() string {
+	var parts []string
+	if n := len(s.SubagentRequestHashes); n > 1 {
+		parts = append(parts, fmt.Sprintf("%d request", n))
+	}
+	if n := len(s.SubagentSystemHashes); n > 1 {
+		parts = append(parts, fmt.Sprintf("%d system", n))
+	}
+	if n := len(s.SubagentToolsHashes); n > 1 {
+		parts = append(parts, fmt.Sprintf("%d tools", n))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, "/")
 }
 
 func usageBuckets(now time.Time) []usageBucketStats {

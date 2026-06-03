@@ -2,6 +2,10 @@ package app
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 
 	"github.com/usewhale/whale/internal/core"
 	whalemcp "github.com/usewhale/whale/internal/mcp"
@@ -23,6 +27,9 @@ func (a *App) InitializeMCP(ctx context.Context, emit func(whalemcp.StartupEvent
 		if ev.State.Connected || ev.Complete {
 			_ = a.refreshMCPTools()
 		}
+		if ev.Complete {
+			a.freezeMCPToolSignature()
+		}
 		if emit != nil {
 			emit(ev)
 		}
@@ -36,8 +43,12 @@ func (a *App) refreshMCPTools() error {
 	a.toolMu.Lock()
 	defer a.toolMu.Unlock()
 
+	mcpTools := a.mcpManager.Tools()
+	if err := a.guardMCPToolSignatureLocked(mcpTools); err != nil {
+		return err
+	}
 	base := append([]core.Tool{}, a.baseTools...)
-	base = append(base, a.mcpManager.Tools()...)
+	base = append(base, mcpTools...)
 	if err := a.baseToolRegistry.ReplaceTools(base); err != nil {
 		return err
 	}
@@ -53,6 +64,47 @@ func (a *App) refreshMCPTools() error {
 	full = append(full, a.goalTools...)
 	full = append(full, a.workflowTools...)
 	return a.toolRegistry.ReplaceTools(full)
+}
+
+func (a *App) freezeMCPToolSignature() {
+	if a == nil {
+		return
+	}
+	a.toolMu.Lock()
+	defer a.toolMu.Unlock()
+	a.mcpSigFrozen = true
+}
+
+func (a *App) guardMCPToolSignatureLocked(tools []core.Tool) error {
+	next, err := mcpToolSetSignature(tools)
+	if err != nil {
+		return err
+	}
+	if a.mcpSig == "" {
+		a.mcpSig = next
+		return nil
+	}
+	if next == a.mcpSig {
+		return nil
+	}
+	if !a.mcpSigFrozen {
+		a.mcpSig = next
+		return nil
+	}
+	return fmt.Errorf("MCP tool set changed; restart Whale to apply updated MCP tools without changing the active provider prefix")
+}
+
+func mcpToolSetSignature(tools []core.Tool) (string, error) {
+	payloads := make([]map[string]any, 0, len(tools))
+	for _, tool := range tools {
+		payloads = append(payloads, core.ProviderToolPayload(tool))
+	}
+	b, err := json.Marshal(payloads)
+	if err != nil {
+		return "", fmt.Errorf("hash mcp tool set: %w", err)
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func (a *App) MCPStates() []whalemcp.ServerState {

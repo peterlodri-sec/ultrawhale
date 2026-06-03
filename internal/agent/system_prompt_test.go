@@ -111,7 +111,7 @@ func TestImmutableSystemBlocksIncludeWorkflowAuthoringGuidance(t *testing.T) {
 		"Do not inspect existing workflow directories, load skills, or pre-read repository files",
 		"Claude Code-compatible raw JavaScript workflow",
 		"array of objects such as { title:",
-		"capability-defined workers",
+		"tool-scoped workers",
 		"Call phase(\"Name\") only as a statement",
 		"Await async workflow primitives before reading their results",
 		"Call agent(prompt, { label, phase, schema",

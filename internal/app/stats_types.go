@@ -213,16 +213,19 @@ type profileToolStats struct {
 }
 
 type sessionUsageSummary struct {
-	Turns            int
-	PromptTokens     int
-	CompletionTokens int
-	CacheHit         int
-	CacheMiss        int
-	CostUSD          float64
-	CacheSavingsUSD  float64
-	LastPromptTokens int
-	LastTS           int64
-	SubagentTurns    int
-	SubagentTokens   int
-	SubagentCostUSD  float64
+	Turns                 int
+	PromptTokens          int
+	CompletionTokens      int
+	CacheHit              int
+	CacheMiss             int
+	CostUSD               float64
+	CacheSavingsUSD       float64
+	LastPromptTokens      int
+	LastTS                int64
+	SubagentTurns         int
+	SubagentTokens        int
+	SubagentCostUSD       float64
+	SubagentRequestHashes map[string]bool
+	SubagentSystemHashes  map[string]bool
+	SubagentToolsHashes   map[string]bool
 }
