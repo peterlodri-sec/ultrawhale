@@ -14,6 +14,13 @@ import (
 
 const cacheShapeTailMessages = 8
 
+const (
+	cacheShapeRequestAgent        = "agent"
+	cacheShapeRequestCompact      = "compact"
+	cacheShapeRequestForceSummary = "force_summary"
+	cacheShapeRequestSideQuestion = "side_question"
+)
+
 type cacheShapeMessage struct {
 	Role             core.Role            `json:"role"`
 	Text             string               `json:"text,omitempty"`
@@ -45,6 +52,14 @@ type pendingCacheShapeToolCall struct {
 }
 
 func buildCacheShape(history []core.Message, tools []core.Tool, assistantPrefix string) *telemetry.CacheShape {
+	return buildCacheShapeWithSystemBlocks(history, tools, assistantPrefix, nil)
+}
+
+func buildCacheShapeWithSystemBlocks(history []core.Message, tools []core.Tool, assistantPrefix string, systemBlocks []string) *telemetry.CacheShape {
+	return buildCacheShapeForRequest(cacheShapeRequestAgent, history, tools, assistantPrefix, systemBlocks)
+}
+
+func buildCacheShapeForRequest(requestKind string, history []core.Message, tools []core.Tool, assistantPrefix string, systemBlocks []string) *telemetry.CacheShape {
 	var system []cacheShapeMessage
 	var log []cacheShapeMessage
 	var pendingToolCalls []pendingCacheShapeToolCall
@@ -80,22 +95,31 @@ func buildCacheShape(history []core.Message, tools []core.Tool, assistantPrefix 
 	tailLen := min(cacheShapeTailMessages, len(log))
 	head := log[:len(log)-tailLen]
 	tail := log[len(log)-tailLen:]
+	toolPayload := shapeToolPayload(tools)
 	shape := &telemetry.CacheShape{
-		SystemHash:   hashJSON(system),
-		ToolsHash:    hashJSON(shapeToolPayload(tools)),
-		LogMessages:  len(log),
-		TailMessages: tailLen,
+		RequestKind:    strings.TrimSpace(requestKind),
+		SystemHash:     hashJSON(system),
+		SystemSegments: shapeSystemSegments(systemBlocks, system),
+		SystemBytes:    stableJSONBytes(system),
+		ToolsHash:      hashJSON(toolPayload),
+		ToolsBytes:     stableJSONBytes(toolPayload),
+		LogMessages:    len(log),
+		TailMessages:   tailLen,
 	}
 	if strings.TrimSpace(assistantPrefix) != "" {
 		shape.AssistantPrefixHash = hashJSON(assistantPrefix)
+		shape.AssistantPrefixBytes = len([]byte(assistantPrefix))
 	}
 	if len(head) > 0 {
 		shape.LogHeadHash = hashJSON(head)
+		shape.LogHeadBytes = stableJSONBytes(head)
 	}
 	if len(tail) > 0 {
 		shape.LogTailHash = hashJSON(tail)
+		shape.LogTailBytes = stableJSONBytes(tail)
 	}
 	shape.RequestHash = hashJSON(struct {
+		RequestKind         string `json:"request_kind,omitempty"`
 		SystemHash          string `json:"system_hash,omitempty"`
 		ToolsHash           string `json:"tools_hash,omitempty"`
 		FewShotHash         string `json:"fewshot_hash,omitempty"`
@@ -105,6 +129,7 @@ func buildCacheShape(history []core.Message, tools []core.Tool, assistantPrefix 
 		LogMessages         int    `json:"log_messages,omitempty"`
 		TailMessages        int    `json:"tail_messages,omitempty"`
 	}{
+		RequestKind:         shape.RequestKind,
 		SystemHash:          shape.SystemHash,
 		ToolsHash:           shape.ToolsHash,
 		FewShotHash:         shape.FewShotHash,
@@ -115,6 +140,78 @@ func buildCacheShape(history []core.Message, tools []core.Tool, assistantPrefix 
 		TailMessages:        shape.TailMessages,
 	})
 	return shape
+}
+
+func shapeSystemSegments(systemBlocks []string, system []cacheShapeMessage) []telemetry.CacheShapeSegment {
+	if len(systemBlocks) == 0 {
+		systemBlocks = systemMessagesToBlocks(system)
+	}
+	out := make([]telemetry.CacheShapeSegment, 0, len(systemBlocks))
+	for i, block := range systemBlocks {
+		trimmed := strings.TrimSpace(block)
+		if trimmed == "" {
+			continue
+		}
+		name, stability := classifySystemBlock(trimmed, i)
+		out = append(out, telemetry.CacheShapeSegment{
+			Index:     i,
+			Name:      name,
+			Stability: stability,
+			Hash:      hashJSON(cacheShapeMessage{Role: core.RoleSystem, Text: trimmed}),
+			Bytes:     len([]byte(trimmed)),
+		})
+	}
+	return out
+}
+
+func systemMessagesToBlocks(system []cacheShapeMessage) []string {
+	if len(system) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(system))
+	for _, msg := range system {
+		if strings.TrimSpace(msg.Text) != "" {
+			out = append(out, msg.Text)
+		}
+	}
+	return out
+}
+
+func classifySystemBlock(block string, index int) (string, string) {
+	lower := strings.ToLower(block)
+	switch {
+	case strings.HasPrefix(block, "Current Whale runtime:"):
+		return "runtime_context", "dynamic"
+	case strings.HasPrefix(block, "Available skills"):
+		return "skills", "dynamic"
+	case strings.HasPrefix(block, "# Project Memory"):
+		return "project_memory", "dynamic"
+	case strings.Contains(lower, "current whale workspace root") ||
+		strings.Contains(lower, "current worktree root") ||
+		strings.Contains(lower, "original workspace"):
+		return "workspace_context", "dynamic"
+	case strings.HasPrefix(block, "Tool use policy."):
+		return "tool_policy", "immutable"
+	case strings.HasPrefix(block, "Workflow authoring."):
+		return "workflow_authoring", "immutable"
+	case strings.Contains(lower, "agent mode is active") ||
+		strings.Contains(lower, "ask mode is active") ||
+		strings.Contains(lower, "plan mode is active") ||
+		strings.HasPrefix(block, "Current session mode:"):
+		return "mode_instructions", "dynamic"
+	case strings.HasPrefix(block, "Focus view is active"):
+		return "output_style", "dynamic"
+	case strings.HasPrefix(block, "Mode switching commands"):
+		return "mode_switching", "immutable"
+	case strings.HasPrefix(block, "Delegation policy"):
+		return "delegation_policy", "immutable"
+	case strings.HasPrefix(block, "For questions about the current date or time"):
+		return "date_time_policy", "immutable"
+	case strings.HasPrefix(block, "For branch decisions"):
+		return "decision_policy", "immutable"
+	default:
+		return fmt.Sprintf("system_block_%02d", index), "immutable"
+	}
 }
 
 func shapeMessage(msg core.Message, pendingToolCalls *[]pendingCacheShapeToolCall, providerMessageIndex int, flushPending func() []cacheShapeMessage) []cacheShapeMessage {
@@ -236,7 +333,7 @@ func shapeToolPayload(tools []core.Tool) []cacheShapeToolSpec {
 }
 
 func stableMap(in map[string]any) map[string]any {
-	if len(in) == 0 {
+	if in == nil {
 		return nil
 	}
 	out := make(map[string]any, len(in))
@@ -259,6 +356,14 @@ func stableValue(v any) any {
 	default:
 		return x
 	}
+}
+
+func stableJSONBytes(v any) int {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return 0
+	}
+	return len(b)
 }
 
 func hashJSON(v any) string {

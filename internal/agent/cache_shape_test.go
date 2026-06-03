@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -53,7 +54,7 @@ func TestBuildCacheShapeIgnoresMessageIdentityFields(t *testing.T) {
 
 	got := buildCacheShape(base, tools.Tools(), "")
 	got2 := buildCacheShape(changedIdentity, tools.Tools(), "")
-	if *got != *got2 {
+	if !reflect.DeepEqual(got, got2) {
 		t.Fatalf("identity fields changed cache shape:\n%+v\n%+v", got, got2)
 	}
 
@@ -70,6 +71,61 @@ func TestBuildCacheShapeIgnoresMessageIdentityFields(t *testing.T) {
 	}})
 	if buildCacheShape(base, changedTools.Tools(), "").ToolsHash == got.ToolsHash {
 		t.Fatal("expected tool schema change to alter tools hash")
+	}
+}
+
+func TestBuildCacheShapeReportsSystemSegments(t *testing.T) {
+	systemBlocks := []string{
+		"Agent mode is active.",
+		"Current Whale runtime:\n- Current Whale workspace root: /tmp/task-a\n- OS: darwin",
+		"Tool use policy.\n\n- Tools are provided through the provider tool schema.",
+		"Workflow authoring.",
+	}
+	history := []core.Message{
+		{Role: core.RoleSystem, Text: strings.Join(systemBlocks, "\n\n")},
+		{Role: core.RoleUser, Text: "hi"},
+	}
+
+	shape := buildCacheShapeWithSystemBlocks(history, nil, "", systemBlocks)
+	if shape.SystemHash == "" || shape.SystemBytes == 0 {
+		t.Fatalf("missing system aggregate shape: %+v", shape)
+	}
+	if len(shape.SystemSegments) != len(systemBlocks) {
+		t.Fatalf("system segments len = %d, want %d: %+v", len(shape.SystemSegments), len(systemBlocks), shape.SystemSegments)
+	}
+	runtimeSegment := shape.SystemSegments[1]
+	if runtimeSegment.Name != "runtime_context" || runtimeSegment.Stability != "dynamic" {
+		t.Fatalf("runtime segment classification = %+v", runtimeSegment)
+	}
+	if runtimeSegment.Hash == "" || runtimeSegment.Bytes == 0 {
+		t.Fatalf("runtime segment missing hash/bytes: %+v", runtimeSegment)
+	}
+	toolPolicySegment := shape.SystemSegments[2]
+	if toolPolicySegment.Name != "tool_policy" || toolPolicySegment.Stability != "immutable" {
+		t.Fatalf("tool policy segment classification = %+v", toolPolicySegment)
+	}
+	workflowSegment := shape.SystemSegments[3]
+	if workflowSegment.Name != "workflow_authoring" || workflowSegment.Stability != "immutable" {
+		t.Fatalf("workflow segment classification = %+v", workflowSegment)
+	}
+}
+
+func TestBuildCacheShapeRequestKindAffectsRequestHash(t *testing.T) {
+	history := []core.Message{
+		{Role: core.RoleSystem, Text: "system"},
+		{Role: core.RoleUser, Text: "hi"},
+	}
+
+	agentShape := buildCacheShapeForRequest(cacheShapeRequestAgent, history, nil, "", nil)
+	compactShape := buildCacheShapeForRequest(cacheShapeRequestCompact, history, nil, "", nil)
+	if agentShape.RequestKind != cacheShapeRequestAgent {
+		t.Fatalf("agent request kind = %q", agentShape.RequestKind)
+	}
+	if compactShape.RequestKind != cacheShapeRequestCompact {
+		t.Fatalf("compact request kind = %q", compactShape.RequestKind)
+	}
+	if agentShape.RequestHash == compactShape.RequestHash {
+		t.Fatal("expected request kind to affect request hash")
 	}
 }
 

@@ -2,6 +2,8 @@ package agent
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -34,6 +36,20 @@ func (p *autoCompactProvider) StreamResponse(_ context.Context, history []Messag
 		content = "compact summary"
 	}
 	out <- ProviderEvent{Type: EventComplete, Response: &ProviderResponse{FinishReason: FinishReasonEndTurn, Content: content}}
+	close(out)
+	return out
+}
+
+type compactUsageProvider struct{}
+
+func (p *compactUsageProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	out := make(chan ProviderEvent, 1)
+	out <- ProviderEvent{Type: EventComplete, Response: &ProviderResponse{
+		FinishReason: FinishReasonEndTurn,
+		Content:      "compact summary",
+		Model:        "deepseek-v4-flash",
+		Usage:        Usage{PromptTokens: 100, CompletionTokens: 10, PromptCacheHitTokens: 25, PromptCacheMissTokens: 75},
+	}}
 	close(out)
 	return out
 }
@@ -224,6 +240,42 @@ func TestCompactSessionRewritesToSummaryOnly(t *testing.T) {
 	}
 	if msgs[0].Role != RoleUser || msgs[0].Text != "compact summary" || msgs[0].FinishReason != FinishReasonEndTurn {
 		t.Fatalf("unexpected compact summary message: %+v", msgs[0])
+	}
+}
+
+func TestCompactSessionRecordsCacheShapeRequestKind(t *testing.T) {
+	store := NewInMemoryStore()
+	_, _ = store.Create(context.Background(), Message{SessionID: "s-compact-usage", Role: RoleUser, Text: "keep this"})
+	usagePath := filepath.Join(t.TempDir(), "usage.jsonl")
+	a := NewAgentWithRegistry(&compactUsageProvider{}, store, NewToolRegistry(nil), WithUsageLogPath(usagePath))
+
+	if _, err := a.CompactSession(context.Background(), "s-compact-usage"); err != nil {
+		t.Fatalf("compact failed: %v", err)
+	}
+	b, err := os.ReadFile(usagePath)
+	if err != nil {
+		t.Fatalf("read usage log: %v", err)
+	}
+	if !strings.Contains(string(b), `"request_kind":"compact"`) {
+		t.Fatalf("missing compact cache shape: %s", string(b))
+	}
+}
+
+func TestForceSummaryRecordsCacheShapeRequestKind(t *testing.T) {
+	store := NewInMemoryStore()
+	usagePath := filepath.Join(t.TempDir(), "usage.jsonl")
+	a := NewAgentWithRegistry(&compactUsageProvider{}, store, NewToolRegistry(nil), WithUsageLogPath(usagePath))
+
+	_, err := a.forceSummary(context.Background(), "s-force-summary", []Message{{SessionID: "s-force-summary", Role: RoleUser, Text: "work"}}, "test")
+	if err != nil {
+		t.Fatalf("force summary failed: %v", err)
+	}
+	b, err := os.ReadFile(usagePath)
+	if err != nil {
+		t.Fatalf("read usage log: %v", err)
+	}
+	if !strings.Contains(string(b), `"request_kind":"force_summary"`) {
+		t.Fatalf("missing force summary cache shape: %s", string(b))
 	}
 }
 

@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/usewhale/whale/internal/agent/planning"
@@ -21,7 +20,7 @@ func (a *Agent) buildImmutableSystemBlocks(opts ...RunOptions) []string {
 	return a.buildImmutableSystemBlocksWithTools(a.tools, opts...)
 }
 
-func (a *Agent) buildImmutableSystemBlocksWithTools(tools *core.ToolRegistry, opts ...RunOptions) []string {
+func (a *Agent) buildImmutableSystemBlocksWithTools(_ *core.ToolRegistry, opts ...RunOptions) []string {
 	systemBlocks := make([]string, 0, len(a.extraSystemBlocks)+2)
 	var turnOpts RunOptions
 	if len(opts) > 0 {
@@ -70,7 +69,7 @@ Ask mode is active.
 	systemBlocks = append(systemBlocks, renderDelegationPolicyBlock())
 	systemBlocks = append(systemBlocks, renderRuntimeBlock(a.workspaceRoot, runtimeWorktreeContext{WorktreeRoot: a.worktreeRoot, OriginalWorkspace: a.originalWorkspace}, shell.DescribeRuntime()))
 	systemBlocks = append(systemBlocks, "For questions about the current date or time, use an available read-only shell/time command to verify the answer instead of guessing from model memory.")
-	systemBlocks = append(systemBlocks, renderToolSpecsBlock(tools.Specs()))
+	systemBlocks = append(systemBlocks, renderToolPolicyBlock())
 	systemBlocks = append(systemBlocks, renderWorkflowAuthoringBlock())
 	if strings.TrimSpace(a.workspaceRoot) != "" {
 		discovered := skills.Filter(skills.Discover(skills.DefaultRoots(a.workspaceRoot)), a.disabledSkills)
@@ -189,54 +188,11 @@ Delegation policy.
 `)
 }
 
-func renderToolSpecsBlock(specs []core.ToolSpec) string {
-	if len(specs) == 0 {
-		return "No tools are available."
-	}
-	var b strings.Builder
-	b.WriteString("Available tools (source of truth from registry):\n")
-	for _, s := range specs {
-		mode := "write"
-		switch {
-		case s.ReadOnly:
-			mode = "read-only"
-		case s.ReadOnlyCheck != nil:
-			mode = "conditional read-only"
-		}
-		b.WriteString("- ")
-		b.WriteString(s.Name)
-		b.WriteString(" [")
-		b.WriteString(mode)
-		b.WriteString("]")
-		if strings.TrimSpace(s.Description) != "" {
-			b.WriteString(": ")
-			b.WriteString(strings.TrimSpace(s.Description))
-		}
-		if s.Parameters != nil {
-			if propsAny, ok := s.Parameters["properties"]; ok {
-				if props, ok := propsAny.(map[string]any); ok && len(props) > 0 {
-					keys := make([]string, 0, len(props))
-					for k := range props {
-						keys = append(keys, k)
-					}
-					sort.Strings(keys)
-					max := len(keys)
-					if max > 5 {
-						max = 5
-					}
-					b.WriteString(" args:")
-					b.WriteString(strings.Join(keys[:max], ","))
-				}
-			}
-		}
-		if strings.TrimSpace(s.ApprovalHint) != "" {
-			b.WriteString(" approval:")
-			b.WriteString(strings.TrimSpace(s.ApprovalHint))
-		}
-		if s.ReadOnlyCheck != nil {
-			b.WriteString(" note:some calls are allowed in read-only modes when their input is classified as safe read-only; mutating inputs are blocked.")
-		}
-		b.WriteString("\n")
-	}
-	return strings.TrimSpace(b.String())
+func renderToolPolicyBlock() string {
+	return strings.TrimSpace(`
+Tool use policy.
+
+- Tools are provided through the provider tool schema. Choose tools by name and schema; do not invent tools that are not present in the schema.
+- Respect runtime permission errors, mode restrictions, approval outcomes, and tool results. If a tool call is blocked, do not retry the same blocked action through another tool unless the user explicitly asks.
+`)
 }

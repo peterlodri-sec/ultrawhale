@@ -267,27 +267,32 @@ func TestImmutableSystemBlocksIncludeFocusOutputStyleOnlyInFocusView(t *testing.
 	}
 }
 
-func TestRenderToolSpecsMarksDynamicReadOnlyTools(t *testing.T) {
-	block := renderToolSpecsBlock([]core.ToolSpec{
-		{
-			Name:          "shell_run",
-			Description:   "Run a shell command",
-			ReadOnlyCheck: func(map[string]any) bool { return true },
-		},
-		{
-			Name:     "write",
-			ReadOnly: false,
-		},
-	})
+func TestImmutableSystemPromptUsesStableToolPolicyWithoutToolCatalog(t *testing.T) {
+	tools := core.NewToolRegistry([]core.Tool{&recordingWorkflowTool{}})
+	a := NewAgentWithRegistry(nil, nil, tools)
+	joined := strings.Join(a.buildImmutableSystemBlocks(), "\n\n")
 
 	for _, want := range []string{
-		"shell_run [conditional read-only]",
-		"some calls are allowed in read-only modes",
-		"mutating inputs are blocked",
-		"write [write]",
+		"Tool use policy.",
+		"provider tool schema",
+		"Choose tools by name and schema",
+		"do not invent tools",
+		"Respect runtime permission errors",
 	} {
-		if !strings.Contains(block, want) {
-			t.Fatalf("tool specs block missing %q:\n%s", want, block)
+		if !strings.Contains(joined, want) {
+			t.Fatalf("tool policy missing %q:\n%s", want, joined)
+		}
+	}
+	for _, notWant := range []string{
+		"Available tools",
+		"No tools are available.",
+		"workflow [",
+		"Launch a workflow by name.",
+		" args:",
+		" approval:",
+	} {
+		if strings.Contains(joined, notWant) {
+			t.Fatalf("system prompt leaked tool catalog text %q:\n%s", notWant, joined)
 		}
 	}
 }

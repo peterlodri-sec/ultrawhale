@@ -39,15 +39,30 @@ type UsageRecord struct {
 }
 
 type CacheShape struct {
-	SystemHash          string `json:"system_hash,omitempty"`
-	ToolsHash           string `json:"tools_hash,omitempty"`
-	FewShotHash         string `json:"fewshot_hash,omitempty"`
-	AssistantPrefixHash string `json:"assistant_prefix_hash,omitempty"`
-	LogHeadHash         string `json:"log_head_hash,omitempty"`
-	LogTailHash         string `json:"log_tail_hash,omitempty"`
-	RequestHash         string `json:"request_hash,omitempty"`
-	LogMessages         int    `json:"log_messages,omitempty"`
-	TailMessages        int    `json:"tail_messages,omitempty"`
+	RequestKind          string              `json:"request_kind,omitempty"`
+	SystemHash           string              `json:"system_hash,omitempty"`
+	SystemSegments       []CacheShapeSegment `json:"system_segments,omitempty"`
+	SystemBytes          int                 `json:"system_bytes,omitempty"`
+	ToolsHash            string              `json:"tools_hash,omitempty"`
+	ToolsBytes           int                 `json:"tools_bytes,omitempty"`
+	FewShotHash          string              `json:"fewshot_hash,omitempty"`
+	AssistantPrefixHash  string              `json:"assistant_prefix_hash,omitempty"`
+	AssistantPrefixBytes int                 `json:"assistant_prefix_bytes,omitempty"`
+	LogHeadHash          string              `json:"log_head_hash,omitempty"`
+	LogHeadBytes         int                 `json:"log_head_bytes,omitempty"`
+	LogTailHash          string              `json:"log_tail_hash,omitempty"`
+	LogTailBytes         int                 `json:"log_tail_bytes,omitempty"`
+	RequestHash          string              `json:"request_hash,omitempty"`
+	LogMessages          int                 `json:"log_messages,omitempty"`
+	TailMessages         int                 `json:"tail_messages,omitempty"`
+}
+
+type CacheShapeSegment struct {
+	Index     int    `json:"index"`
+	Name      string `json:"name"`
+	Stability string `json:"stability"`
+	Hash      string `json:"hash"`
+	Bytes     int    `json:"bytes"`
 }
 
 type UsageMetadata struct {
@@ -136,6 +151,7 @@ func CloneCacheShape(in *CacheShape) *CacheShape {
 		return nil
 	}
 	out := *in
+	out.SystemSegments = append([]CacheShapeSegment(nil), in.SystemSegments...)
 	return &out
 }
 

@@ -57,7 +57,7 @@ func TestImmutableSystemPromptFiltersDisabledPluginSkills(t *testing.T) {
 	}
 }
 
-func TestImmutableSystemPromptIncludesDelegationPolicyBeforeToolSpecs(t *testing.T) {
+func TestImmutableSystemPromptIncludesDelegationPolicyBeforeToolPolicy(t *testing.T) {
 	a := &Agent{
 		tools:                core.NewToolRegistry(nil),
 		projectMemoryEnabled: false,
@@ -65,15 +65,15 @@ func TestImmutableSystemPromptIncludesDelegationPolicyBeforeToolSpecs(t *testing
 	blocks := a.buildImmutableSystemBlocks()
 	joined := strings.Join(blocks, "\n\n")
 	policyIx := strings.Index(joined, "Delegation policy.")
-	toolIx := strings.Index(joined, "No tools are available.")
+	toolIx := strings.Index(joined, "Tool use policy.")
 	if policyIx < 0 {
 		t.Fatalf("missing delegation policy:\n%s", joined)
 	}
 	if toolIx < 0 {
-		t.Fatalf("missing tool specs block:\n%s", joined)
+		t.Fatalf("missing tool policy block:\n%s", joined)
 	}
 	if policyIx > toolIx {
-		t.Fatalf("delegation policy should appear before tool specs:\n%s", joined)
+		t.Fatalf("delegation policy should appear before tool policy:\n%s", joined)
 	}
 	for _, want := range []string{"Use parallel_reason for 2-8 independent", "Use spawn_subagent for one bounded capability-defined", "Use a single agent for direct questions", "Do not load a skill first unless the user explicitly names one"} {
 		if !strings.Contains(joined, want) {

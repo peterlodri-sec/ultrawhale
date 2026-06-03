@@ -29,6 +29,13 @@ func (p *ImmutablePrefix) Fingerprint() string {
 	return p.fingerprint
 }
 
+func (p *ImmutablePrefix) SystemBlocks() []string {
+	if p == nil {
+		return nil
+	}
+	return append([]string(nil), p.systemBlocks...)
+}
+
 func (p *ImmutablePrefix) ToMessages() []core.Message {
 	if len(p.systemBlocks) == 0 {
 		return nil

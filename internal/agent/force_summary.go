@@ -17,6 +17,8 @@ func (a *Agent) forceSummary(ctx context.Context, sessionID string, history []co
 	prompt := fmt.Sprintf("The run stopped: %s. Summarize completed work, findings, and remaining next steps concisely. Do not call tools.", strings.TrimSpace(reason))
 	tmpHistory := append(append([]core.Message(nil), history...), core.Message{SessionID: sessionID, Role: core.RoleUser, Text: prompt})
 	ch := a.provider.StreamResponse(ctx, tmpHistory, nil)
+	lastUsage := llm.Usage{}
+	lastModel := ""
 	for ev := range ch {
 		switch ev.Type {
 		case llm.EventContentDelta:
@@ -25,6 +27,8 @@ func (a *Agent) forceSummary(ctx context.Context, sessionID string, history []co
 			assistant.Reasoning += ev.ReasoningDelta
 		case llm.EventComplete:
 			if ev.Response != nil {
+				lastUsage = ev.Response.Usage
+				lastModel = ev.Response.Model
 				if strings.TrimSpace(ev.Response.Content) != "" {
 					assistant.Text = ev.Response.Content
 				}
@@ -36,6 +40,7 @@ func (a *Agent) forceSummary(ctx context.Context, sessionID string, history []co
 			}
 		}
 	}
+	a.recordTurnCost(sessionID, lastUsage, lastModel, "", buildCacheShapeForRequest(cacheShapeRequestForceSummary, tmpHistory, nil, "", nil))
 	if strings.TrimSpace(assistant.Text) == "" {
 		assistant.Text = "Run stopped before completion. Please retry with /retry to continue from current context."
 	}

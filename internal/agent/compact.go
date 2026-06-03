@@ -99,14 +99,20 @@ Do not call tools. Output only the summary.`)
 	tmpHistory := append(append([]core.Message(nil), history...), core.Message{SessionID: sessionID, Role: core.RoleUser, Text: prompt})
 	ch := a.provider.StreamResponse(ctx, tmpHistory, nil)
 	var summary strings.Builder
+	lastUsage := llm.Usage{}
+	lastModel := ""
 	for ev := range ch {
 		switch ev.Type {
 		case llm.EventContentDelta:
 			summary.WriteString(ev.Content)
 		case llm.EventComplete:
-			if ev.Response != nil && strings.TrimSpace(ev.Response.Content) != "" {
-				summary.Reset()
-				summary.WriteString(ev.Response.Content)
+			if ev.Response != nil {
+				lastUsage = ev.Response.Usage
+				lastModel = ev.Response.Model
+				if strings.TrimSpace(ev.Response.Content) != "" {
+					summary.Reset()
+					summary.WriteString(ev.Response.Content)
+				}
 			}
 		case llm.EventError:
 			if ev.Err != nil {
@@ -114,6 +120,7 @@ Do not call tools. Output only the summary.`)
 			}
 		}
 	}
+	a.recordTurnCost(sessionID, lastUsage, lastModel, "", buildCacheShapeForRequest(cacheShapeRequestCompact, tmpHistory, nil, "", nil))
 	out := strings.TrimSpace(summary.String())
 	if out == "" {
 		return "", errors.New("compact summary was empty")

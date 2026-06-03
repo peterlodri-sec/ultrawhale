@@ -323,15 +323,22 @@ func recordAgentEvent(turn int, ev agent.AgentEvent) (transcriptRecord, bool) {
 		rec.PrefixHash = ev.CacheMetrics.PrefixFingerprint
 		if ev.CacheMetrics.CacheShape != nil {
 			rec.CacheShape = map[string]any{
-				"system_hash":           ev.CacheMetrics.CacheShape.SystemHash,
-				"tools_hash":            ev.CacheMetrics.CacheShape.ToolsHash,
-				"fewshot_hash":          ev.CacheMetrics.CacheShape.FewShotHash,
-				"assistant_prefix_hash": ev.CacheMetrics.CacheShape.AssistantPrefixHash,
-				"log_head_hash":         ev.CacheMetrics.CacheShape.LogHeadHash,
-				"log_tail_hash":         ev.CacheMetrics.CacheShape.LogTailHash,
-				"request_hash":          ev.CacheMetrics.CacheShape.RequestHash,
-				"log_messages":          ev.CacheMetrics.CacheShape.LogMessages,
-				"tail_messages":         ev.CacheMetrics.CacheShape.TailMessages,
+				"request_kind":           ev.CacheMetrics.CacheShape.RequestKind,
+				"system_hash":            ev.CacheMetrics.CacheShape.SystemHash,
+				"system_segments":        ev.CacheMetrics.CacheShape.SystemSegments,
+				"system_bytes":           ev.CacheMetrics.CacheShape.SystemBytes,
+				"tools_hash":             ev.CacheMetrics.CacheShape.ToolsHash,
+				"tools_bytes":            ev.CacheMetrics.CacheShape.ToolsBytes,
+				"fewshot_hash":           ev.CacheMetrics.CacheShape.FewShotHash,
+				"assistant_prefix_hash":  ev.CacheMetrics.CacheShape.AssistantPrefixHash,
+				"assistant_prefix_bytes": ev.CacheMetrics.CacheShape.AssistantPrefixBytes,
+				"log_head_hash":          ev.CacheMetrics.CacheShape.LogHeadHash,
+				"log_head_bytes":         ev.CacheMetrics.CacheShape.LogHeadBytes,
+				"log_tail_hash":          ev.CacheMetrics.CacheShape.LogTailHash,
+				"log_tail_bytes":         ev.CacheMetrics.CacheShape.LogTailBytes,
+				"request_hash":           ev.CacheMetrics.CacheShape.RequestHash,
+				"log_messages":           ev.CacheMetrics.CacheShape.LogMessages,
+				"tail_messages":          ev.CacheMetrics.CacheShape.TailMessages,
 			}
 		}
 		rec.PromptTokens = ev.CacheMetrics.PromptTokens

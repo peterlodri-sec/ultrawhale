@@ -29,9 +29,20 @@ func TestAppendUsage_WritesJSONL(t *testing.T) {
 		ToolResultTokensSaved:  225,
 		ToolResultsCompacted:   1,
 	}, 0.1234, time.UnixMilli(1000), &CacheShape{
-		SystemHash:   "sys",
+		RequestKind: "agent",
+		SystemHash:  "sys",
+		SystemSegments: []CacheShapeSegment{{
+			Index:     0,
+			Name:      "runtime_context",
+			Stability: "dynamic",
+			Hash:      "seg",
+			Bytes:     42,
+		}},
+		SystemBytes:  42,
 		ToolsHash:    "tools",
+		ToolsBytes:   12,
 		LogTailHash:  "tail",
+		LogTailBytes: 20,
 		RequestHash:  "req",
 		LogMessages:  2,
 		TailMessages: 2,
@@ -58,6 +69,12 @@ func TestAppendUsage_WritesJSONL(t *testing.T) {
 	}
 	if !strings.Contains(s, `"cache_shape"`) || !strings.Contains(s, `"system_hash":"sys"`) {
 		t.Fatalf("missing cache shape in log: %s", s)
+	}
+	if !strings.Contains(s, `"request_kind":"agent"`) {
+		t.Fatalf("missing cache shape request kind in log: %s", s)
+	}
+	if !strings.Contains(s, `"system_segments"`) || !strings.Contains(s, `"name":"runtime_context"`) {
+		t.Fatalf("missing cache shape system segments in log: %s", s)
 	}
 	if !strings.Contains(s, `"cache_hit_ratio"`) {
 		t.Fatalf("missing cache hit ratio in log: %s", s)
