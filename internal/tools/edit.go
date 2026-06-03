@@ -33,12 +33,12 @@ func (b *Toolset) editFile(ctx context.Context, call core.ToolCall) (core.ToolRe
 		}
 		return marshalToolError(call, "read_failed", err.Error()), nil
 	}
-	if b.afterFileRead != nil {
-		b.afterFileRead(abs)
-	}
 	before, lineEndings := normalizeTextFileBytes(data)
 	if code, msg := b.validateFileState(abs, before); code != "" {
 		return marshalToolError(call, code, msg), nil
+	}
+	if b.afterFileRead != nil {
+		b.afterFileRead(abs)
 	}
 	if in.Search == "" {
 		return marshalToolError(call, "invalid_args", "search is required"), nil
