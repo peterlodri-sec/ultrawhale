@@ -885,15 +885,9 @@ func looksLikeCompleteJSON(s string) bool {
 func toDeepSeekTools(tools []core.Tool) []map[string]any {
 	out := make([]map[string]any, 0, len(tools))
 	for _, t := range tools {
-		spec := core.DescribeTool(t)
-		out = append(out, map[string]any{
-			"type": "function",
-			"function": map[string]any{
-				"name":        spec.Name,
-				"description": spec.Description,
-				"parameters":  core.FlattenSchemaForModel(spec.Parameters),
-			},
-		})
+		if payload := core.ProviderToolPayload(t); payload != nil {
+			out = append(out, payload)
+		}
 	}
 	return out
 }

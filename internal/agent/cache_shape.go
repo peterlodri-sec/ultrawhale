@@ -29,17 +29,6 @@ type cacheShapeMessage struct {
 	ToolCalls        []cacheShapeToolCall `json:"tool_calls,omitempty"`
 }
 
-type cacheShapeToolSpec struct {
-	Type     string                 `json:"type"`
-	Function cacheShapeToolFunction `json:"function"`
-}
-
-type cacheShapeToolFunction struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	Parameters  map[string]any `json:"parameters,omitempty"`
-}
-
 type cacheShapeToolCall struct {
 	ID        string `json:"id,omitempty"`
 	Name      string `json:"name"`
@@ -183,7 +172,7 @@ func systemBlocksToShapeMessages(blocks []string) []cacheShapeMessage {
 	return out
 }
 
-func shapeToolSegments(tools []cacheShapeToolSpec) []telemetry.CacheShapeSegment {
+func shapeToolSegments(tools []map[string]any) []telemetry.CacheShapeSegment {
 	if len(tools) == 0 {
 		return nil
 	}
@@ -191,13 +180,19 @@ func shapeToolSegments(tools []cacheShapeToolSpec) []telemetry.CacheShapeSegment
 	for i, tool := range tools {
 		out = append(out, telemetry.CacheShapeSegment{
 			Index:     i,
-			Name:      tool.Function.Name,
+			Name:      shapeToolName(tool),
 			Stability: "immutable",
 			Hash:      hashJSON(tool),
 			Bytes:     stableJSONBytes(tool),
 		})
 	}
 	return out
+}
+
+func shapeToolName(tool map[string]any) string {
+	fn, _ := tool["function"].(map[string]any)
+	name, _ := fn["name"].(string)
+	return name
 }
 
 func shapeSystemSegments(systemBlocks []string, system []cacheShapeMessage) []telemetry.CacheShapeSegment {
@@ -371,49 +366,17 @@ func syntheticMissingToolResultShape(id string) cacheShapeMessage {
 	}
 }
 
-func shapeToolPayload(tools []core.Tool) []cacheShapeToolSpec {
+func shapeToolPayload(tools []core.Tool) []map[string]any {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]cacheShapeToolSpec, 0, len(tools))
+	out := make([]map[string]any, 0, len(tools))
 	for _, tool := range tools {
-		spec := core.DescribeTool(tool)
-		out = append(out, cacheShapeToolSpec{
-			Type: "function",
-			Function: cacheShapeToolFunction{
-				Name:        spec.Name,
-				Description: spec.Description,
-				Parameters:  stableMap(core.FlattenSchemaForModel(spec.Parameters)),
-			},
-		})
-	}
-	return out
-}
-
-func stableMap(in map[string]any) map[string]any {
-	if in == nil {
-		return nil
-	}
-	out := make(map[string]any, len(in))
-	for k, v := range in {
-		out[k] = stableValue(v)
-	}
-	return out
-}
-
-func stableValue(v any) any {
-	switch x := v.(type) {
-	case map[string]any:
-		return stableMap(x)
-	case []any:
-		out := make([]any, 0, len(x))
-		for _, item := range x {
-			out = append(out, stableValue(item))
+		if payload := core.ProviderToolPayload(tool); payload != nil {
+			out = append(out, payload)
 		}
-		return out
-	default:
-		return x
 	}
+	return out
 }
 
 func stableJSONBytes(v any) int {

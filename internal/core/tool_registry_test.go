@@ -92,6 +92,78 @@ func TestToolRegistryToolsUseFrozenSpecs(t *testing.T) {
 	}
 }
 
+func TestToolRegistryProviderToolPayloadUsesSessionCache(t *testing.T) {
+	params := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"value": map[string]any{"type": "string"},
+		},
+	}
+	reg := NewToolRegistry([]Tool{snapshotTestTool{name: "stable", params: params}})
+
+	firstTools := reg.Tools()
+	first := ProviderToolPayload(firstTools[0])
+	fn := first["function"].(map[string]any)
+	fn["description"] = "mutated by caller"
+
+	second := ProviderToolPayload(firstTools[0])
+	secondFn := second["function"].(map[string]any)
+	if secondFn["description"] == "mutated by caller" {
+		t.Fatal("provider payload mutation leaked into cache")
+	}
+	if len(reg.providerSchemas.entries) != 1 {
+		t.Fatalf("provider schema cache entries = %d, want 1", len(reg.providerSchemas.entries))
+	}
+
+	if err := reg.ReplaceTools([]Tool{snapshotTestTool{name: "stable", params: params}}); err != nil {
+		t.Fatalf("replace tools: %v", err)
+	}
+	replaced := ProviderToolPayload(reg.Tools()[0])
+	if len(reg.providerSchemas.entries) != 1 {
+		t.Fatalf("provider schema cache entries after equivalent replace = %d, want 1", len(reg.providerSchemas.entries))
+	}
+	if replacedFn := replaced["function"].(map[string]any); replacedFn["description"] != secondFn["description"] {
+		t.Fatalf("provider description changed after equivalent replace: %v != %v", replacedFn["description"], secondFn["description"])
+	}
+}
+
+func TestToolRegistryProviderToolPayloadChangesWhenSpecChanges(t *testing.T) {
+	reg := NewToolRegistry([]Tool{snapshotTestTool{
+		name: "changing",
+		params: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"value": map[string]any{"type": "string"},
+			},
+		},
+	}})
+	first := ProviderToolPayload(reg.Tools()[0])
+
+	if err := reg.ReplaceTools([]Tool{snapshotTestTool{
+		name: "changing",
+		params: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"value": map[string]any{"type": "integer"},
+			},
+		},
+	}}); err != nil {
+		t.Fatalf("replace tools: %v", err)
+	}
+	second := ProviderToolPayload(reg.Tools()[0])
+
+	if len(reg.providerSchemas.entries) != 2 {
+		t.Fatalf("provider schema cache entries after changed replace = %d, want 2", len(reg.providerSchemas.entries))
+	}
+	firstParams := first["function"].(map[string]any)["parameters"].(map[string]any)
+	secondParams := second["function"].(map[string]any)["parameters"].(map[string]any)
+	firstType := firstParams["properties"].(map[string]any)["value"].(map[string]any)["type"]
+	secondType := secondParams["properties"].(map[string]any)["value"].(map[string]any)["type"]
+	if firstType == secondType {
+		t.Fatalf("provider schema did not reflect changed params: %v", secondParams)
+	}
+}
+
 func TestToolRegistryToolsNormalizeNilParameterSpecs(t *testing.T) {
 	reg := NewToolRegistry([]Tool{nilParamsTool{name: "empty"}})
 	providerTools := reg.Tools()

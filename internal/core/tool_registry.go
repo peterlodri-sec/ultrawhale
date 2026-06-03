@@ -16,11 +16,12 @@ import (
 )
 
 type ToolRegistry struct {
-	mu             sync.RWMutex
-	byName         map[string]Tool
-	specs          map[string]ToolSpec
-	ordered        []Tool
-	maxResultChars int
+	mu              sync.RWMutex
+	byName          map[string]Tool
+	specs           map[string]ToolSpec
+	ordered         []Tool
+	providerSchemas *ProviderToolSchemaCache
+	maxResultChars  int
 }
 
 const DefaultMaxToolResultChars = 32 * 1024
@@ -54,7 +55,8 @@ func NewToolRegistry(tools []Tool) *ToolRegistry {
 
 func NewToolRegistryChecked(tools []Tool) (*ToolRegistry, error) {
 	r := &ToolRegistry{
-		maxResultChars: DefaultMaxToolResultChars,
+		providerSchemas: NewProviderToolSchemaCache(),
+		maxResultChars:  DefaultMaxToolResultChars,
 	}
 	if err := r.replaceToolsLocked(tools); err != nil {
 		return nil, err
@@ -116,10 +118,11 @@ func (r *ToolRegistry) Snapshot() *ToolRegistry {
 	}
 	ordered := append([]Tool(nil), r.ordered...)
 	return &ToolRegistry{
-		byName:         byName,
-		specs:          specs,
-		ordered:        ordered,
-		maxResultChars: r.maxResultChars,
+		byName:          byName,
+		specs:           specs,
+		ordered:         ordered,
+		providerSchemas: r.providerSchemas,
+		maxResultChars:  r.maxResultChars,
 	}
 }
 
@@ -141,8 +144,9 @@ func (r *ToolRegistry) Tools() []Tool {
 	out := make([]Tool, 0, len(r.ordered))
 	for _, t := range r.ordered {
 		wrapped := frozenSpecTool{
-			tool: t,
-			spec: r.specs[t.Name()],
+			tool:            t,
+			spec:            r.specs[t.Name()],
+			providerSchemas: r.providerSchemas,
 		}
 		if wrapped.spec.ReadOnlyCheck != nil {
 			out = append(out, frozenSpecReadOnlyCheckTool{frozenSpecTool: wrapped})
@@ -154,8 +158,9 @@ func (r *ToolRegistry) Tools() []Tool {
 }
 
 type frozenSpecTool struct {
-	tool Tool
-	spec ToolSpec
+	tool            Tool
+	spec            ToolSpec
+	providerSchemas *ProviderToolSchemaCache
 }
 
 func (t frozenSpecTool) Name() string {
@@ -186,6 +191,10 @@ func (t frozenSpecTool) Description() string {
 
 func (t frozenSpecTool) Parameters() map[string]any {
 	return cloneSchemaMap(t.spec.Parameters)
+}
+
+func (t frozenSpecTool) ProviderToolPayload() map[string]any {
+	return providerToolPayloadFromSpec(t.providerSchemas, t.spec)
 }
 
 func (t frozenSpecTool) ReadOnly() bool {
@@ -705,6 +714,14 @@ func cloneSchemaValue(v any) any {
 			out = append(out, cloneSchemaValue(item))
 		}
 		return out
+	case []string:
+		return append([]string(nil), x...)
+	case []int:
+		return append([]int(nil), x...)
+	case []float64:
+		return append([]float64(nil), x...)
+	case []bool:
+		return append([]bool(nil), x...)
 	default:
 		return x
 	}

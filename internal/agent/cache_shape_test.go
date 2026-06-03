@@ -194,6 +194,27 @@ func TestBuildCacheShapeReportsProviderPrefixAndToolSegments(t *testing.T) {
 	}
 }
 
+func TestBuildCacheShapeHashesProviderToolPayload(t *testing.T) {
+	history := []core.Message{{Role: core.RoleSystem, Text: "system"}, {Role: core.RoleUser, Text: "hi"}}
+	registry := core.NewToolRegistry([]core.Tool{
+		cacheShapeTool{name: "alpha", description: "first", params: map[string]any{"type": "object"}},
+		cacheShapeTool{name: "beta", description: "second", params: map[string]any{"type": "object"}},
+	})
+	tools := registry.Tools()
+	providerPayload := make([]map[string]any, 0, len(tools))
+	for _, tool := range tools {
+		providerPayload = append(providerPayload, core.ProviderToolPayload(tool))
+	}
+
+	shape := buildCacheShape(history, tools, "")
+	if shape.ToolsHash != hashJSON(providerPayload) {
+		t.Fatalf("tools hash = %q, want provider payload hash %q", shape.ToolsHash, hashJSON(providerPayload))
+	}
+	if shape.ToolsBytes != stableJSONBytes(providerPayload) {
+		t.Fatalf("tools bytes = %d, want provider payload bytes %d", shape.ToolsBytes, stableJSONBytes(providerPayload))
+	}
+}
+
 func TestBuildCacheShapeRequestKindAffectsRequestHash(t *testing.T) {
 	history := []core.Message{
 		{Role: core.RoleSystem, Text: "system"},
