@@ -110,6 +110,53 @@ func TestBuildCacheShapeReportsSystemSegments(t *testing.T) {
 	}
 }
 
+func TestBuildCacheShapeReportsRuntimeSegments(t *testing.T) {
+	systemBlocks := []string{
+		"Tool use policy.\n\n- Tools are provided through the provider tool schema.",
+	}
+	runtimeBlocks := []string{
+		"Current session mode: agent.",
+		"Current Whale runtime:\n- Current Whale workspace root: /tmp/task-a\n- OS: darwin",
+	}
+	history := []core.Message{
+		{Role: core.RoleSystem, Text: strings.Join(systemBlocks, "\n\n")},
+		{Role: core.RoleSystem, Text: strings.Join(runtimeBlocks, "\n\n")},
+		{Role: core.RoleUser, Text: "hi"},
+	}
+
+	shape := buildCacheShapeForRequestWithRuntime(cacheShapeRequestAgent, history, nil, "", systemBlocks, runtimeBlocks)
+	if shape.RuntimeHash == "" || shape.RuntimeBytes == 0 {
+		t.Fatalf("missing runtime aggregate shape: %+v", shape)
+	}
+	if len(shape.RuntimeSegments) != len(runtimeBlocks) {
+		t.Fatalf("runtime segments len = %d, want %d: %+v", len(shape.RuntimeSegments), len(runtimeBlocks), shape.RuntimeSegments)
+	}
+	if shape.RuntimeSegments[0].Name != "mode_instructions" || shape.RuntimeSegments[0].Stability != "dynamic" {
+		t.Fatalf("mode runtime segment classification = %+v", shape.RuntimeSegments[0])
+	}
+	if shape.RuntimeSegments[1].Name != "runtime_context" || shape.RuntimeSegments[1].Stability != "dynamic" {
+		t.Fatalf("runtime context segment classification = %+v", shape.RuntimeSegments[1])
+	}
+
+	changedRuntime := append([]string(nil), runtimeBlocks...)
+	changedRuntime[1] = strings.Replace(changedRuntime[1], "/tmp/task-a", "/tmp/task-b", 1)
+	changedHistory := []core.Message{
+		{Role: core.RoleSystem, Text: strings.Join(systemBlocks, "\n\n")},
+		{Role: core.RoleSystem, Text: strings.Join(changedRuntime, "\n\n")},
+		{Role: core.RoleUser, Text: "hi"},
+	}
+	changed := buildCacheShapeForRequestWithRuntime(cacheShapeRequestAgent, changedHistory, nil, "", systemBlocks, changedRuntime)
+	if changed.SystemHash != shape.SystemHash {
+		t.Fatal("expected runtime change not to alter immutable system hash")
+	}
+	if changed.RuntimeHash == shape.RuntimeHash {
+		t.Fatal("expected runtime change to alter runtime hash")
+	}
+	if changed.RequestHash == shape.RequestHash {
+		t.Fatal("expected runtime change to alter request hash")
+	}
+}
+
 func TestBuildCacheShapeRequestKindAffectsRequestHash(t *testing.T) {
 	history := []core.Message{
 		{Role: core.RoleSystem, Text: "system"},

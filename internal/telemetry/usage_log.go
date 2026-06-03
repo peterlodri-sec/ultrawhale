@@ -43,6 +43,9 @@ type CacheShape struct {
 	SystemHash           string              `json:"system_hash,omitempty"`
 	SystemSegments       []CacheShapeSegment `json:"system_segments,omitempty"`
 	SystemBytes          int                 `json:"system_bytes,omitempty"`
+	RuntimeHash          string              `json:"runtime_hash,omitempty"`
+	RuntimeSegments      []CacheShapeSegment `json:"runtime_segments,omitempty"`
+	RuntimeBytes         int                 `json:"runtime_bytes,omitempty"`
 	ToolsHash            string              `json:"tools_hash,omitempty"`
 	ToolsBytes           int                 `json:"tools_bytes,omitempty"`
 	FewShotHash          string              `json:"fewshot_hash,omitempty"`
@@ -152,6 +155,7 @@ func CloneCacheShape(in *CacheShape) *CacheShape {
 	}
 	out := *in
 	out.SystemSegments = append([]CacheShapeSegment(nil), in.SystemSegments...)
+	out.RuntimeSegments = append([]CacheShapeSegment(nil), in.RuntimeSegments...)
 	return &out
 }
 

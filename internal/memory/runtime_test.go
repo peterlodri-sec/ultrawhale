@@ -62,3 +62,22 @@ func TestRuntimeBuildProviderHistory(t *testing.T) {
 		t.Fatalf("unexpected history shape: %+v", got)
 	}
 }
+
+func TestRuntimeBuildProviderHistoryAppendsRuntimeSystemAfterPrefix(t *testing.T) {
+	rt := HydrateRuntime(NewImmutablePrefix([]string{"immutable"}), []core.Message{{Role: core.RoleUser, Text: "hi"}})
+	rt.SetRuntimeBlocks([]string{"runtime-a", "runtime-b"})
+
+	got := rt.BuildProviderHistory()
+	if len(got) != 3 {
+		t.Fatalf("expected 3 messages, got %d: %+v", len(got), got)
+	}
+	if got[0].Role != core.RoleSystem || got[0].Text != "immutable" {
+		t.Fatalf("unexpected immutable prefix message: %+v", got[0])
+	}
+	if got[1].Role != core.RoleSystem || got[1].Text != "runtime-a\n\nruntime-b" {
+		t.Fatalf("unexpected runtime suffix message: %+v", got[1])
+	}
+	if got[2].Role != core.RoleUser || got[2].Text != "hi" {
+		t.Fatalf("unexpected log message: %+v", got[2])
+	}
+}

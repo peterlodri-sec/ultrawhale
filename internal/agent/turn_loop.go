@@ -119,7 +119,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 			return
 		}
 		rt := memory.HydrateRuntime(memory.NewImmutablePrefix(a.buildImmutableSystemBlocksWithTools(toolSnapshot, opts)), history)
-		expectedPrefixFingerprint := rt.Prefix.Fingerprint()
+		rt.SetRuntimeBlocks(a.buildRuntimeSystemBlocks(opts))
 		modelTurns := 0
 		toolIters := 0
 		toolCalls := 0
@@ -157,23 +157,12 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 				}
 			}
 			firstRequest = false
-			rt.Prefix.Refresh(a.buildImmutableSystemBlocksWithTools(toolSnapshot, opts))
-			if got := rt.Prefix.Fingerprint(); got != expectedPrefixFingerprint {
-				if !emit(AgentEvent{
-					Type: AgentEventTypePrefixDrift,
-					PrefixDrift: &PrefixDriftInfo{
-						Expected: expectedPrefixFingerprint,
-						Actual:   got,
-					},
-				}) {
-					return
-				}
-				expectedPrefixFingerprint = got
-			}
+			rt.SetRuntimeBlocks(a.buildRuntimeSystemBlocks(opts))
 			if a.autoCompact {
 				before := compact.EstimateMessagesTokens(rt.BuildProviderHistory())
 				if float64(before)/float64(max(1, a.contextWindow)) > a.compactThresh {
-					replacement, info, err := a.compactHistory(ctx, sessionID, history, true, a.hookRunObserver(ctx, out))
+					summaryCtx := summaryRequestContextFromPrefix(rt.Prefix, rt.RuntimeBlocks(), toolSnapshot)
+					replacement, info, err := a.compactHistory(ctx, sessionID, history, true, a.hookRunObserver(ctx, out), summaryCtx)
 					if err != nil {
 						emit(AgentEvent{Type: AgentEventTypeError, Err: err})
 						return
@@ -255,7 +244,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 					if !emit(AgentEvent{Type: AgentEventTypeForcedSummaryStarted, Content: "turn cap reached"}) {
 						return
 					}
-					sum, serr := a.forceSummary(ctx, sessionID, history, "turn cap reached")
+					sum, serr := a.forceSummary(ctx, sessionID, history, "turn cap reached", summaryRequestContextFromPrefix(rt.Prefix, rt.RuntimeBlocks(), nil))
 					if serr != nil {
 						if !emit(AgentEvent{Type: AgentEventTypeForcedSummaryFailed, Content: serr.Error()}) {
 							return
@@ -273,7 +262,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 					if !emit(AgentEvent{Type: AgentEventTypeForcedSummaryStarted, Content: "tool call cap reached"}) {
 						return
 					}
-					sum, serr := a.forceSummary(ctx, sessionID, history, "tool call cap reached")
+					sum, serr := a.forceSummary(ctx, sessionID, history, "tool call cap reached", summaryRequestContextFromPrefix(rt.Prefix, rt.RuntimeBlocks(), nil))
 					if serr != nil {
 						if !emit(AgentEvent{Type: AgentEventTypeForcedSummaryFailed, Content: serr.Error()}) {
 							return
@@ -291,7 +280,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 					if !emit(AgentEvent{Type: AgentEventTypeForcedSummaryStarted, Content: "tool iteration cap reached"}) {
 						return
 					}
-					sum, serr := a.forceSummary(ctx, sessionID, history, "tool iteration cap reached")
+					sum, serr := a.forceSummary(ctx, sessionID, history, "tool iteration cap reached", summaryRequestContextFromPrefix(rt.Prefix, rt.RuntimeBlocks(), nil))
 					if serr != nil {
 						if !emit(AgentEvent{Type: AgentEventTypeForcedSummaryFailed, Content: serr.Error()}) {
 							return

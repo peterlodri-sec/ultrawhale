@@ -1424,7 +1424,7 @@ func TestSpawnSubagentInheritsAutoCompact(t *testing.T) {
 			go func() {
 				defer close(out)
 				content := "child done"
-				if len(tools) == 0 && len(history) > 0 && strings.Contains(history[len(history)-1].Text, "Summarize the conversation") {
+				if len(history) > 0 && strings.Contains(history[len(history)-1].Text, "Summarize the conversation") {
 					content = "compact summary"
 				}
 				out <- llm.ProviderEvent{Type: llm.EventComplete, Response: &llm.ProviderResponse{
@@ -1496,7 +1496,7 @@ func TestSpawnSubagentDerivesAutoCompactWindowFromChildModel(t *testing.T) {
 			go func() {
 				defer close(out)
 				content := "child done"
-				if len(tools) == 0 && len(history) > 0 && strings.Contains(history[len(history)-1].Text, "Summarize the conversation") {
+				if len(history) > 0 && strings.Contains(history[len(history)-1].Text, "Summarize the conversation") {
 					content = "compact summary"
 				}
 				out <- llm.ProviderEvent{Type: llm.EventComplete, Response: &llm.ProviderResponse{

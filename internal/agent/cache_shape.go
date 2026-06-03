@@ -60,6 +60,10 @@ func buildCacheShapeWithSystemBlocks(history []core.Message, tools []core.Tool, 
 }
 
 func buildCacheShapeForRequest(requestKind string, history []core.Message, tools []core.Tool, assistantPrefix string, systemBlocks []string) *telemetry.CacheShape {
+	return buildCacheShapeForRequestWithRuntime(requestKind, history, tools, assistantPrefix, systemBlocks, nil)
+}
+
+func buildCacheShapeForRequestWithRuntime(requestKind string, history []core.Message, tools []core.Tool, assistantPrefix string, systemBlocks, runtimeBlocks []string) *telemetry.CacheShape {
 	var system []cacheShapeMessage
 	var log []cacheShapeMessage
 	var pendingToolCalls []pendingCacheShapeToolCall
@@ -96,15 +100,25 @@ func buildCacheShapeForRequest(requestKind string, history []core.Message, tools
 	head := log[:len(log)-tailLen]
 	tail := log[len(log)-tailLen:]
 	toolPayload := shapeToolPayload(tools)
+	systemForShape := system
+	if len(systemBlocks) > 0 {
+		systemForShape = systemBlocksToShapeMessages(systemBlocks)
+	}
 	shape := &telemetry.CacheShape{
 		RequestKind:    strings.TrimSpace(requestKind),
-		SystemHash:     hashJSON(system),
+		SystemHash:     hashJSON(systemForShape),
 		SystemSegments: shapeSystemSegments(systemBlocks, system),
-		SystemBytes:    stableJSONBytes(system),
+		SystemBytes:    stableJSONBytes(systemForShape),
 		ToolsHash:      hashJSON(toolPayload),
 		ToolsBytes:     stableJSONBytes(toolPayload),
 		LogMessages:    len(log),
 		TailMessages:   tailLen,
+	}
+	if len(runtimeBlocks) > 0 {
+		runtimeSystem := systemBlocksToShapeMessages(runtimeBlocks)
+		shape.RuntimeHash = hashJSON(runtimeSystem)
+		shape.RuntimeSegments = shapeSystemSegments(runtimeBlocks, runtimeSystem)
+		shape.RuntimeBytes = stableJSONBytes(runtimeSystem)
 	}
 	if strings.TrimSpace(assistantPrefix) != "" {
 		shape.AssistantPrefixHash = hashJSON(assistantPrefix)
@@ -121,6 +135,7 @@ func buildCacheShapeForRequest(requestKind string, history []core.Message, tools
 	shape.RequestHash = hashJSON(struct {
 		RequestKind         string `json:"request_kind,omitempty"`
 		SystemHash          string `json:"system_hash,omitempty"`
+		RuntimeHash         string `json:"runtime_hash,omitempty"`
 		ToolsHash           string `json:"tools_hash,omitempty"`
 		FewShotHash         string `json:"fewshot_hash,omitempty"`
 		AssistantPrefixHash string `json:"assistant_prefix_hash,omitempty"`
@@ -131,6 +146,7 @@ func buildCacheShapeForRequest(requestKind string, history []core.Message, tools
 	}{
 		RequestKind:         shape.RequestKind,
 		SystemHash:          shape.SystemHash,
+		RuntimeHash:         shape.RuntimeHash,
 		ToolsHash:           shape.ToolsHash,
 		FewShotHash:         shape.FewShotHash,
 		AssistantPrefixHash: shape.AssistantPrefixHash,
@@ -140,6 +156,16 @@ func buildCacheShapeForRequest(requestKind string, history []core.Message, tools
 		TailMessages:        shape.TailMessages,
 	})
 	return shape
+}
+
+func systemBlocksToShapeMessages(blocks []string) []cacheShapeMessage {
+	out := make([]cacheShapeMessage, 0, len(blocks))
+	for _, block := range blocks {
+		if trimmed := strings.TrimSpace(block); trimmed != "" {
+			out = append(out, cacheShapeMessage{Role: core.RoleSystem, Text: trimmed})
+		}
+	}
+	return out
 }
 
 func shapeSystemSegments(systemBlocks []string, system []cacheShapeMessage) []telemetry.CacheShapeSegment {

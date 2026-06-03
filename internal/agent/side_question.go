@@ -44,6 +44,7 @@ func (a *Agent) RunSideQuestionWithOptions(ctx context.Context, sessionID, quest
 	_, sessionActive := a.active.Load(sessionID)
 	history = stripInProgressAssistantMessage(history, sessionActive)
 	rt := memory.HydrateRuntime(memory.NewImmutablePrefix(a.buildImmutableSystemBlocks(opts)), history)
+	rt.SetRuntimeBlocks(a.buildRuntimeSystemBlocks(opts))
 	tmpHistory := append(a.buildTurnProviderHistory(sessionID, rt), core.Message{
 		SessionID: sessionID,
 		Role:      core.RoleUser,
@@ -84,7 +85,7 @@ func (a *Agent) RunSideQuestionWithOptions(ctx context.Context, sessionID, quest
 				}
 			}
 		}
-		cacheShape := buildCacheShapeForRequest(cacheShapeRequestSideQuestion, tmpHistory, nil, "", rt.Prefix.SystemBlocks())
+		cacheShape := buildCacheShapeForRequestWithRuntime(cacheShapeRequestSideQuestion, tmpHistory, nil, "", rt.Prefix.SystemBlocks(), rt.RuntimeBlocks())
 		a.recordTurnCost(sessionID, lastUsage, lastModel, rt.Prefix.Fingerprint(), cacheShape)
 		text := strings.TrimSpace(response.String())
 		if sawToolUse && text == "" {

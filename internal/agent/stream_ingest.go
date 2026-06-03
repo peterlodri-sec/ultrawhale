@@ -168,6 +168,6 @@ func (a *Agent) collectAssistantStream(ctx context.Context, sessionID string, rt
 	if lastUsage.PrefixCompletionRequests > 0 {
 		assistantPrefix = requestedAssistantPrefix
 	}
-	cacheShape := buildCacheShapeWithSystemBlocks(history, toolList, assistantPrefix, rt.Prefix.SystemBlocks())
+	cacheShape := buildCacheShapeForRequestWithRuntime(cacheShapeRequestAgent, history, toolList, assistantPrefix, rt.Prefix.SystemBlocks(), rt.RuntimeBlocks())
 	return assistant, lastUsage, lastModel, cacheShape, nil
 }

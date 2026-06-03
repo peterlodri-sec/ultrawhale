@@ -22,14 +22,25 @@ func (a *Agent) buildImmutableSystemBlocks(opts ...RunOptions) []string {
 
 func (a *Agent) buildImmutableSystemBlocksWithTools(_ *core.ToolRegistry, opts ...RunOptions) []string {
 	systemBlocks := make([]string, 0, len(a.extraSystemBlocks)+2)
-	var turnOpts RunOptions
-	if len(opts) > 0 {
-		turnOpts = opts[0]
-	}
 	for _, block := range a.extraSystemBlocks {
 		if trimmed := strings.TrimSpace(block); trimmed != "" {
 			systemBlocks = append(systemBlocks, trimmed)
 		}
+	}
+	systemBlocks = append(systemBlocks, "Mode switching commands are /agent, /ask, and /plan. Shift+Tab cycles modes in the TUI. Do not tell users to run /mode agent, /mode ask, or /mode plan; those commands do not exist.")
+	systemBlocks = append(systemBlocks, renderDelegationPolicyBlock())
+	systemBlocks = append(systemBlocks, "For questions about the current date or time, use an available read-only shell/time command to verify the answer instead of guessing from model memory.")
+	systemBlocks = append(systemBlocks, renderToolPolicyBlock())
+	systemBlocks = append(systemBlocks, renderWorkflowAuthoringBlock())
+	systemBlocks = append(systemBlocks, "For branch decisions or key assumptions requiring user choice, call request_user_input instead of presenting long A/B/C prose menus.")
+	return systemBlocks
+}
+
+func (a *Agent) buildRuntimeSystemBlocks(opts ...RunOptions) []string {
+	systemBlocks := make([]string, 0, len(a.dynamicSystemBlocks)+6)
+	var turnOpts RunOptions
+	if len(opts) > 0 {
+		turnOpts = opts[0]
 	}
 	for _, render := range a.dynamicSystemBlocks {
 		if render == nil {
@@ -62,15 +73,10 @@ Ask mode is active.
 - For implementation work with more than one step, use update_plan to initialize and maintain a concise execution checklist. Keep at most one item in_progress and mark steps completed promptly.
 		`))
 	}
-	systemBlocks = append(systemBlocks, "Mode switching commands are /agent, /ask, and /plan. Shift+Tab cycles modes in the TUI. Do not tell users to run /mode agent, /mode ask, or /mode plan; those commands do not exist.")
 	if block := renderOutputStyleBlock(turnOpts.ViewMode); block != "" {
 		systemBlocks = append(systemBlocks, block)
 	}
-	systemBlocks = append(systemBlocks, renderDelegationPolicyBlock())
 	systemBlocks = append(systemBlocks, renderRuntimeBlock(a.workspaceRoot, runtimeWorktreeContext{WorktreeRoot: a.worktreeRoot, OriginalWorkspace: a.originalWorkspace}, shell.DescribeRuntime()))
-	systemBlocks = append(systemBlocks, "For questions about the current date or time, use an available read-only shell/time command to verify the answer instead of guessing from model memory.")
-	systemBlocks = append(systemBlocks, renderToolPolicyBlock())
-	systemBlocks = append(systemBlocks, renderWorkflowAuthoringBlock())
 	if strings.TrimSpace(a.workspaceRoot) != "" {
 		discovered := skills.Filter(skills.Discover(skills.DefaultRoots(a.workspaceRoot)), a.disabledSkills)
 		discovered = append(discovered, skills.Filter(a.extraSkills, a.disabledSkills)...)

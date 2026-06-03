@@ -54,7 +54,7 @@ func TestBuildTurnProviderHistoryDoesNotAppendLegacyPlanRuntimeControl(t *testin
 	}
 }
 
-func TestRunStreamEmitsPrefixDriftWhenImmutablePrefixChanges(t *testing.T) {
+func TestRunStreamDoesNotEmitPrefixDriftWhenRuntimeMemoryChanges(t *testing.T) {
 	dir := t.TempDir()
 	memFile := filepath.Join(dir, "AGENTS.md")
 	if err := os.WriteFile(memFile, []byte("v1"), 0o600); err != nil {
@@ -71,14 +71,14 @@ func TestRunStreamEmitsPrefixDriftWhenImmutablePrefixChanges(t *testing.T) {
 	seen := false
 	for ev := range events {
 		if ev.Type == AgentEventTypePrefixDrift && ev.PrefixDrift != nil && ev.PrefixDrift.Expected != "" && ev.PrefixDrift.Actual != "" && ev.PrefixDrift.Expected != ev.PrefixDrift.Actual {
-			seen = true
+			t.Fatalf("unexpected prefix drift for runtime memory change: %+v", ev.PrefixDrift)
 		}
 		if ev.Type == AgentEventTypeError {
 			t.Fatalf("unexpected error: %v", ev.Err)
 		}
 	}
-	if !seen {
-		t.Fatal("expected prefix drift event")
+	if seen {
+		t.Fatal("unexpected prefix drift event")
 	}
 }
 

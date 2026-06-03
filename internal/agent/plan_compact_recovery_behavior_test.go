@@ -26,13 +26,15 @@ func (p *planModeHistoryProvider) StreamResponse(_ context.Context, history []Me
 
 type autoCompactProvider struct {
 	histories [][]Message
+	tools     [][]Tool
 }
 
 func (p *autoCompactProvider) StreamResponse(_ context.Context, history []Message, tools []Tool) <-chan ProviderEvent {
 	p.histories = append(p.histories, append([]Message(nil), history...))
+	p.tools = append(p.tools, append([]Tool(nil), tools...))
 	out := make(chan ProviderEvent, 1)
 	content := "ok"
-	if len(tools) == 0 && len(history) > 0 && strings.Contains(history[len(history)-1].Text, "Summarize the conversation") {
+	if len(history) > 0 && strings.Contains(history[len(history)-1].Text, "Summarize the conversation") {
 		content = "compact summary"
 	}
 	out <- ProviderEvent{Type: EventComplete, Response: &ProviderResponse{FinishReason: FinishReasonEndTurn, Content: content}}
@@ -128,8 +130,15 @@ func TestPlanModeInjectsSystemPrompt(t *testing.T) {
 	if prov.firstHistory[0].Role != RoleSystem {
 		t.Fatalf("expected first role system, got %s", prov.firstHistory[0].Role)
 	}
-	if !strings.Contains(prov.firstHistory[0].Text, "PLAN mode") {
-		t.Fatalf("unexpected system prompt: %s", prov.firstHistory[0].Text)
+	joinedSystem := strings.Builder{}
+	for _, msg := range prov.firstHistory {
+		if msg.Role == RoleSystem {
+			joinedSystem.WriteString(msg.Text)
+			joinedSystem.WriteString("\n\n")
+		}
+	}
+	if !strings.Contains(joinedSystem.String(), "PLAN mode") {
+		t.Fatalf("unexpected system prompt: %s", joinedSystem.String())
 	}
 }
 
@@ -201,17 +210,23 @@ func TestAutoCompactEmitsEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list messages failed: %v", err)
 	}
-	if len(msgs) != 2 {
-		t.Fatalf("expected compact summary plus current turn, got %+v", msgs)
+	if len(msgs) != 3 {
+		t.Fatalf("expected compact summary plus retained current turn and assistant, got %+v", msgs)
 	}
 	if msgs[0].Role != RoleUser || msgs[0].Text != "compact summary" || msgs[0].FinishReason != FinishReasonEndTurn {
 		t.Fatalf("expected first message to be compact summary, got %+v", msgs[0])
 	}
-	if msgs[1].Role != RoleAssistant || msgs[1].Text != "ok" {
-		t.Fatalf("expected current assistant response after compact summary, got %+v", msgs[1])
+	if msgs[1].Role != RoleUser || msgs[1].Text != "next" {
+		t.Fatalf("expected retained current user turn after compact summary, got %+v", msgs[1])
+	}
+	if msgs[2].Role != RoleAssistant || msgs[2].Text != "ok" {
+		t.Fatalf("expected current assistant response after retained tail, got %+v", msgs[2])
 	}
 	if len(prov.histories) < 2 {
 		t.Fatalf("expected summary call and normal call, got %d calls", len(prov.histories))
+	}
+	if prov.histories[0][0].Role != RoleSystem {
+		t.Fatalf("expected compact summary call to include system prefix, got %+v", prov.histories[0])
 	}
 }
 
@@ -247,7 +262,7 @@ func TestCompactSessionRecordsCacheShapeRequestKind(t *testing.T) {
 	store := NewInMemoryStore()
 	_, _ = store.Create(context.Background(), Message{SessionID: "s-compact-usage", Role: RoleUser, Text: "keep this"})
 	usagePath := filepath.Join(t.TempDir(), "usage.jsonl")
-	a := NewAgentWithRegistry(&compactUsageProvider{}, store, NewToolRegistry(nil), WithUsageLogPath(usagePath))
+	a := NewAgentWithRegistry(&compactUsageProvider{}, store, NewToolRegistry([]Tool{readOnlyViewTool{}}), WithUsageLogPath(usagePath))
 
 	if _, err := a.CompactSession(context.Background(), "s-compact-usage"); err != nil {
 		t.Fatalf("compact failed: %v", err)
@@ -259,6 +274,32 @@ func TestCompactSessionRecordsCacheShapeRequestKind(t *testing.T) {
 	if !strings.Contains(string(b), `"request_kind":"compact"`) {
 		t.Fatalf("missing compact cache shape: %s", string(b))
 	}
+	if !strings.Contains(string(b), `"prefix_fingerprint"`) || !strings.Contains(string(b), `"system_segments"`) {
+		t.Fatalf("missing compact prefix shape: %s", string(b))
+	}
+	if !strings.Contains(string(b), `"tools_hash"`) || !strings.Contains(string(b), `"tools_bytes"`) {
+		t.Fatalf("missing compact tools shape: %s", string(b))
+	}
+}
+
+func TestCompactSessionSendsToolsWithPrefixShape(t *testing.T) {
+	store := NewInMemoryStore()
+	_, _ = store.Create(context.Background(), Message{SessionID: "s-compact-tools", Role: RoleUser, Text: "keep this"})
+	prov := &autoCompactProvider{}
+	a := NewAgentWithRegistry(prov, store, NewToolRegistry([]Tool{readOnlyViewTool{}}))
+
+	if _, err := a.CompactSession(context.Background(), "s-compact-tools"); err != nil {
+		t.Fatalf("compact failed: %v", err)
+	}
+	if len(prov.histories) != 1 {
+		t.Fatalf("expected one compact provider call, got %d", len(prov.histories))
+	}
+	if prov.histories[0][0].Role != RoleSystem {
+		t.Fatalf("expected compact summary call to include system prefix, got %+v", prov.histories[0])
+	}
+	if len(prov.tools) != 1 || len(prov.tools[0]) != 1 || prov.tools[0][0].Name() != "read_file" {
+		t.Fatalf("expected compact summary call to include provider tools, got %+v", prov.tools)
+	}
 }
 
 func TestForceSummaryRecordsCacheShapeRequestKind(t *testing.T) {
@@ -266,7 +307,11 @@ func TestForceSummaryRecordsCacheShapeRequestKind(t *testing.T) {
 	usagePath := filepath.Join(t.TempDir(), "usage.jsonl")
 	a := NewAgentWithRegistry(&compactUsageProvider{}, store, NewToolRegistry(nil), WithUsageLogPath(usagePath))
 
-	_, err := a.forceSummary(context.Background(), "s-force-summary", []Message{{SessionID: "s-force-summary", Role: RoleUser, Text: "work"}}, "test")
+	reqCtx, err := a.buildSummaryRequestContext(context.Background(), RunOptions{})
+	if err != nil {
+		t.Fatalf("summary context failed: %v", err)
+	}
+	_, err = a.forceSummary(context.Background(), "s-force-summary", []Message{{SessionID: "s-force-summary", Role: RoleUser, Text: "work"}}, "test", reqCtx)
 	if err != nil {
 		t.Fatalf("force summary failed: %v", err)
 	}
@@ -276,6 +321,33 @@ func TestForceSummaryRecordsCacheShapeRequestKind(t *testing.T) {
 	}
 	if !strings.Contains(string(b), `"request_kind":"force_summary"`) {
 		t.Fatalf("missing force summary cache shape: %s", string(b))
+	}
+	if !strings.Contains(string(b), `"prefix_fingerprint"`) || !strings.Contains(string(b), `"system_segments"`) {
+		t.Fatalf("missing force summary prefix shape: %s", string(b))
+	}
+}
+
+func TestForceSummaryUsesPrefixWithoutTools(t *testing.T) {
+	store := NewInMemoryStore()
+	prov := &autoCompactProvider{}
+	a := NewAgentWithRegistry(prov, store, NewToolRegistry([]Tool{readOnlyViewTool{}}))
+	reqCtx, err := a.buildSummaryRequestContext(context.Background(), RunOptions{})
+	if err != nil {
+		t.Fatalf("summary context failed: %v", err)
+	}
+
+	_, err = a.forceSummary(context.Background(), "s-force-tools", []Message{{SessionID: "s-force-tools", Role: RoleUser, Text: "work"}}, "test", reqCtx)
+	if err != nil {
+		t.Fatalf("force summary failed: %v", err)
+	}
+	if len(prov.histories) != 1 {
+		t.Fatalf("expected one force summary provider call, got %d", len(prov.histories))
+	}
+	if prov.histories[0][0].Role != RoleSystem {
+		t.Fatalf("expected force summary call to include system prefix, got %+v", prov.histories[0])
+	}
+	if len(prov.tools) != 1 || len(prov.tools[0]) != 0 {
+		t.Fatalf("expected force summary call to omit provider tools, got %+v", prov.tools)
 	}
 }
 
