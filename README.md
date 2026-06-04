@@ -27,20 +27,6 @@
 
 ---
 
-## ✨ At a Glance
-
-| What | Why it matters |
-|---|---|
-| 🐋 **DeepSeek-native** | Built for DeepSeek's long context (1M tokens), tool calling, and cost efficiency — no generic multi-model wrapper |
-| 💬 **Persistent sessions** | Come back days later, context is still there. Search, branch, resume. |
-| 🎛️ **Multiple interfaces** | TUI for interactive coding, CLI for one-shot tasks, headless for CI — desktop and more on the way |
-| ⚙️ **Tools & MCP** | Read/edit files, run commands, search web — and plug in 1,000+ MCP servers |
-| 🧩 **Skills + Plugins** | Install community skills (code review, git workflows, etc.) or write your own |
-| 🔁 **Dynamic Workflows** | Write JavaScript scripts that orchestrate multiple agents — fan-out research, multi-perspective review, pipelines. Claude Code compatible. |
-| 💰 **Cost-efficient** | DeepSeek's aggressive pricing paired with prompt caching makes AI-assisted coding affordable at scale |
-
----
-
 ## 🚀 Quick Start
 
 macOS:
@@ -79,6 +65,20 @@ That's it. Type your question and Whale starts working — reading files, runnin
 editing code, searching the web.
 
 > Need a different model provider, proxy, or custom config? See [Configuration](docs/configuration.en.md).
+
+---
+
+## ✨ At a Glance
+
+| What | Why it matters |
+|---|---|
+| 🐋 **DeepSeek-native** | Built for DeepSeek's long context (1M tokens), tool calling, and cost efficiency — no generic multi-model wrapper |
+| 💬 **Persistent sessions** | Come back days later, context is still there. Search, branch, resume. |
+| 🎛️ **Multiple interfaces** | TUI for interactive coding, CLI for one-shot tasks, headless for CI — desktop and more on the way |
+| ⚙️ **Tools & MCP** | Read/edit files, run commands, search web — and plug in 1,000+ MCP servers |
+| 🧩 **Skills + Plugins** | Install community skills (code review, git workflows, etc.) or write your own |
+| 🔁 **Dynamic Workflows** | Write JavaScript scripts that orchestrate multiple agents — fan-out research, multi-perspective review, pipelines. Claude Code compatible. |
+| 💰 **Cost-efficient** | DeepSeek's aggressive pricing paired with prompt caching makes AI-assisted coding affordable at scale |
 
 ---
 
