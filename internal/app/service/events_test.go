@@ -105,13 +105,13 @@ func TestLifecycleEmitAddsCorrelationFields(t *testing.T) {
 	svc.emit(Event{Kind: EventToolCall, ToolCallID: "tc-1", ToolName: "read_file"})
 	svc.emit(Event{Kind: EventToolResult, ToolCallID: "tc-1", ToolName: "read_file", Metadata: map[string]any{"exit_code": 0}})
 	svc.emit(Event{Kind: EventWorkflowSnapshot, LocalResult: &protocol.LocalResult{WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{RunID: "run-1", Status: "running"}}})
-	svc.emit(Event{Kind: EventWorkflowTerminal, WorkflowRunID: "run-1"})
+	svc.emit(Event{Kind: EventWorkflowResult, WorkflowRunID: "run-1"})
 	svc.emit(Event{Kind: EventUserInputDone, ToolCallID: "input-1"})
 
 	toolCall := waitForServiceEvent(t, svc, EventToolCall)
 	toolResult := waitForServiceEvent(t, svc, EventToolResult)
 	snapshot := waitForServiceEvent(t, svc, EventWorkflowSnapshot)
-	terminal := waitForServiceEvent(t, svc, EventWorkflowTerminal)
+	result := waitForServiceEvent(t, svc, EventWorkflowResult)
 	inputDone := waitForServiceEvent(t, svc, EventUserInputDone)
 
 	if toolCall.ItemID != "tool:tc-1" || toolResult.ItemID != "tool:tc-1" {
@@ -123,8 +123,8 @@ func TestLifecycleEmitAddsCorrelationFields(t *testing.T) {
 	if snapshot.ItemID != "workflow:run-1" || snapshot.WorkflowRunID != "run-1" {
 		t.Fatalf("unexpected workflow snapshot correlation: %+v", snapshot)
 	}
-	if terminal.ItemID != "workflow:run-1" || terminal.WorkflowRunID != "run-1" || terminal.Sequence <= snapshot.Sequence {
-		t.Fatalf("unexpected workflow terminal correlation: snapshot=%+v terminal=%+v", snapshot, terminal)
+	if result.ItemID != "workflow:run-1" || result.WorkflowRunID != "run-1" || result.Sequence <= snapshot.Sequence {
+		t.Fatalf("unexpected workflow result correlation: snapshot=%+v result=%+v", snapshot, result)
 	}
 	if inputDone.ItemID != "user_input:input-1" {
 		t.Fatalf("unexpected user input correlation: %+v", inputDone)

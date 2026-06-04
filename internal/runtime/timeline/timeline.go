@@ -253,7 +253,7 @@ func phaseForEvent(ev protocol.Event) (Phase, bool) {
 		return PhaseProgress, true
 	case protocol.EventWorkflowSnapshot:
 		return phaseForWorkflowSnapshot(ev), true
-	case protocol.EventTaskCompleted, protocol.EventHookCompleted, protocol.EventUserInputDone, protocol.EventWorkflowTerminal:
+	case protocol.EventTaskCompleted, protocol.EventHookCompleted, protocol.EventUserInputDone, protocol.EventWorkflowResult, protocol.EventWorkflowTerminal:
 		return PhaseCompleted, true
 	case protocol.EventToolResult:
 		if resultLooksFailed(ev) {
@@ -269,7 +269,7 @@ func itemIdentity(ev protocol.Event) string {
 	if s := strings.TrimSpace(ev.ItemID); s != "" {
 		return s
 	}
-	if ev.Kind == protocol.EventWorkflowSnapshot || ev.Kind == protocol.EventWorkflowTerminal {
+	if ev.Kind == protocol.EventWorkflowSnapshot || ev.Kind == protocol.EventWorkflowResult || ev.Kind == protocol.EventWorkflowTerminal {
 		if s := workflowRunID(ev); s != "" {
 			return "workflow:" + s
 		}
@@ -330,7 +330,7 @@ func classifyItem(ev protocol.Event) ItemKind {
 		return ItemKindHook
 	case protocol.EventUserInputRequired, protocol.EventUserInputDone:
 		return ItemKindUserInput
-	case protocol.EventWorkflowSnapshot, protocol.EventWorkflowTerminal:
+	case protocol.EventWorkflowSnapshot, protocol.EventWorkflowResult, protocol.EventWorkflowTerminal:
 		return ItemKindWorkflow
 	default:
 		return ItemKindTool

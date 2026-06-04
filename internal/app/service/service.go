@@ -152,6 +152,7 @@ const (
 	EventRewindMessagesListed          = protocol.EventRewindMessagesListed
 	EventWorkflowPanel                 = protocol.EventWorkflowPanel
 	EventWorkflowSnapshot              = protocol.EventWorkflowSnapshot
+	EventWorkflowResult                = protocol.EventWorkflowResult
 	EventWorkflowTerminal              = protocol.EventWorkflowTerminal
 )
 

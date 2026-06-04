@@ -154,6 +154,24 @@ func (a *Assembler) RemoveAssistantMessages() {
 	a.messages = out
 }
 
+func (a *Assembler) RemoveStatusMessagesWithPrefix(prefix string) bool {
+	prefix = strings.TrimSpace(prefix)
+	if a == nil || len(a.messages) == 0 || prefix == "" {
+		return false
+	}
+	out := a.messages[:0]
+	removed := false
+	for _, msg := range a.messages {
+		if msg.Kind == KindStatus && strings.HasPrefix(strings.TrimSpace(msg.Text), prefix) {
+			removed = true
+			continue
+		}
+		out = append(out, msg)
+	}
+	a.messages = out
+	return removed
+}
+
 func (a *Assembler) ReplaceTrailingAssistantMessages(text string) bool {
 	t := strings.TrimSpace(strings.TrimRight(text, "\n"))
 	if a == nil || t == "" || len(a.messages) == 0 {

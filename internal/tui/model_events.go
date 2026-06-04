@@ -91,6 +91,8 @@ func (m *model) handleServiceEvent(ev protocol.Event) (tea.Cmd, bool, bool) {
 		return m.handleWorkflowPanelEvent(ev.LocalResult), false, false
 	case protocol.EventWorkflowSnapshot:
 		m.handleWorkflowSnapshotEvent(ev)
+	case protocol.EventWorkflowResult:
+		m.handleWorkflowResultEvent(ev)
 	case protocol.EventWorkflowTerminal:
 		m.handleWorkflowTerminalEvent(ev)
 	case protocol.EventDiffResult:
@@ -177,6 +179,7 @@ func (m *model) handleTurnDone(ev protocol.Event) tea.Cmd {
 	wasStopping := m.stopping
 	wasFrozen := m.viewportFrozen
 	wasBlockingModal := m.mode == modeApproval || m.mode == modeUserInput
+	wasWorkflowLaunchModal := m.mode == modeWorkflowLaunch || m.mode == modeWorkflowRawScript
 	turnDuration := m.completedTurnDuration(wasBusy)
 	m.stopBusy()
 	m.stopping = false
@@ -186,6 +189,9 @@ func (m *model) handleTurnDone(ev protocol.Event) tea.Cmd {
 	reconciledAssistant := false
 	if isAgentTurnDone(ev) {
 		reconciledAssistant = m.reconcileFinalAssistant(ev.LastResponse)
+	}
+	if wasWorkflowLaunchModal {
+		m.sawTerminalToolOutcomeThisTurn = true
 	}
 	m.markMissingProposedPlanIfNeeded(wasBusy)
 	if !wasStopping {

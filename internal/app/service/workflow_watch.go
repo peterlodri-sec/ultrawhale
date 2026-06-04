@@ -40,9 +40,9 @@ func workflowSnapshotEvent(result *app.LocalResult) (Event, bool) {
 	if runID == "" {
 		return Event{}, false
 	}
-	text := strings.TrimSpace(result.PlainText)
+	text := strings.TrimSpace(result.WorkflowPanelSnapshot.Summary)
 	if text == "" {
-		text = strings.TrimSpace(result.WorkflowPanelSnapshot.Summary)
+		text = strings.TrimSpace(result.PlainText)
 	}
 	return Event{
 		Kind:          EventWorkflowSnapshot,
@@ -210,7 +210,10 @@ func (s *Service) watchWorkflowRun(runID string) {
 			if ev, ok := workflowSnapshotEvent(result); ok {
 				s.emit(ev)
 			}
-			s.emit(Event{Kind: EventWorkflowTerminal, WorkflowRunID: runID, Text: result.PlainText, LocalResult: protocolLocalResult(result)})
+			if err := s.app.RecordWorkflowResult(runID, result.PlainText); err != nil {
+				s.emit(Event{Kind: EventError, Text: err.Error()})
+			}
+			s.emit(Event{Kind: EventWorkflowResult, WorkflowRunID: runID, Text: result.PlainText, LocalResult: protocolLocalResult(result)})
 			return
 		}
 	}
