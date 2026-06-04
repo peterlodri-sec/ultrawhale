@@ -33,7 +33,7 @@ func (s *Service) emitBestEffort(ev Event) {
 
 func isCriticalEvent(kind EventKind) bool {
 	switch kind {
-	case EventError, EventPlanCompleted, EventPlanUpdate, EventProviderRetry, EventResponseReset, EventToolCall, EventToolResult, EventHookStarted, EventHookCompleted, EventTaskStarted, EventTaskCompleted, EventMCPComplete, EventApprovalRequired, EventApprovalDecision, EventUserInputRequired, EventUserInputDone, EventSessionsListed, EventRewindMessagesListed, EventLocalSubmitResult, EventLocalSubmitDone, EventDiffResult, EventBtwStarted, EventBtwDelta, EventBtwDone, EventBtwError, EventPendingInputAccepted, EventPendingInputRejected, EventTurnDone, EventModelSelectionRequested, EventPermissionsSelectionRequested, EventSkillsSelectionRequested, EventSkillsManagerUpdated, EventPluginsManagerUpdated, EventConfigManagerUpdated, EventHooksManagerUpdated, EventHooksStartupReviewRequested, EventReviewRequested, EventSkillLoaded, EventWorktreeExitPrompt, EventExitRequested, EventScreenClearRequested, EventSessionHydrated, EventWorkflowPanel, EventWorkflowSnapshot, EventWorkflowTerminal:
+	case EventError, EventPlanCompleted, EventPlanUpdate, EventProviderRetry, EventResponseReset, EventToolCall, EventToolResult, EventHookStarted, EventHookCompleted, EventTaskStarted, EventTaskCompleted, EventMCPComplete, EventApprovalRequired, EventApprovalDecision, EventUserInputRequired, EventUserInputDone, EventSessionsListed, EventRewindMessagesListed, EventLocalSubmitResult, EventLocalSubmitDone, EventDiffResult, EventBtwStarted, EventBtwDelta, EventBtwDone, EventBtwError, EventPendingInputAccepted, EventPendingInputRejected, EventTurnDone, EventModelSelectionRequested, EventPermissionsSelectionRequested, EventSkillsSelectionRequested, EventSkillsManagerUpdated, EventPluginsManagerUpdated, EventConfigManagerUpdated, EventHooksManagerUpdated, EventHooksStartupReviewRequested, EventReviewRequested, EventSkillLoaded, EventWorktreeExitPrompt, EventExitRequested, EventScreenClearRequested, EventSessionHydrated, EventWorkflowPanel, EventWorkflowSnapshot, EventWorkflowResult, EventWorkflowTerminal:
 		return true
 	default:
 		return false
@@ -64,7 +64,7 @@ func (s *Service) prepareLifecycleEvent(ev Event) Event {
 
 func isLifecycleEvent(kind EventKind) bool {
 	switch kind {
-	case EventToolCall, EventToolResult, EventApprovalRequired, EventApprovalDecision, EventTaskStarted, EventTaskProgress, EventTaskCompleted, EventHookStarted, EventHookCompleted, EventUserInputRequired, EventUserInputDone, EventWorkflowSnapshot, EventWorkflowTerminal:
+	case EventToolCall, EventToolResult, EventApprovalRequired, EventApprovalDecision, EventTaskStarted, EventTaskProgress, EventTaskCompleted, EventHookStarted, EventHookCompleted, EventUserInputRequired, EventUserInputDone, EventWorkflowSnapshot, EventWorkflowResult, EventWorkflowTerminal:
 		return true
 	default:
 		return false
@@ -72,7 +72,7 @@ func isLifecycleEvent(kind EventKind) bool {
 }
 
 func lifecycleItemID(ev Event) string {
-	if ev.Kind == EventWorkflowSnapshot || ev.Kind == EventWorkflowTerminal {
+	if ev.Kind == EventWorkflowSnapshot || ev.Kind == EventWorkflowResult || ev.Kind == EventWorkflowTerminal {
 		if runID := workflowRunIDFromEvent(ev); runID != "" {
 			return "workflow:" + runID
 		}

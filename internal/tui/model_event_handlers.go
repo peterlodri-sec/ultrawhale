@@ -132,12 +132,18 @@ func (m *model) handleLocalSubmitResultEvent(ev protocol.Event) tea.Cmd {
 	if !isEnvironmentInventoryBlock(ev.Text) {
 		m.appendLocalCommandEcho(m.popLocalSubmitCommand())
 		if ev.LocalResult != nil && ev.LocalResult.Kind == "workflow-launch" {
+			m.sawTerminalToolOutcomeThisTurn = true
+			m.removeNoFinalAnswerStatusMessages()
 			m.addLog(logEntry{Kind: role, Source: "system", Summary: ev.Text, Raw: ev.Text})
 			return m.openWorkflowLaunch(ev.LocalResult)
 		}
 		if ev.LocalResult != nil && ev.LocalResult.Kind == "workflow-run" {
+			m.sawTerminalToolOutcomeThisTurn = true
+			m.removeNoFinalAnswerStatusMessages()
 			// Workflow run lifecycle is rendered from workflow_snapshot events.
 		} else if shouldOpenWorkflowPanelForLocalResult(ev.LocalResult) {
+			m.sawTerminalToolOutcomeThisTurn = true
+			m.removeNoFinalAnswerStatusMessages()
 			m.addLog(logEntry{Kind: role, Source: "system", Summary: ev.Text, Raw: ev.Text})
 			return m.openWorkflowPanel(ev.LocalResult)
 		} else {
@@ -164,20 +170,28 @@ func (m *model) handleLocalSubmitResultEvent(ev protocol.Event) tea.Cmd {
 }
 
 func (m *model) handleWorkflowTerminalEvent(ev protocol.Event) {
+	m.handleWorkflowResultEvent(ev)
+}
+
+func (m *model) handleWorkflowResultEvent(ev protocol.Event) {
 	m.clearProviderRetryStatus()
+	m.sawTerminalToolOutcomeThisTurn = true
+	m.removeNoFinalAnswerStatusMessages()
 	m.ensureTimeline().HandleEvent(ev)
 	if !m.hasPendingLifecycleItems() {
 		m.commitLiveTranscript(false)
 	} else {
 		m.refreshLiveViewportContent()
 	}
-	m.addLog(logEntry{Kind: "workflow_terminal", Source: "workflow", Summary: truncateLine(ev.Text, 120), Raw: ev.Text})
+	m.addLog(logEntry{Kind: "workflow_result", Source: "workflow", Summary: truncateLine(ev.Text, 120), Raw: ev.Text})
 	m.status = "ready"
 	m.refreshViewportContentFollow(true)
 }
 
 func (m *model) handleWorkflowSnapshotEvent(ev protocol.Event) {
 	m.clearProviderRetryStatus()
+	m.sawTerminalToolOutcomeThisTurn = true
+	m.removeNoFinalAnswerStatusMessages()
 	m.ensureTimeline().HandleEvent(ev)
 	if !m.hasPendingLifecycleItems() {
 		m.commitLiveTranscript(false)
@@ -224,6 +238,9 @@ func (m *model) handleBtwErrorEvent(ev protocol.Event) {
 
 func (m *model) handleToolCallEvent(ev protocol.Event) {
 	m.clearProviderRetryStatus()
+	if ev.ToolName == "workflow" {
+		m.sawTerminalToolOutcomeThisTurn = true
+	}
 	if ev.ToolName != "update_plan" {
 		m.ensureTimeline().HandleEvent(ev)
 		m.refreshLiveViewportContent()
@@ -239,7 +256,7 @@ func (m *model) handleToolCallEvent(ev protocol.Event) {
 func (m *model) handleToolResultEvent(ev protocol.Event) tea.Cmd {
 	m.clearProviderRetryStatus()
 	role, _ := summarizeToolResultForChat(ev.ToolName, ev.Text)
-	if suppressesNoFinalAnswer(role) {
+	if ev.ToolName == "workflow" || suppressesNoFinalAnswer(role) {
 		m.sawTerminalToolOutcomeThisTurn = true
 	}
 	if ev.ToolName != "update_plan" {

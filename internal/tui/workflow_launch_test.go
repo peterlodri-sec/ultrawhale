@@ -42,6 +42,29 @@ func TestWorkflowLaunchLocalResultOpensInteractiveModal(t *testing.T) {
 	}
 }
 
+func TestWorkflowLaunchLocalResultPrunesReasoningOnlyFallback(t *testing.T) {
+	m := model{
+		assembler:           tuirender.NewAssembler(),
+		mode:                modeChat,
+		width:               100,
+		height:              30,
+		localSubmitCommands: []string{"/deep-research question"},
+	}
+	m.appendStatus("The model returned reasoning only and did not produce a visible answer. Ask it to answer directly or retry the last step.")
+	m.commitLiveTranscript(false)
+
+	result := workflowLaunchTestResult()
+	m.handleLocalSubmitResultEvent(protocol.Event{Status: "info", Text: result.PlainText, LocalResult: result})
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 120), "\n")
+	if strings.Contains(got, "Reasoning only") || strings.Contains(got, "did not produce a visible answer") {
+		t.Fatalf("workflow launch should prune reasoning-only fallback:\n%s", got)
+	}
+	if m.mode != modeWorkflowLaunch {
+		t.Fatalf("mode = %v, want workflow launch", m.mode)
+	}
+}
+
 func TestWorkflowLaunchEnterRunsSelectedAction(t *testing.T) {
 	intents := []protocol.Intent{}
 	m := model{
@@ -154,6 +177,51 @@ func TestWorkflowRunLocalResultDoesNotRenderPlainLaunchNotice(t *testing.T) {
 	}
 	if strings.Contains(got, "Started the deep-research workflow") || strings.Contains(got, "async_launched") || strings.Contains(got, "/tmp/run-123/script.js") {
 		t.Fatalf("workflow run local result should not render transcript lifecycle text:\n%s", got)
+	}
+}
+
+func TestWorkflowToolCallSuppressesReasoningOnlyFallback(t *testing.T) {
+	m := model{
+		assembler:            tuirender.NewAssembler(),
+		mode:                 modeChat,
+		width:                100,
+		height:               30,
+		busy:                 true,
+		sawReasoningThisTurn: true,
+	}
+
+	m.handleToolCallEvent(protocol.Event{Kind: protocol.EventToolCall, ToolCallID: "workflow-1", ToolName: "workflow", Text: `workflow: {"name":"smoke-result"}`})
+	m.handleTurnDone(protocol.Event{Kind: protocol.EventTurnDone})
+
+	got := strings.Join(tuirender.ChatLines(m.transcript, 120), "\n")
+	if strings.Contains(got, "Reasoning only") || strings.Contains(got, "did not produce a visible answer") {
+		t.Fatalf("workflow launch should suppress reasoning-only fallback:\n%s", got)
+	}
+}
+
+func TestWorkflowLaunchModalSuppressesReasoningOnlyFallback(t *testing.T) {
+	m := model{
+		assembler:            tuirender.NewAssembler(),
+		mode:                 modeWorkflowLaunch,
+		width:                100,
+		height:               30,
+		busy:                 true,
+		sawReasoningThisTurn: true,
+		workflowLaunch: struct {
+			result    *protocol.LocalResult
+			selected  int
+			rawScroll int
+		}{result: workflowLaunchTestResult()},
+	}
+
+	m.handleTurnDone(protocol.Event{Kind: protocol.EventTurnDone})
+
+	if m.mode != modeWorkflowLaunch {
+		t.Fatalf("workflow launch modal should remain open, got mode=%v", m.mode)
+	}
+	got := strings.Join(tuirender.ChatLines(m.transcript, 120), "\n")
+	if strings.Contains(got, "Reasoning only") || strings.Contains(got, "did not produce a visible answer") {
+		t.Fatalf("workflow launch modal should suppress reasoning-only fallback:\n%s", got)
 	}
 }
 

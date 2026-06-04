@@ -271,12 +271,19 @@ func toolResultSucceeded(raw string) bool {
 }
 
 func (m model) timelineWorkflowMessage(item timeline.Item) *tuirender.UIMessage {
+	if msg := m.timelineWorkflowResultMessage(item); msg != nil {
+		return msg
+	}
 	if msg := m.timelineWorkflowSnapshotMessage(item); msg != nil {
 		return msg
 	}
+	return m.timelineToolMessage(item)
+}
+
+func (m model) timelineWorkflowResultMessage(item timeline.Item) *tuirender.UIMessage {
 	for i := len(item.Events) - 1; i >= 0; i-- {
 		ev := item.Events[i]
-		if ev.Kind != protocol.EventWorkflowTerminal {
+		if ev.Kind != protocol.EventWorkflowResult && ev.Kind != protocol.EventWorkflowTerminal {
 			continue
 		}
 		text := strings.TrimSpace(ev.Text)
@@ -288,15 +295,18 @@ func (m model) timelineWorkflowMessage(item timeline.Item) *tuirender.UIMessage 
 		if text == "" {
 			return nil
 		}
+		if ev.LocalResult != nil {
+			return &tuirender.UIMessage{Role: "assistant", Kind: tuirender.KindLocalStatus, Text: text, Local: ev.LocalResult}
+		}
 		return &tuirender.UIMessage{Role: "assistant", Kind: tuirender.KindText, Text: text}
 	}
-	return m.timelineToolMessage(item)
+	return nil
 }
 
 func (m model) timelineWorkflowSnapshotMessage(item timeline.Item) *tuirender.UIMessage {
 	for i := len(item.Events) - 1; i >= 0; i-- {
 		ev := item.Events[i]
-		if (ev.Kind != protocol.EventWorkflowSnapshot && ev.Kind != protocol.EventWorkflowTerminal) || ev.LocalResult == nil || ev.LocalResult.WorkflowPanelSnapshot == nil {
+		if ev.Kind != protocol.EventWorkflowSnapshot || ev.LocalResult == nil || ev.LocalResult.WorkflowPanelSnapshot == nil {
 			continue
 		}
 		snapshot := ev.LocalResult.WorkflowPanelSnapshot

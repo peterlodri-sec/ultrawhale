@@ -146,7 +146,7 @@ func TestApprovalDecisionStaysBeforeBackgroundWorkflowTerminalResult(t *testing.
 	m = next.(model)
 
 	next, _ = m.Update(svcMsg(protocol.Event{
-		Kind: protocol.EventWorkflowTerminal,
+		Kind: protocol.EventWorkflowResult,
 		Text: "Workflow result",
 		LocalResult: &protocol.LocalResult{
 			Kind:      "workflow-terminal",
@@ -165,8 +165,8 @@ func TestApprovalDecisionStaysBeforeBackgroundWorkflowTerminalResult(t *testing.
 		}
 		if strings.Contains(msg.Text, "executiveSummary") {
 			resultIx = i
-			if msg.Role != "assistant" || msg.Kind != tuirender.KindText || msg.Local != nil {
-				t.Fatalf("workflow terminal should enter transcript as assistant text, got %+v", msg)
+			if msg.Role != "assistant" {
+				t.Fatalf("workflow result should enter transcript as assistant-visible result, got %+v", msg)
 			}
 		}
 	}
@@ -188,7 +188,7 @@ func TestWorkflowTerminalDoesNotCommitUnrelatedPendingToolCall(t *testing.T) {
 	m = next.(model)
 
 	next, _ = m.Update(svcMsg(protocol.Event{
-		Kind: protocol.EventWorkflowTerminal,
+		Kind: protocol.EventWorkflowResult,
 		Text: "Workflow result",
 		LocalResult: &protocol.LocalResult{
 			Kind:      "workflow-terminal",
@@ -225,8 +225,8 @@ func TestWorkflowTerminalDoesNotCommitUnrelatedPendingToolCall(t *testing.T) {
 		}
 		if strings.Contains(msg.Text, "executiveSummary") {
 			resultIx = i
-			if msg.Role != "assistant" || msg.Kind != tuirender.KindText || msg.Local != nil {
-				t.Fatalf("workflow terminal should enter transcript as assistant text, got %+v", msg)
+			if msg.Role != "assistant" {
+				t.Fatalf("workflow result should enter transcript as assistant-visible result, got %+v", msg)
 			}
 		}
 	}

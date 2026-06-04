@@ -52,6 +52,15 @@ func TestEventJSONRoundTrip(t *testing.T) {
 			},
 		},
 		{
+			Kind:          EventWorkflowResult,
+			WorkflowRunID: "run-2",
+			Text:          "Workflow completed",
+			LocalResult: &LocalResult{
+				Kind:      "workflow-terminal",
+				PlainText: "Workflow completed",
+			},
+		},
+		{
 			Kind:      EventSessionHydrated,
 			SessionID: "s1",
 			Messages:  []Message{{ID: "m1", Role: "assistant", Text: "done"}},

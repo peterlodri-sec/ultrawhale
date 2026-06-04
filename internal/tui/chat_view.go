@@ -7,6 +7,8 @@ import (
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
 
+const noFinalAnswerStatusPrefix = "The model returned reasoning only"
+
 func (m *model) append(role, text string) {
 	if m.assembler == nil {
 		m.assembler = tuirender.NewAssembler()
@@ -48,6 +50,31 @@ func (m *model) appendStatus(text string) {
 	}
 	m.assembler.AddStatus(text)
 	m.refreshLiveViewportContent()
+}
+
+func (m *model) removeNoFinalAnswerStatusMessages() {
+	removed := false
+	if len(m.transcript) > 0 {
+		out := m.transcript[:0]
+		for _, msg := range m.transcript {
+			if isNoFinalAnswerStatus(msg) {
+				removed = true
+				continue
+			}
+			out = append(out, msg)
+		}
+		m.transcript = out
+	}
+	if m.assembler != nil && m.assembler.RemoveStatusMessagesWithPrefix(noFinalAnswerStatusPrefix) {
+		removed = true
+	}
+	if removed {
+		m.refreshViewportContentFollow(false)
+	}
+}
+
+func isNoFinalAnswerStatus(msg tuirender.UIMessage) bool {
+	return msg.Kind == tuirender.KindStatus && strings.HasPrefix(strings.TrimSpace(msg.Text), noFinalAnswerStatusPrefix)
 }
 
 func (m *model) appendLiveLocalResult(result *protocol.LocalResult) {
@@ -216,6 +243,9 @@ func (m *model) replaceCommittedTurnAssistant(text string) bool {
 
 func (m *model) markNoFinalAnswerIfNeeded() bool {
 	if !m.sawReasoningThisTurn || m.sawAssistantThisTurn || m.sawPlanThisTurn || m.sawTerminalToolOutcomeThisTurn {
+		return false
+	}
+	if m.hasPendingLifecycleItems() {
 		return false
 	}
 	if m.chatMode == "plan" {

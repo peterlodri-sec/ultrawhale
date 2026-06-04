@@ -58,7 +58,7 @@ func TestTimelineRendersUserInputLifecycle(t *testing.T) {
 	}
 }
 
-func TestTimelineRendersWorkflowSnapshotInsteadOfAssistantTerminal(t *testing.T) {
+func TestTimelineRendersWorkflowResultAfterSnapshot(t *testing.T) {
 	m := newModel(nil, "", "", "")
 	next, _ := m.Update(svcMsg(protocol.Event{
 		Kind:          protocol.EventWorkflowSnapshot,
@@ -78,10 +78,10 @@ func TestTimelineRendersWorkflowSnapshotInsteadOfAssistantTerminal(t *testing.T)
 	}
 
 	next, _ = m.Update(svcMsg(protocol.Event{
-		Kind:          protocol.EventWorkflowTerminal,
+		Kind:          protocol.EventWorkflowResult,
 		WorkflowRunID: "run-1",
-		Text:          "Workflow\n\nexecutiveSummary: should stay in panel",
-		LocalResult: &protocol.LocalResult{Kind: "workflow-terminal", PlainText: "Workflow\n\nexecutiveSummary: should stay in panel", WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
+		Text:          "Workflow\n\nexecutiveSummary: visible final result",
+		LocalResult: &protocol.LocalResult{Kind: "workflow-terminal", PlainText: "Workflow\n\nexecutiveSummary: visible final result", WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
 			RunID:   "run-1",
 			Status:  "completed",
 			Summary: "done",
@@ -91,7 +91,33 @@ func TestTimelineRendersWorkflowSnapshotInsteadOfAssistantTerminal(t *testing.T)
 	if len(m.transcript) != 1 {
 		t.Fatalf("expected one committed workflow lifecycle row, got %+v", m.transcript)
 	}
-	if msg := m.transcript[0]; msg.Role == "assistant" || strings.Contains(msg.Text, "executiveSummary") || !strings.Contains(msg.Text, "Workflow") {
-		t.Fatalf("workflow terminal should commit lifecycle row, got %+v", msg)
+	if msg := m.transcript[0]; msg.Role != "assistant" || !strings.Contains(msg.Text, "executiveSummary") || !strings.Contains(msg.Text, "Workflow") {
+		t.Fatalf("workflow result should commit final result, got %+v", msg)
+	}
+}
+
+func TestWorkflowResultPrunesReasoningOnlyFallback(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.appendStatus("The model returned reasoning only and did not produce a visible answer. Ask it to answer directly or retry the last step.")
+	m.commitLiveTranscript(false)
+
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind:          protocol.EventWorkflowResult,
+		WorkflowRunID: "run-1",
+		Text:          "Workflow\n\nexecutiveSummary: visible final result",
+		LocalResult: &protocol.LocalResult{Kind: "workflow-terminal", PlainText: "Workflow\n\nexecutiveSummary: visible final result", WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
+			RunID:   "run-1",
+			Status:  "completed",
+			Summary: "done",
+		}},
+	}))
+	m = next.(model)
+
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	if strings.Contains(rendered, "Reasoning only") || strings.Contains(rendered, "did not produce a visible answer") {
+		t.Fatalf("workflow result should prune reasoning-only fallback:\n%s", rendered)
+	}
+	if len(m.transcript) != 1 || !strings.Contains(m.transcript[0].Text, "executiveSummary") {
+		t.Fatalf("workflow result should remain in transcript: %+v", m.transcript)
 	}
 }

@@ -26,6 +26,21 @@ func TestTurnDoneReasoningOnlyCommitsFallback(t *testing.T) {
 		t.Fatal("expected turn tracking flags to reset")
 	}
 }
+
+func TestTurnDoneReasoningOnlySkipsFallbackWhileLifecyclePending(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true}
+	next, _ := m.Update(svcMsg(protocol.Event{Kind: protocol.EventReasoningDelta, Text: "I should wait."}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{Kind: protocol.EventToolCall, ToolCallID: "tool-1", ToolName: "list_dir", Text: "list_dir: ."}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{Kind: protocol.EventTurnDone}))
+	m = next.(model)
+
+	if got := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n"); strings.Contains(got, "Reasoning only") || strings.Contains(got, "did not produce a visible answer") {
+		t.Fatalf("pending lifecycle should suppress reasoning-only status:\n%s", got)
+	}
+}
+
 func TestTurnDoneReconcilesDroppedAssistantDeltaFromLastResponse(t *testing.T) {
 	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 8, busy: true}
 	next, _ := m.Update(svcMsg(protocol.Event{

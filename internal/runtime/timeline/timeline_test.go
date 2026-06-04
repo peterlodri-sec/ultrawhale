@@ -72,7 +72,7 @@ func TestBuilderMapsSubagentProgressFlow(t *testing.T) {
 	assertPhases(t, item, PhaseRequested, PhaseProgress, PhaseCompleted)
 }
 
-func TestBuilderMapsWorkflowLaunchAndTerminal(t *testing.T) {
+func TestBuilderMapsWorkflowLaunchAndResult(t *testing.T) {
 	b := NewTurnTimelineBuilder()
 	b.HandleEvent(protocol.Event{Kind: protocol.EventToolCall, ToolCallID: "workflow-1", ToolName: "workflow", Text: `workflow: {"name":"scan"}`})
 	b.HandleEvent(protocol.Event{
@@ -83,20 +83,20 @@ func TestBuilderMapsWorkflowLaunchAndTerminal(t *testing.T) {
 		Metadata:   map[string]any{"workflow_run_id": "run-123"},
 	})
 	b.HandleEvent(protocol.Event{
-		Kind:          protocol.EventWorkflowTerminal,
+		Kind:          protocol.EventWorkflowResult,
 		WorkflowRunID: "run-123",
 		Text:          "Workflow result",
 	})
 
 	snap := b.Snapshot()
 	if len(snap.Items) != 2 {
-		t.Fatalf("expected launch tool and terminal workflow items, got %+v", snap.Items)
+		t.Fatalf("expected launch tool and result workflow items, got %+v", snap.Items)
 	}
 	if snap.Items[0].Kind != ItemKindWorkflow || snap.Items[0].ToolCallID != "workflow-1" || snap.Items[0].WorkflowRunID != "run-123" {
 		t.Fatalf("unexpected workflow launch item: %+v", snap.Items[0])
 	}
 	if snap.Items[1].Kind != ItemKindWorkflow || snap.Items[1].WorkflowRunID != "run-123" || snap.Items[1].Phase != PhaseCompleted {
-		t.Fatalf("unexpected workflow terminal item: %+v", snap.Items[1])
+		t.Fatalf("unexpected workflow result item: %+v", snap.Items[1])
 	}
 }
 
@@ -207,20 +207,20 @@ func TestHydrationEventsFromMessageMapsStoredToolLifecycle(t *testing.T) {
 	}
 }
 
-func TestBuilderKeepsLateWorkflowTerminalSeparateFromPendingTool(t *testing.T) {
+func TestBuilderKeepsLateWorkflowResultSeparateFromPendingTool(t *testing.T) {
 	b := NewTurnTimelineBuilder()
 	b.HandleEvent(protocol.Event{Kind: protocol.EventToolCall, ToolCallID: "tool-1", ToolName: "list_dir"})
-	b.HandleEvent(protocol.Event{Kind: protocol.EventWorkflowTerminal, WorkflowRunID: "run-late", Text: "Workflow result"})
+	b.HandleEvent(protocol.Event{Kind: protocol.EventWorkflowResult, WorkflowRunID: "run-late", Text: "Workflow result"})
 
 	snap := b.Snapshot()
 	if len(snap.Items) != 2 {
-		t.Fatalf("expected pending tool and workflow terminal, got %+v", snap.Items)
+		t.Fatalf("expected pending tool and workflow result, got %+v", snap.Items)
 	}
 	if snap.Items[0].ToolCallID != "tool-1" || snap.Items[0].Phase != PhaseRequested {
 		t.Fatalf("unexpected pending tool: %+v", snap.Items[0])
 	}
 	if snap.Items[1].WorkflowRunID != "run-late" || snap.Items[1].Phase != PhaseCompleted {
-		t.Fatalf("unexpected terminal item: %+v", snap.Items[1])
+		t.Fatalf("unexpected result item: %+v", snap.Items[1])
 	}
 }
 
