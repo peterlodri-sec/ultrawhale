@@ -128,6 +128,7 @@ type App struct {
 	contextWindow         int
 	mcpManager            *whalemcp.Manager
 	mcpSig                string
+	mcpToolPayloads       map[string]string
 	mcpSigFrozen          bool
 	pluginManager         *plugins.Manager
 	pluginTools           []core.Tool

@@ -59,6 +59,9 @@ func TestRefreshMCPToolsRejectsDescriptionChangeAfterFreeze(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "restart Whale") {
 		t.Fatalf("expected restart-required error, got %v", err)
 	}
+	if !strings.Contains(err.Error(), "changed mcp__runtime__echo") {
+		t.Fatalf("expected changed tool detail, got %v", err)
+	}
 	spec, ok = app.toolRegistry.Spec("mcp__runtime__echo")
 	if !ok {
 		t.Fatal("mcp tool spec disappeared after rejected refresh")
@@ -93,6 +96,29 @@ func TestMCPToolSetSignatureChangesWithSchema(t *testing.T) {
 	}
 	if first == second {
 		t.Fatal("schema change should change MCP tool-set signature")
+	}
+}
+
+func TestMCPToolSetDeltaReportsAddedRemovedChanged(t *testing.T) {
+	prev := map[string]string{
+		"mcp__old__same":    `{"same":true}`,
+		"mcp__old__changed": `{"version":1}`,
+		"mcp__old__removed": `{"removed":true}`,
+	}
+	next := map[string]string{
+		"mcp__old__same":    `{"same":true}`,
+		"mcp__old__changed": `{"version":2}`,
+		"mcp__new__added":   `{"added":true}`,
+	}
+	got := mcpToolSetDelta(prev, next)
+	for _, want := range []string{
+		"added mcp__new__added",
+		"removed mcp__old__removed",
+		"changed mcp__old__changed",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("delta missing %q: %s", want, got)
+		}
 	}
 }
 
