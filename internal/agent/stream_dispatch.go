@@ -83,6 +83,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 	}
 
 	pendingParallelSubagents := []preparedToolDispatch{}
+	pendingParallelReasoning := []preparedToolDispatch{}
 	flushPendingParallelSubagents := func() error {
 		if len(pendingParallelSubagents) == 0 {
 			return nil
@@ -91,9 +92,28 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 		pendingParallelSubagents = pendingParallelSubagents[:0]
 		return a.flushPendingParallelSubagents(ctx, sc.SessionID, sc.Assistant.ID, sc.Model, pending, sc.Events, &results, sc.Tools)
 	}
+	flushPendingParallelReasoning := func() error {
+		if len(pendingParallelReasoning) == 0 {
+			return nil
+		}
+		pending := append([]preparedToolDispatch(nil), pendingParallelReasoning...)
+		pendingParallelReasoning = pendingParallelReasoning[:0]
+		return a.flushPendingParallelReasoning(ctx, sc.SessionID, sc.Assistant.ID, sc.Model, pending, sc.Events, &results, sc.Tools)
+	}
+	flushPendingParallelBatches := func() error {
+		if err := flushPendingParallelSubagents(); err != nil {
+			return err
+		}
+		return flushPendingParallelReasoning()
+	}
 	for i, call := range dispatchCalls {
 		if call.Name != parallelSubagentToolName {
 			if err := flushPendingParallelSubagents(); err != nil {
+				return nil, false, err
+			}
+		}
+		if call.Name != parallelReasonToolName {
+			if err := flushPendingParallelReasoning(); err != nil {
 				return nil, false, err
 			}
 		}
@@ -103,7 +123,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 			return nil, false, err
 		}
 
-		spec, skipCall, err := a.resolveDispatchSpec(ctx, sc, call, flushPendingParallelSubagents, &results)
+		spec, skipCall, err := a.resolveDispatchSpec(ctx, sc, call, flushPendingParallelBatches, &results)
 		if err != nil {
 			return nil, false, err
 		}
@@ -113,7 +133,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 
 		var preHookContext string
 		var hookBlocked bool
-		call, preHookContext, hookBlocked, err = a.runPreToolUseHook(ctx, sc, call, flushPendingParallelSubagents, &results)
+		call, preHookContext, hookBlocked, err = a.runPreToolUseHook(ctx, sc, call, flushPendingParallelBatches, &results)
 		if err != nil {
 			return nil, false, err
 		}
@@ -121,7 +141,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 			continue
 		}
 
-		modeBlocked, err := a.appendModeBlockedResult(ctx, sc, spec, call, flushPendingParallelSubagents, &results)
+		modeBlocked, err := a.appendModeBlockedResult(ctx, sc, spec, call, flushPendingParallelBatches, &results)
 		if err != nil {
 			return nil, false, err
 		}
@@ -142,7 +162,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 			return nil, false, err
 		}
 		if !decision.Allow {
-			if err := flushPendingParallelSubagents(); err != nil {
+			if err := flushPendingParallelBatches(); err != nil {
 				return nil, false, err
 			}
 			if err := a.appendPolicyDeniedResult(ctx, sc, call, decision, false, &results); err != nil {
@@ -151,7 +171,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 			continue
 		}
 
-		approval, err := a.resolveToolApproval(ctx, sc, spec, call, decision, flushPendingParallelSubagents, &results)
+		approval, err := a.resolveToolApproval(ctx, sc, spec, call, decision, flushPendingParallelBatches, &results)
 		if err != nil {
 			return nil, false, err
 		}
@@ -170,6 +190,10 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 		}
 		if _, ok := maybeReadyParallelSubagentCall(i, call); ok {
 			pendingParallelSubagents = append(pendingParallelSubagents, prepared)
+			continue
+		}
+		if maybeReadyParallelReasonCall(call) {
+			pendingParallelReasoning = append(pendingParallelReasoning, prepared)
 			continue
 		}
 
@@ -196,7 +220,7 @@ func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext,
 			return &toolMsg, true, nil
 		}
 	}
-	if err := flushPendingParallelSubagents(); err != nil {
+	if err := flushPendingParallelBatches(); err != nil {
 		return nil, false, err
 	}
 

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -277,6 +278,82 @@ func (p *parallelSpawnProvider) StreamResponse(_ context.Context, _ []Message, _
 	))
 }
 
+type parallelReasonProvider struct {
+	calls int
+	order []string
+}
+
+func (p *parallelReasonProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	p.calls++
+	if p.calls > 1 {
+		return eventStream(endTurnEvent("done"))
+	}
+	calls := make([]ToolCall, 0, len(p.order))
+	for _, name := range p.order {
+		switch name {
+		case "parallel_reason":
+			id := "tc-reason-" + strconv.Itoa(len(calls)+1)
+			calls = append(calls, toolCall(id, "parallel_reason", `{"prompts":["analyze"]}`))
+		case "read_counter":
+			calls = append(calls, toolCall("tc-read-"+strconv.Itoa(len(calls)+1), "read_counter", `{}`))
+		default:
+			id := "tc-" + name + "-" + strconv.Itoa(len(calls)+1)
+			calls = append(calls, toolCall(id, name, `{}`))
+		}
+	}
+	return eventStream(toolUseEvent(calls...))
+}
+
+type mockParallelReasonTool struct {
+	calls   atomic.Int32
+	running atomic.Int32
+	max     atomic.Int32
+
+	delay     time.Duration
+	delayByID map[string]time.Duration
+	failByID  map[string]bool
+}
+
+func (t *mockParallelReasonTool) Name() string { return "parallel_reason" }
+func (t *mockParallelReasonTool) ReadOnly() bool {
+	return true
+}
+func (t *mockParallelReasonTool) SupportsParallel() bool {
+	return true
+}
+func (t *mockParallelReasonTool) Run(ctx context.Context, call ToolCall) (ToolResult, error) {
+	t.calls.Add(1)
+	running := t.running.Add(1)
+	for {
+		max := t.max.Load()
+		if running <= max || t.max.CompareAndSwap(max, running) {
+			break
+		}
+	}
+	defer t.running.Add(-1)
+
+	delay := t.delay
+	if d, ok := t.delayByID[call.ID]; ok {
+		delay = d
+	}
+	if err := waitOrCancel(ctx, delay); err != nil {
+		return ToolResult{}, err
+	}
+	if t.failByID[call.ID] {
+		return ToolResult{
+			ToolCallID: call.ID,
+			Name:       call.Name,
+			Content:    `{"success":false,"error":"reason failed","code":"parallel_reason_failed"}`,
+			IsError:    true,
+		}, nil
+	}
+	return ToolResult{
+		ToolCallID: call.ID,
+		Name:       call.Name,
+		Content:    `{"success":true,"data":{"summary":"ok:` + call.ID + `"}}`,
+	}, nil
+}
+
 type mockSpawnSubagentTool struct {
 	calls   atomic.Int32
 	running atomic.Int32
@@ -395,6 +472,154 @@ func waitOrCancel(ctx context.Context, delay time.Duration) error {
 		return ctx.Err()
 	case <-timer.C:
 		return nil
+	}
+}
+
+func TestParallelReasonToolCallsRunConcurrently(t *testing.T) {
+	store := NewInMemoryStore()
+	reason := &mockParallelReasonTool{delay: 180 * time.Millisecond}
+	a := NewAgentWithRegistry(
+		&parallelReasonProvider{order: []string{"parallel_reason", "parallel_reason", "parallel_reason"}},
+		store,
+		NewToolRegistry([]Tool{reason}),
+	)
+
+	start := time.Now()
+	events, err := a.RunStream(context.Background(), "s-parallel-reason", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+	}
+	elapsed := time.Since(start)
+
+	if got := reason.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 parallel_reason calls, got %d", got)
+	}
+	if got := reason.max.Load(); got < 2 {
+		t.Fatalf("expected overlapping parallel_reason calls, max concurrency was %d", got)
+	}
+	if elapsed >= 360*time.Millisecond {
+		t.Fatalf("expected concurrent wall-clock under 360ms for three 180ms calls, got %s", elapsed)
+	}
+
+	msgs, err := store.List(context.Background(), "s-parallel-reason")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	toolMsg := findOnlyToolMessage(t, msgs)
+	wantOrder := []string{"tc-reason-1", "tc-reason-2", "tc-reason-3"}
+	if got := toolResultIDs(toolMsg.ToolResults); !sameStringSlice(got, wantOrder) {
+		t.Fatalf("persisted tool result order = %v, want %v", got, wantOrder)
+	}
+}
+
+func TestParallelReasonToolCallsSplitAroundNonReasonTool(t *testing.T) {
+	store := NewInMemoryStore()
+	reason := &mockParallelReasonTool{delay: 90 * time.Millisecond}
+	counter := &readOnlyCountingTool{}
+	a := NewAgentWithRegistry(
+		&parallelReasonProvider{order: []string{"parallel_reason", "parallel_reason", "read_counter", "parallel_reason"}},
+		store,
+		NewToolRegistry([]Tool{reason, counter}),
+	)
+
+	events, err := a.RunStream(context.Background(), "s-parallel-reason-boundary", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	var resultEventOrder []string
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil {
+			resultEventOrder = append(resultEventOrder, ev.Result.ToolCallID)
+		}
+	}
+
+	if got := reason.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 parallel_reason calls, got %d", got)
+	}
+	if got := reason.max.Load(); got < 2 {
+		t.Fatalf("expected first parallel_reason segment to overlap, max concurrency was %d", got)
+	}
+	if counter.calls != 1 {
+		t.Fatalf("expected boundary read_counter to execute once, got %d", counter.calls)
+	}
+	wantOrder := []string{"tc-reason-1", "tc-reason-2", "tc-read-3", "tc-reason-4"}
+	if !sameStringSlice(resultEventOrder, wantOrder) {
+		t.Fatalf("tool result event order = %v, want %v", resultEventOrder, wantOrder)
+	}
+
+	msgs, err := store.List(context.Background(), "s-parallel-reason-boundary")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	toolMsg := findOnlyToolMessage(t, msgs)
+	if got := toolResultIDs(toolMsg.ToolResults); !sameStringSlice(got, wantOrder) {
+		t.Fatalf("persisted tool result order = %v, want %v", got, wantOrder)
+	}
+}
+
+func TestParallelReasonFailureStaysInOriginalResultSlot(t *testing.T) {
+	store := NewInMemoryStore()
+	reason := &mockParallelReasonTool{
+		delayByID: map[string]time.Duration{
+			"tc-reason-1": 80 * time.Millisecond,
+			"tc-reason-2": 20 * time.Millisecond,
+			"tc-reason-3": 80 * time.Millisecond,
+		},
+		failByID: map[string]bool{"tc-reason-2": true},
+	}
+	a := NewAgentWithRegistry(
+		&parallelReasonProvider{order: []string{"parallel_reason", "parallel_reason", "parallel_reason"}},
+		store,
+		NewToolRegistry([]Tool{reason}),
+	)
+
+	events, err := a.RunStream(context.Background(), "s-parallel-reason-failure", "go")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	var resultEvents []ToolResult
+	for ev := range events {
+		if ev.Type == AgentEventTypeError && ev.Err != nil {
+			t.Fatalf("run stream emitted error: %v", ev.Err)
+		}
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil && ev.Result.Name == "parallel_reason" {
+			resultEvents = append(resultEvents, *ev.Result)
+		}
+	}
+
+	if got := reason.calls.Load(); got != 3 {
+		t.Fatalf("expected 3 parallel_reason calls, got %d", got)
+	}
+	if got := reason.max.Load(); got < 2 {
+		t.Fatalf("expected overlapping parallel_reason calls, max concurrency was %d", got)
+	}
+	msgs, err := store.List(context.Background(), "s-parallel-reason-failure")
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	toolMsg := findOnlyToolMessage(t, msgs)
+	wantIDs := []string{"tc-reason-1", "tc-reason-2", "tc-reason-3"}
+	if got := toolResultIDs(toolMsg.ToolResults); !sameStringSlice(got, wantIDs) {
+		t.Fatalf("persisted tool result order = %v, want %v", got, wantIDs)
+	}
+	if got := toolResultIDs(resultEvents); !sameStringSlice(got, wantIDs) {
+		t.Fatalf("tool result event order = %v, want %v", got, wantIDs)
+	}
+	if !toolMsg.ToolResults[1].IsError {
+		t.Fatalf("expected middle parallel_reason result to be marked error: %+v", toolMsg.ToolResults[1])
+	}
+	for _, idx := range []int{0, 2} {
+		if toolMsg.ToolResults[idx].IsError {
+			t.Fatalf("expected successful parallel_reason result at index %d, got error %+v", idx, toolMsg.ToolResults[idx])
+		}
 	}
 }
 
@@ -920,4 +1145,28 @@ func sameStringSlice(got, want []string) bool {
 		}
 	}
 	return true
+}
+
+func findOnlyToolMessage(t *testing.T, msgs []Message) Message {
+	t.Helper()
+	var toolMsg Message
+	toolMessages := 0
+	for _, msg := range msgs {
+		if msg.Role == RoleTool {
+			toolMessages++
+			toolMsg = msg
+		}
+	}
+	if toolMessages != 1 {
+		t.Fatalf("expected one persisted tool message, got %d", toolMessages)
+	}
+	return toolMsg
+}
+
+func toolResultIDs(results []ToolResult) []string {
+	ids := make([]string, 0, len(results))
+	for _, result := range results {
+		ids = append(ids, result.ToolCallID)
+	}
+	return ids
 }

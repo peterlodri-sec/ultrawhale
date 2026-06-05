@@ -144,10 +144,36 @@ func (a *Agent) flushPendingParallelSubagents(ctx context.Context, sessionID, as
 	return nil
 }
 
+func (a *Agent) flushPendingParallelReasoning(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, results *[]core.ToolResult, tools *core.ToolRegistry) error {
+	outcomes, err := a.dispatchParallelToolCallsWithRecovery(ctx, sessionID, assistantMessageID, model, pending, events, tools, maxParallelReasonToolCalls)
+	if err != nil {
+		return err
+	}
+	for _, outcome := range outcomes {
+		if !outcome.OK {
+			continue
+		}
+		if !a.appendDispatchedToolResult(ctx, sessionID, outcome.Prepared, outcome.Result, outcome.PrimarySucceeded, events, results) {
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
 func (a *Agent) dispatchParallelSubagentsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, tools *core.ToolRegistry) ([]toolDispatchOutcome, error) {
 	limit := a.maxParallelSubagents
 	if limit <= 0 {
 		limit = defaultMaxParallelSubagents()
+	}
+	return a.dispatchParallelToolCallsWithRecovery(ctx, sessionID, assistantMessageID, model, pending, events, tools, limit)
+}
+
+func (a *Agent) dispatchParallelToolCallsWithRecovery(ctx context.Context, sessionID, assistantMessageID, model string, pending []preparedToolDispatch, events chan<- AgentEvent, tools *core.ToolRegistry, limit int) ([]toolDispatchOutcome, error) {
+	if len(pending) == 0 {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 1
 	}
 	if limit > len(pending) {
 		limit = len(pending)
