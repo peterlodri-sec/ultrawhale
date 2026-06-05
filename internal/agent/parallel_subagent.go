@@ -3,6 +3,8 @@ package agent
 import "github.com/usewhale/whale/internal/core"
 
 const parallelSubagentToolName = "spawn_subagent"
+const parallelReasonToolName = "parallel_reason"
+const maxParallelReasonToolCalls = 8
 
 type parallelSubagentGroup struct {
 	Start int
@@ -19,6 +21,10 @@ func maybeReadyParallelSubagentCall(index int, call core.ToolCall) (readyParalle
 		return readyParallelSubagentCall{}, false
 	}
 	return readyParallelSubagentCall{Index: index, Call: call}, true
+}
+
+func maybeReadyParallelReasonCall(call core.ToolCall) bool {
+	return call.Name == parallelReasonToolName
 }
 
 func eligibleReadyParallelSubagentGroups(ready []readyParallelSubagentCall) []parallelSubagentGroup {
