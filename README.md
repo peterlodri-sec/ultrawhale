@@ -13,10 +13,11 @@
   <a href="https://github.com/usewhale/DeepSeek-Code-Whale/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/usewhale/DeepSeek-Code-Whale/ci.yml?label=CI" alt="CI"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/usewhale/DeepSeek-Code-Whale" alt="license"></a>
   <a href="https://github.com/usewhale/DeepSeek-Code-Whale/stargazers"><img src="https://img.shields.io/github/stars/usewhale/DeepSeek-Code-Whale?style=flat&logo=github&label=stars" alt="GitHub stars"></a>
+  <img src="https://img.shields.io/badge/prompt%20cache-98%25-brightgreen" alt="98% prompt cache hit">
 </p>
 
 <p align="center">
-  Blazingly fast · Zero bloat · Pure local speed.
+  Blazingly fast · ~98% prompt cache hit · Zero bloat
 </p>
 
 <p align="center">
@@ -78,7 +79,7 @@ editing code, searching the web.
 | ⚙️ **Tools & MCP** | Read/edit files, run commands, search web — and plug in 1,000+ MCP servers |
 | 🧩 **Skills + Plugins** | Install community skills (code review, git workflows, etc.) or write your own |
 | 🔁 **Dynamic Workflows** | Write JavaScript scripts that orchestrate multiple agents — fan-out research, multi-perspective review, pipelines. Claude Code compatible. |
-| 💰 **Cost-efficient** | DeepSeek's aggressive pricing paired with prompt caching makes AI-assisted coding affordable at scale |
+| 💰 **~98% prompt cache hit** | Whale reuses cached context aggressively — most prompts hit cache, slashing costs to pennies per session. DeepSeek pricing × Whale caching = AI-assisted coding at scale. |
 
 ---
 

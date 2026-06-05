@@ -13,10 +13,11 @@
   <a href="https://github.com/usewhale/DeepSeek-Code-Whale/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/usewhale/DeepSeek-Code-Whale/ci.yml?label=CI" alt="CI"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/usewhale/DeepSeek-Code-Whale" alt="license"></a>
   <a href="https://github.com/usewhale/DeepSeek-Code-Whale/stargazers"><img src="https://img.shields.io/github/stars/usewhale/DeepSeek-Code-Whale?style=flat&logo=github&label=stars" alt="GitHub stars"></a>
+  <img src="https://img.shields.io/badge/prompt%20cache-98%25-brightgreen" alt="98% prompt cache hit">
 </p>
 
 <p align="center">
-  Blazingly fast · Zero bloat · Pure local speed.
+  Blazingly fast · ~98% prompt cache hit · Zero bloat
 </p>
 
 <p align="center">
@@ -77,7 +78,7 @@ whale
 | ⚙️ **工具 & MCP** | 读/写文件、执行命令、搜索网页，接入 1,000+ MCP 服务器 |
 | 🧩 **Skills + 插件** | 安装社区技能（代码审查、git 工作流等）或自己编写 |
 | 🔁 **动态 Workflow** | 用 JavaScript 编排多个子 agent——扇出研究、多视角审查、流水线处理。兼容 Claude Code。 |
-| 💰 **成本优势** | DeepSeek 极低定价 + prompt caching，让 AI 辅助编码不再心疼账单 |
+| 💰 **~98% prompt cache hit** | Whale 激进地复用缓存上下文——大多数 prompt 命中缓存，每次会话成本低至几美分。DeepSeek 定价 × Whale 缓存 = 可规模化的 AI 辅助编码。 |
 
 ---
 
