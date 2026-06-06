@@ -145,6 +145,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 		if opts.ReadOnly {
 			turnPolicy = policy.ReadOnlyTurnPolicy{Base: turnPolicy}
 		}
+		autoDenyCounts := map[string]int{}
 		firstRequest := true
 		for {
 			if pending := turnState.drainPending(); len(pending) > 0 {
@@ -205,7 +206,7 @@ func (a *Agent) runStreamWithNewMessages(ctx context.Context, sessionID string, 
 					return
 				}
 			}
-			assistant, toolMsg, usage, modelName, cacheShape, abortTurn, attemptedToolCalls, sErr := a.streamAndHandle(ctx, sessionID, checkpointMessageID, history, rt, out, turnPolicy, toolSnapshot, remainingToolCalls, opts)
+			assistant, toolMsg, usage, modelName, cacheShape, abortTurn, attemptedToolCalls, sErr := a.streamAndHandle(ctx, sessionID, checkpointMessageID, history, rt, out, turnPolicy, toolSnapshot, remainingToolCalls, autoDenyCounts, opts)
 			if sErr != nil {
 				if errors.Is(sErr, context.Canceled) || errors.Is(sErr, context.DeadlineExceeded) {
 					a.persistInterruptedTurnMarker(sessionID)

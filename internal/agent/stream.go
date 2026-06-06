@@ -32,7 +32,7 @@ type toolDispatchOutcome struct {
 	PrimarySucceeded bool
 }
 
-func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpointMessageID string, history []core.Message, rt *memory.RuntimeState, events chan<- AgentEvent, toolPolicy policy.ToolPolicy, tools *core.ToolRegistry, remainingToolCalls int, opts RunOptions) (core.Message, *core.Message, llm.Usage, string, *telemetry.CacheShape, bool, int, error) {
+func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpointMessageID string, history []core.Message, rt *memory.RuntimeState, events chan<- AgentEvent, toolPolicy policy.ToolPolicy, tools *core.ToolRegistry, remainingToolCalls int, autoDenyCounts map[string]int, opts RunOptions) (core.Message, *core.Message, llm.Usage, string, *telemetry.CacheShape, bool, int, error) {
 	assistant, lastUsage, lastModel, cacheShape, err := a.collectAssistantStream(ctx, sessionID, rt, events, tools, opts)
 	if err != nil {
 		return core.Message{}, nil, llm.Usage{}, "", nil, false, 0, err
@@ -62,6 +62,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpoin
 			Tools:               tools,
 			Events:              events,
 			CheckpointMessageID: checkpointMessageID,
+			AutoDenyCounts:      autoDenyCounts,
 		}, nil, blocked)
 		if err != nil {
 			return core.Message{}, nil, llm.Usage{}, "", nil, false, attemptedToolCalls, err
@@ -76,6 +77,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpoin
 		Tools:               tools,
 		Events:              events,
 		CheckpointMessageID: checkpointMessageID,
+		AutoDenyCounts:      autoDenyCounts,
 	}, dispatchCalls, blocked)
 	if err != nil {
 		return core.Message{}, nil, llm.Usage{}, "", nil, false, attemptedToolCalls, err
@@ -381,11 +383,58 @@ func policyDenialEnvelope(d policy.PolicyDecision) string {
 		Code:    code,
 		Error:   reason,
 		Message: reason,
+		Summary: "This tool call was blocked automatically by policy. Do not retry the same tool call in this turn; continue with allowed alternatives or explain the block.",
+		Data: map[string]any{
+			"action":    "do_not_retry_same_call",
+			"retryable": false,
+		},
 	})
 	if err != nil {
 		return fmt.Sprintf(`{"success":false,"error":%q,"code":%q}`, reason, code)
 	}
 	return content
+}
+
+func autoDenyMetadata(counts map[string]int, code, tool string) map[string]any {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		code = "policy_denied"
+	}
+	tool = strings.TrimSpace(tool)
+	key := code + "\x00" + tool
+	count := 1
+	if counts != nil {
+		counts[key]++
+		count = counts[key]
+	}
+	metadata := map[string]any{
+		"auto_denied":         true,
+		"ui_visibility":       "audit",
+		"blocked_reason_code": code,
+		"policy_code":         code,
+	}
+	if count > 1 {
+		metadata["auto_deny_repeat_count"] = count
+		metadata["auto_deny_notice"] = repeatedAutoDenyNotice(code, tool)
+	}
+	return metadata
+}
+
+func repeatedAutoDenyNotice(code, tool string) string {
+	tool = strings.TrimSpace(tool)
+	if tool == "" {
+		tool = "tool"
+	}
+	switch strings.TrimSpace(code) {
+	case "plan_mode_blocked":
+		return fmt.Sprintf("Repeated %s attempts were blocked because plan mode only allows safe read-only actions. The model was told not to retry this tool.", tool)
+	case "ask_mode_blocked":
+		return fmt.Sprintf("Repeated %s attempts were blocked because ask mode only allows read-only actions. The model was told not to retry this tool.", tool)
+	case "read_only_turn_denied":
+		return fmt.Sprintf("Repeated %s attempts were blocked because this turn is read-only. The model was told not to retry this tool.", tool)
+	default:
+		return fmt.Sprintf("Repeated %s attempts were blocked by policy. The model was told not to retry this tool.", tool)
+	}
 }
 
 func addPolicyApprovalMetadata(metadata map[string]any, decision policy.PolicyDecision) map[string]any {

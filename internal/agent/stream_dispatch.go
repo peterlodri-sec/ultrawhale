@@ -21,6 +21,7 @@ type streamDispatchContext struct {
 	Tools               *core.ToolRegistry
 	Events              chan<- AgentEvent
 	CheckpointMessageID string
+	AutoDenyCounts      map[string]int
 }
 
 type toolApprovalResult struct {
@@ -77,6 +78,9 @@ func (a *Agent) prepareToolDispatches(ctx context.Context, sessionID, model stri
 }
 
 func (a *Agent) dispatchToolCalls(ctx context.Context, sc streamDispatchContext, dispatchCalls []core.ToolCall, blocked []core.ToolResult) (*core.Message, bool, error) {
+	if sc.AutoDenyCounts == nil {
+		sc.AutoDenyCounts = map[string]int{}
+	}
 	results := make([]core.ToolResult, 0, len(sc.Assistant.ToolCalls))
 	if err := appendBlockedToolResults(ctx, sc, blocked, &results); err != nil {
 		return nil, false, err
@@ -378,6 +382,7 @@ func (a *Agent) appendPolicyDeniedResult(ctx context.Context, sc streamDispatchC
 		Name:       call.Name,
 		Content:    policyDenialEnvelope(decision),
 		IsError:    true,
+		Metadata:   autoDenyMetadata(sc.AutoDenyCounts, decision.Code, call.Name),
 	})
 }
 
@@ -469,6 +474,7 @@ func (a *Agent) appendModeBlockedResult(ctx context.Context, sc streamDispatchCo
 		Name:       call.Name,
 		Content:    content,
 		IsError:    true,
+		Metadata:   autoDenyMetadata(sc.AutoDenyCounts, blockedCode, call.Name),
 	})
 }
 

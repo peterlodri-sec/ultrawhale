@@ -41,6 +41,30 @@ func TestBuilderMapsApprovedToolFlow(t *testing.T) {
 	assertPhases(t, item, PhaseRequested, PhaseApprovalRequired, PhaseApprovalDecided, PhaseCompleted)
 }
 
+func TestBuilderSkipsAuditOnlyAutoDeniedToolResult(t *testing.T) {
+	b := NewTurnTimelineBuilder()
+	b.HandleEvent(protocol.Event{
+		Kind:       protocol.EventToolCall,
+		ToolCallID: "tc-denied",
+		ToolName:   "write",
+		Text:       `write: {"file_path":"a.txt"}`,
+	})
+	b.HandleEvent(protocol.Event{
+		Kind:       protocol.EventToolResult,
+		ToolCallID: "tc-denied",
+		ToolName:   "write",
+		Text:       `{"success":false,"code":"read_only_turn_denied"}`,
+		Metadata: map[string]any{
+			"auto_denied":   true,
+			"ui_visibility": "audit",
+		},
+	})
+
+	if snap := b.Snapshot(); len(snap.Items) != 0 {
+		t.Fatalf("audit-only auto-deny should not create timeline items: %+v", snap.Items)
+	}
+}
+
 func TestBuilderMapsApprovalDecisionWithoutPrompt(t *testing.T) {
 	b := NewTurnTimelineBuilder()
 	b.HandleEvent(protocol.Event{Kind: protocol.EventApprovalDecision, ToolCallID: "tc-1", ToolName: "shell_run", ApprovalID: "approval-shell", Decision: "allow_session"})

@@ -446,6 +446,46 @@ func TestSessionHydrationRendersStoredToolLifecycleThroughTimelineInOrder(t *tes
 	}
 }
 
+func TestSessionHydrationSuppressesStoredAuditOnlyToolLifecycle(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 100, height: 24}
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind: protocol.EventSessionHydrated,
+		Messages: protocolMessagesForTest([]core.Message{
+			{Role: core.RoleAssistant, ToolCalls: []core.ToolCall{{
+				ID:    "deny-1",
+				Name:  "shell_run",
+				Input: `{"command":"printf whale-auto-deny-test >/tmp/whale-auto-deny-test"}`,
+			}}},
+			{Role: core.RoleTool, ToolResults: []core.ToolResult{{
+				ToolCallID: "deny-1",
+				Name:       "shell_run",
+				Content:    `{"success":false,"code":"plan_mode_blocked"}`,
+				IsError:    true,
+				Metadata: map[string]any{
+					"ui_visibility":       "audit",
+					"auto_denied":         true,
+					"blocked_reason_code": "plan_mode_blocked",
+				},
+			}}},
+		}),
+	}))
+	m = next.(model)
+
+	if m.hasPendingLifecycleItems() {
+		t.Fatalf("hydrated audit-only tool should not remain pending: %+v", m.timeline.Snapshot())
+	}
+	if got := m.timeline.Snapshot().Items; len(got) != 0 {
+		t.Fatalf("hydrated audit-only tool should be hidden from timeline snapshot: %+v", got)
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	if strings.Contains(rendered, "Shell") || strings.Contains(rendered, "plan_mode_blocked") || strings.Contains(rendered, "whale-auto-deny-test") {
+		t.Fatalf("hydrated audit-only tool leaked into transcript:\n%s", rendered)
+	}
+	if m.assembler != nil && len(m.assembler.Snapshot()) != 0 {
+		t.Fatalf("hydrated audit-only tool should not leave live entries: %+v", m.assembler.Snapshot())
+	}
+}
+
 func TestRewindHydrationClearsVisibleTranscriptAndRestoresInput(t *testing.T) {
 	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24}
 	m.append("you", "a")

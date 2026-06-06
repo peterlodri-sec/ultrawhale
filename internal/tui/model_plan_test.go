@@ -40,6 +40,31 @@ func TestPlanTurnDoneWithAssistantButNoProposedPlanDoesNotShowNotice(t *testing.
 		t.Fatal("expected turn tracking flags to reset")
 	}
 }
+
+func TestPlanTurnDoneWithQuotedProposedPlanTagDoesNotShowPicker(t *testing.T) {
+	m := model{
+		assembler: tuirender.NewAssembler(),
+		mode:      modeChat,
+		chatMode:  "plan",
+		width:     80,
+		height:    24,
+		busy:      true,
+	}
+	text := "Tool result says to output the final plan in a `<proposed_plan>` block."
+	next, _ := m.Update(svcMsg(protocol.Event{Kind: protocol.EventAssistantDelta, Text: text}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{Kind: protocol.EventTurnDone}))
+	m = next.(model)
+
+	if m.mode == modePlanImplementation {
+		t.Fatal("did not expect implementation picker for quoted proposed_plan tag")
+	}
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 80), "\n")
+	if !strings.Contains(rendered, "<proposed_plan>") {
+		t.Fatalf("expected quoted tag text to remain visible:\n%s", rendered)
+	}
+}
+
 func TestMarkNoFinalAnswerIfNeededAddsPlanNotice(t *testing.T) {
 	m := model{
 		assembler:            tuirender.NewAssembler(),

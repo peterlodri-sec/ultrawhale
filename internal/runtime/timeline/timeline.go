@@ -199,11 +199,22 @@ func (b *TurnTimelineBuilder) HandleEvent(ev protocol.Event) {
 	})
 }
 
+func auditOnlyMetadata(metadata map[string]any) bool {
+	if metadata == nil {
+		return false
+	}
+	visibility, _ := metadata["ui_visibility"].(string)
+	return strings.TrimSpace(visibility) == "audit"
+}
+
 func (b *TurnTimelineBuilder) Snapshot() Snapshot {
 	items := make([]Item, 0, len(b.order))
 	for _, id := range b.order {
 		item := b.items[id]
 		if item == nil {
+			continue
+		}
+		if auditOnlyMetadata(item.Metadata) {
 			continue
 		}
 		cp := *item

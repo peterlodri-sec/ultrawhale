@@ -174,6 +174,22 @@ func (p *finalPlanOnlyProvider) StreamResponse(_ context.Context, _ []Message, _
 	return out
 }
 
+type quotedPlanTagProvider struct{}
+
+func (p *quotedPlanTagProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	text := "Tool result says: output the final plan in a `<proposed_plan>` block."
+	return eventStream(
+		ProviderEvent{Type: EventContentDelta, Content: text},
+		ProviderEvent{
+			Type: EventComplete,
+			Response: &ProviderResponse{
+				FinishReason: FinishReasonEndTurn,
+				Content:      text,
+			},
+		},
+	)
+}
+
 func TestPlanModeEmitsPlanCompletedFromFinalContentFallback(t *testing.T) {
 	store := NewInMemoryStore()
 	a := NewAgentWithRegistry(
@@ -194,6 +210,32 @@ func TestPlanModeEmitsPlanCompletedFromFinalContentFallback(t *testing.T) {
 	}
 	if !strings.Contains(completed, "Implement final-content fallback") {
 		t.Fatalf("expected final proposed plan, got %q", completed)
+	}
+}
+
+func TestPlanModeQuotedProposedPlanTagDoesNotEmitPlanCompleted(t *testing.T) {
+	store := NewInMemoryStore()
+	a := NewAgentWithRegistry(
+		&quotedPlanTagProvider{},
+		store,
+		NewToolRegistry(nil),
+		WithSessionMode(session.ModePlan),
+	)
+	events, err := a.RunStream(context.Background(), "s-quoted-plan-tag", "plan")
+	if err != nil {
+		t.Fatalf("run stream failed: %v", err)
+	}
+	var sawAssistant bool
+	for ev := range events {
+		if ev.Type == AgentEventTypePlanCompleted || ev.Type == AgentEventTypePlanDelta {
+			t.Fatalf("quoted proposed_plan tag should not emit plan events: %+v", ev)
+		}
+		if ev.Type == AgentEventTypeAssistantDelta && strings.Contains(ev.Content, "<proposed_plan>") {
+			sawAssistant = true
+		}
+	}
+	if !sawAssistant {
+		t.Fatal("expected quoted proposed_plan text to remain assistant text")
 	}
 }
 

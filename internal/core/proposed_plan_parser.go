@@ -1,6 +1,9 @@
 package core
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 const (
 	ProposedPlanOpenTag  = "<proposed_plan>"
@@ -22,86 +25,126 @@ type ProposedPlanSegment struct {
 }
 
 type ProposedPlanParser struct {
-	inPlan bool
-	buf    string
+	inPlan      bool
+	detectTag   bool
+	initialized bool
+	lineBuf     string
 }
 
 func (p *ProposedPlanParser) Parse(delta string) []ProposedPlanSegment {
 	if delta == "" {
 		return nil
 	}
-	p.buf += delta
-	return p.drain(false)
+	p.ensureInitialized()
+	var out []ProposedPlanSegment
+	var run strings.Builder
+	flushRun := func() {
+		if run.Len() == 0 {
+			return
+		}
+		p.pushText(run.String(), &out)
+		run.Reset()
+	}
+	for _, ch := range delta {
+		if p.detectTag {
+			flushRun()
+			p.lineBuf += string(ch)
+			if ch == '\n' {
+				p.finishLine(&out)
+				continue
+			}
+			slug := strings.TrimRightFunc(strings.TrimLeftFunc(p.lineBuf, unicode.IsSpace), unicode.IsSpace)
+			if slug == "" || p.isTagPrefix(slug) {
+				continue
+			}
+			buffered := p.lineBuf
+			p.lineBuf = ""
+			p.detectTag = false
+			p.pushText(buffered, &out)
+			continue
+		}
+		run.WriteRune(ch)
+		if ch == '\n' {
+			flushRun()
+			p.detectTag = true
+		}
+	}
+	flushRun()
+	return out
 }
 
 func (p *ProposedPlanParser) Finish() []ProposedPlanSegment {
-	if p.buf == "" && p.inPlan {
-		p.inPlan = false
-		return []ProposedPlanSegment{{Kind: ProposedPlanSegmentEnd}}
+	p.ensureInitialized()
+	var out []ProposedPlanSegment
+	if p.lineBuf != "" {
+		line := p.lineBuf
+		p.lineBuf = ""
+		p.handleCompleteLine(line, &out)
 	}
-	return p.drain(true)
+	if p.inPlan {
+		p.inPlan = false
+		appendSegment(&out, ProposedPlanSegment{Kind: ProposedPlanSegmentEnd})
+	}
+	p.detectTag = true
+	return out
 }
 
-func (p *ProposedPlanParser) drain(final bool) []ProposedPlanSegment {
-	var out []ProposedPlanSegment
-	for p.buf != "" {
-		if !p.inPlan {
-			idx := strings.Index(p.buf, ProposedPlanOpenTag)
-			if idx >= 0 {
-				if idx > 0 {
-					out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentNormal, Text: p.buf[:idx]})
-				}
-				p.buf = p.buf[idx+len(ProposedPlanOpenTag):]
-				p.inPlan = true
-				out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentStart})
-				continue
-			}
-			if final {
-				out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentNormal, Text: p.buf})
-				p.buf = ""
-				break
-			}
-			keep := tagPrefixSuffixLen(p.buf, ProposedPlanOpenTag)
-			if keep == len(p.buf) {
-				break
-			}
-			text := p.buf[:len(p.buf)-keep]
-			if text != "" {
-				out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentNormal, Text: text})
-			}
-			p.buf = p.buf[len(p.buf)-keep:]
-			break
-		}
-
-		idx := strings.Index(p.buf, ProposedPlanCloseTag)
-		if idx >= 0 {
-			if idx > 0 {
-				out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentDelta, Text: p.buf[:idx]})
-			}
-			p.buf = p.buf[idx+len(ProposedPlanCloseTag):]
-			p.inPlan = false
-			out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentEnd})
-			continue
-		}
-		if final {
-			out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentDelta, Text: p.buf})
-			p.buf = ""
-			p.inPlan = false
-			out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentEnd})
-			break
-		}
-		keep := tagPrefixSuffixLen(p.buf, ProposedPlanCloseTag)
-		if keep == len(p.buf) {
-			break
-		}
-		text := p.buf[:len(p.buf)-keep]
-		if text != "" {
-			out = append(out, ProposedPlanSegment{Kind: ProposedPlanSegmentDelta, Text: text})
-		}
-		p.buf = p.buf[len(p.buf)-keep:]
-		break
+func (p *ProposedPlanParser) ensureInitialized() {
+	if p.initialized {
+		return
 	}
-	return out
+	p.initialized = true
+	p.detectTag = true
+}
+
+func (p *ProposedPlanParser) finishLine(out *[]ProposedPlanSegment) {
+	line := p.lineBuf
+	p.lineBuf = ""
+	p.handleCompleteLine(line, out)
+	p.detectTag = true
+}
+
+func (p *ProposedPlanParser) handleCompleteLine(line string, out *[]ProposedPlanSegment) {
+	trimmed := strings.TrimSpace(strings.TrimSuffix(line, "\n"))
+	switch {
+	case trimmed == ProposedPlanOpenTag && !p.inPlan:
+		p.inPlan = true
+		appendSegment(out, ProposedPlanSegment{Kind: ProposedPlanSegmentStart})
+	case trimmed == ProposedPlanCloseTag && p.inPlan:
+		p.inPlan = false
+		appendSegment(out, ProposedPlanSegment{Kind: ProposedPlanSegmentEnd})
+	default:
+		p.pushText(line, out)
+	}
+}
+
+func (p *ProposedPlanParser) pushText(text string, out *[]ProposedPlanSegment) {
+	if text == "" {
+		return
+	}
+	if p.inPlan {
+		appendSegment(out, ProposedPlanSegment{Kind: ProposedPlanSegmentDelta, Text: text})
+		return
+	}
+	appendSegment(out, ProposedPlanSegment{Kind: ProposedPlanSegmentNormal, Text: text})
+}
+
+func appendSegment(out *[]ProposedPlanSegment, seg ProposedPlanSegment) {
+	if seg.Text == "" {
+		switch seg.Kind {
+		case ProposedPlanSegmentStart, ProposedPlanSegmentEnd:
+		default:
+			return
+		}
+	}
+	if len(*out) > 0 {
+		last := &(*out)[len(*out)-1]
+		if last.Kind == seg.Kind && (seg.Kind == ProposedPlanSegmentNormal || seg.Kind == ProposedPlanSegmentDelta) {
+			last.Text += seg.Text
+			return
+		}
+	}
+	*out = append(*out, seg)
 }
 
 func StripProposedPlanBlocks(text string) string {
@@ -131,15 +174,6 @@ func ExtractProposedPlanText(text string) (string, bool) {
 	return out.String(), seen
 }
 
-func tagPrefixSuffixLen(s, tag string) int {
-	maxLen := len(tag) - 1
-	if maxLen > len(s) {
-		maxLen = len(s)
-	}
-	for n := maxLen; n > 0; n-- {
-		if strings.HasSuffix(s, tag[:n]) {
-			return n
-		}
-	}
-	return 0
+func (p *ProposedPlanParser) isTagPrefix(slug string) bool {
+	return strings.HasPrefix(ProposedPlanOpenTag, slug) || strings.HasPrefix(ProposedPlanCloseTag, slug)
 }

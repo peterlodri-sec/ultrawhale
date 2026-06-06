@@ -38,6 +38,59 @@ func TestShellToolResultRefreshesGitBranch(t *testing.T) {
 		t.Fatalf("expected refreshed branch %q, got %q", "feat/after-shell", msg.branch)
 	}
 }
+
+func TestAuditOnlyAutoDeniedToolResultDoesNotRenderToolCard(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	next, cmd := m.Update(svcMsg(protocol.Event{
+		Kind:       protocol.EventToolResult,
+		ToolCallID: "tc-denied",
+		ToolName:   "write",
+		Text:       `{"success":false,"code":"read_only_turn_denied","message":"read-only"}`,
+		Metadata: map[string]any{
+			"auto_denied":   true,
+			"ui_visibility": "audit",
+		},
+	}))
+	m = next.(model)
+	_ = cmd
+	if len(m.transcript) != 0 {
+		t.Fatalf("audit-only auto-deny should not render transcript entries: %+v", m.transcript)
+	}
+	if m.assembler != nil && len(m.assembler.Snapshot()) != 0 {
+		t.Fatalf("audit-only auto-deny should not render live entries: %+v", m.assembler.Snapshot())
+	}
+}
+
+func TestRepeatedAutoDeniedToolResultRendersNoticeOnly(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind:       protocol.EventToolResult,
+		ToolCallID: "tc-denied",
+		ToolName:   "write",
+		Text:       `{"success":false,"code":"read_only_turn_denied","message":"read-only"}`,
+		Metadata: map[string]any{
+			"auto_denied":         true,
+			"ui_visibility":       "audit",
+			"auto_deny_notice":    "Repeated write attempts were blocked because this turn is read-only.",
+			"blocked_reason_code": "read_only_turn_denied",
+		},
+	}))
+	m = next.(model)
+	if m.assembler == nil {
+		t.Fatal("expected live assembler with notice")
+	}
+	snap := m.assembler.Snapshot()
+	if len(snap) != 1 {
+		t.Fatalf("expected one notice live entry, got %+v", snap)
+	}
+	got := snap[0]
+	if got.Kind != tuirender.KindNotice || got.Notice == nil || got.Notice.Kind != "auto_deny_repeated" {
+		t.Fatalf("expected repeated auto-deny notice, got %+v", got)
+	}
+	if strings.Contains(got.Text, "success") || strings.Contains(got.Text, "read_only_turn_denied") {
+		t.Fatalf("notice should not render raw tool result: %q", got.Text)
+	}
+}
 func TestMCPLocalResultRendersAsStructuredTranscriptEntry(t *testing.T) {
 	m, _ := newModelWithDispatchSpy()
 	m.width = 80
