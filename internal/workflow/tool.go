@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/usewhale/whale/internal/core"
@@ -39,6 +40,8 @@ func (t Tool) Description() string {
 	return strings.Join([]string{
 		"Launch a restricted Whale workflow script asynchronously for decomposable multi-agent work such as fan-out research, repository inspection, or multi-perspective review.",
 		t.workflowUseGuidance(),
+		"When the user asks what workflows are available, call this workflow tool with action=\"list\". Do not inspect .whale/workflows, search files, or run shell commands to discover workflow names.",
+		"When the user asks whether a named workflow exists, call this workflow tool with action=\"resolve\" and name. The resolver returns project, user, and builtin matches plus available names when missing.",
 		"When the user clearly asks to run a named workflow, call this workflow tool directly with name. Do not call request_user_input or ask a chat question for launch confirmation first; this tool returns the single TUI launch confirmation when confirmation is required. Do not first inspect files, search the workspace, or block confirmation because you think an expected input might be missing unless the user asked for a preflight check.",
 		"When the user clearly asks to create, generate, or write a new workflow, do not inspect existing workflow directories or load skills first. Generate a Claude Code-compatible raw JavaScript workflow script, pass it as script, and set saveAs to the same kebab-case value as meta.name. The tool will request confirmation; if the user confirms, Whale saves it under the project .whale/workflows directory before launching it.",
 		"Use ordinary tools instead for a single quick read, edit, shell-dependent task, or answer.",
@@ -67,6 +70,11 @@ func (t Tool) Parameters() map[string]any {
 		"type":                 "object",
 		"additionalProperties": false,
 		"properties": map[string]any{
+			"action": map[string]any{
+				"type":        "string",
+				"enum":        []string{"list", "resolve", "run"},
+				"description": "Optional workflow control action. Use list to discover available workflows, resolve to check a named workflow without launch confirmation, and run to launch. Omit for backward-compatible run behavior.",
+			},
 			"script": map[string]any{
 				"type":        "string",
 				"maxLength":   MaxWorkflowScriptBytes,
@@ -107,6 +115,15 @@ func (t Tool) Run(ctx context.Context, call core.ToolCall) (core.ToolResult, err
 	var input WorkflowInput
 	if err := json.Unmarshal([]byte(call.Input), &input); err != nil {
 		return workflowToolError(call, "invalid_input", err.Error())
+	}
+	switch workflowToolAction(input.Action) {
+	case "list":
+		return t.listWorkflows(ctx, call)
+	case "resolve":
+		return t.resolveWorkflow(ctx, call, input)
+	case "run":
+	default:
+		return workflowToolError(call, "invalid_input", "workflow action must be one of list, resolve, or run")
 	}
 	if strings.TrimSpace(input.SaveAs) != "" {
 		prepared, err := t.prepareGenerated(ctx, input)
@@ -209,11 +226,212 @@ func (t Tool) resolveNamedWorkflow(ctx context.Context, name string) (ResolvedSc
 	return t.runner.Library.Resolve(ctx, name)
 }
 
+func workflowToolAction(action string) string {
+	action = strings.TrimSpace(strings.ToLower(action))
+	if action == "" {
+		return "run"
+	}
+	return action
+}
+
+func (t Tool) listWorkflows(ctx context.Context, call core.ToolCall) (core.ToolResult, error) {
+	if t.runner == nil || t.runner.Library == nil {
+		return workflowToolError(call, "not_configured", "workflow library is not configured")
+	}
+	defs, err := t.runner.Library.List(ctx)
+	if err != nil {
+		return workflowToolError(call, "workflow_list_failed", err.Error())
+	}
+	data := workflowDiscoveryData(t.runner.Library, defs)
+	content, err := core.MarshalToolEnvelope(core.ToolEnvelope{
+		OK:      true,
+		Success: true,
+		Code:    "workflow_list",
+		Summary: workflowListSummary(defs),
+		Data:    data,
+	})
+	if err != nil {
+		return core.ToolResult{}, err
+	}
+	return core.ToolResult{ToolCallID: call.ID, Name: call.Name, Content: content}, nil
+}
+
+func (t Tool) resolveWorkflow(ctx context.Context, call core.ToolCall, input WorkflowInput) (core.ToolResult, error) {
+	if t.runner == nil || t.runner.Library == nil {
+		return workflowToolError(call, "not_configured", "workflow library is not configured")
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return workflowToolError(call, "invalid_input", "workflow name is required for action=resolve")
+	}
+	defs, err := t.runner.Library.List(ctx)
+	if err != nil {
+		return workflowToolError(call, "workflow_resolve_failed", err.Error())
+	}
+	data := workflowDiscoveryData(t.runner.Library, defs)
+	data["query"] = name
+	for _, def := range defs {
+		if def.Name != name {
+			continue
+		}
+		if def.Status != DefinitionReady {
+			data["workflow"] = workflowDefinitionData(def)
+			return workflowToolErrorWithData(call, "workflow_problem", def.Error, data)
+		}
+		data["workflow"] = workflowDefinitionData(def)
+		content, err := core.MarshalToolEnvelope(core.ToolEnvelope{
+			OK:      true,
+			Success: true,
+			Code:    "workflow_resolved",
+			Summary: fmt.Sprintf("Workflow %q resolved from %s.", def.Name, workflowNonEmpty(def.Source, "workflow library")),
+			Data:    data,
+		})
+		if err != nil {
+			return core.ToolResult{}, err
+		}
+		return core.ToolResult{ToolCallID: call.ID, Name: call.Name, Content: content}, nil
+	}
+	return workflowToolErrorWithData(call, "workflow_not_found", workflowNotFoundMessage(name, defs), data)
+}
+
 func (t Tool) parentSessionID() string {
 	if t.parentSessionIDFunc == nil {
 		return ""
 	}
 	return strings.TrimSpace(t.parentSessionIDFunc())
+}
+
+func workflowDiscoveryData(library *Library, defs []Definition) map[string]any {
+	ready := make([]map[string]any, 0, len(defs))
+	problems := make([]map[string]any, 0)
+	available := make([]string, 0, len(defs))
+	for _, def := range defs {
+		item := workflowDefinitionData(def)
+		if def.Status == DefinitionReady {
+			ready = append(ready, item)
+			if strings.TrimSpace(def.Name) != "" {
+				available = append(available, def.Name)
+			}
+			continue
+		}
+		problems = append(problems, item)
+	}
+	return map[string]any{
+		"workflows": ready,
+		"problems":  problems,
+		"available": available,
+		"roots":     workflowRootData(library),
+		"count":     len(ready),
+	}
+}
+
+func workflowDefinitionData(def Definition) map[string]any {
+	item := map[string]any{
+		"name":   def.Name,
+		"source": def.Source,
+		"status": string(def.Status),
+	}
+	if desc := strings.TrimSpace(def.Description); desc != "" {
+		item["description"] = desc
+	}
+	if when := strings.TrimSpace(def.WhenToUse); when != "" {
+		item["whenToUse"] = when
+	}
+	if path := strings.TrimSpace(def.Path); path != "" {
+		item["path"] = path
+	}
+	if root := strings.TrimSpace(def.Root); root != "" {
+		item["root"] = root
+	}
+	if len(def.Phases) > 0 {
+		phases := make([]map[string]any, 0, len(def.Phases))
+		for _, phase := range def.Phases {
+			p := map[string]any{"title": strings.TrimSpace(phase.Title)}
+			if detail := strings.TrimSpace(phase.Detail); detail != "" {
+				p["detail"] = detail
+			}
+			phases = append(phases, p)
+		}
+		item["phases"] = phases
+	}
+	if def.EstimatedAgents > 0 {
+		item["estimatedAgents"] = def.EstimatedAgents
+	}
+	if def.DefaultBudgetTokens > 0 {
+		item["defaultBudgetTokens"] = def.DefaultBudgetTokens
+	}
+	if err := strings.TrimSpace(def.Error); err != "" {
+		item["error"] = err
+	}
+	return item
+}
+
+func workflowRootData(library *Library) []map[string]any {
+	if library == nil {
+		return nil
+	}
+	roots := make([]map[string]any, 0, len(library.Roots))
+	for _, root := range library.Roots {
+		item := map[string]any{
+			"source": root.Source,
+			"path":   root.Path,
+			"rank":   root.Rank,
+		}
+		exists, status := workflowRootStatus(root.Path)
+		item["exists"] = exists
+		item["status"] = status
+		roots = append(roots, item)
+	}
+	return roots
+}
+
+func workflowRootStatus(path string) (bool, string) {
+	info, err := os.Stat(path)
+	if err == nil {
+		if info.IsDir() {
+			return true, "present"
+		}
+		return true, "not_directory"
+	}
+	if os.IsNotExist(err) {
+		return false, "missing"
+	}
+	return false, "error: " + err.Error()
+}
+
+func workflowListSummary(defs []Definition) string {
+	ready, problems := 0, 0
+	for _, def := range defs {
+		if def.Status == DefinitionReady {
+			ready++
+		} else {
+			problems++
+		}
+	}
+	if problems > 0 {
+		return fmt.Sprintf("%d workflow(s) available; %d workflow definition(s) have problems.", ready, problems)
+	}
+	return fmt.Sprintf("%d workflow(s) available.", ready)
+}
+
+func workflowNotFoundMessage(name string, defs []Definition) string {
+	available := make([]string, 0, len(defs))
+	for _, def := range defs {
+		if def.Status == DefinitionReady && strings.TrimSpace(def.Name) != "" {
+			available = append(available, def.Name)
+		}
+	}
+	if len(available) == 0 {
+		return fmt.Sprintf("workflow not found: %s; no workflows are currently available", name)
+	}
+	return fmt.Sprintf("workflow not found: %s; available workflows: %s", name, strings.Join(available, ", "))
+}
+
+func workflowNonEmpty(v, fallback string) string {
+	if v = strings.TrimSpace(v); v != "" {
+		return v
+	}
+	return fallback
 }
 
 func workflowConfirmationData(resolved ResolvedScript, args, resume string) map[string]any {

@@ -37,6 +37,9 @@ func TestWorkflowToolDescriptionPrefersNamedCatalogWorkflows(t *testing.T) {
 	desc := NewTool(nil).Description()
 	for _, want := range []string{
 		"names/describes an available workflow",
+		"action=\"list\"",
+		"action=\"resolve\"",
+		"Do not inspect .whale/workflows",
 		"create, generate, or write a new workflow",
 		"do not inspect existing workflow directories or load skills first",
 		"set saveAs",
@@ -58,6 +61,146 @@ func TestWorkflowToolDescriptionPrefersNamedCatalogWorkflows(t *testing.T) {
 		if !strings.Contains(desc, want) {
 			t.Fatalf("description missing %q:\n%s", want, desc)
 		}
+	}
+}
+
+func TestWorkflowToolParametersExposeActionWithoutAddingTools(t *testing.T) {
+	params := NewTool(nil).Parameters()
+	props, _ := params["properties"].(map[string]any)
+	action, _ := props["action"].(map[string]any)
+	values, _ := action["enum"].([]string)
+	if action["type"] != "string" || strings.Join(values, ",") != "list,resolve,run" {
+		t.Fatalf("unexpected action schema: %+v", action)
+	}
+	if desc := strings.TrimSpace(core.AsString(action["description"])); !strings.Contains(desc, "Omit for backward-compatible run behavior") {
+		t.Fatalf("unexpected action description: %q", desc)
+	}
+}
+
+func TestWorkflowToolListsWorkflowsWithRoots(t *testing.T) {
+	projectRoot := t.TempDir()
+	userRoot := t.TempDir()
+	missingRoot := filepath.Join(t.TempDir(), "missing-workflows")
+	writeWorkflowFile(t, filepath.Join(projectRoot, "project-scan.js"), `export const meta = { name: 'project-scan', description: 'project scan' }
+log('project')
+`)
+	writeWorkflowFile(t, filepath.Join(userRoot, "user-scan.js"), `export const meta = { name: 'user-scan', description: 'user scan' }
+log('user')
+`)
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.Library = NewLibraryWithRoots([]LibraryRoot{
+		{Path: projectRoot, Source: "project", Rank: 0},
+		{Path: userRoot, Source: "user", Rank: 1},
+		{Path: missingRoot, Source: "global", Rank: 2},
+	})
+	tool := NewTool(runner, func() string { return "parent-session" })
+
+	res, err := tool.Run(context.Background(), core.ToolCall{
+		ID:    "tool-1",
+		Name:  "workflow",
+		Input: `{"action":"list"}`,
+	})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("list should not be a tool error: %s", res.Content)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok || !env.Success || env.Code != "workflow_list" {
+		t.Fatalf("unexpected envelope: %s", res.Content)
+	}
+	available, _ := env.Data["available"].([]any)
+	if !containsAnyString(available, "project-scan") || !containsAnyString(available, "user-scan") {
+		t.Fatalf("available workflows missing expected names: %+v", env.Data["available"])
+	}
+	roots, _ := env.Data["roots"].([]any)
+	if !rootStatusExists(roots, missingRoot, "missing") {
+		t.Fatalf("missing root status not returned: %+v", env.Data["roots"])
+	}
+	if _, hasMeta := res.Metadata["workflow_confirmation_required"]; hasMeta {
+		t.Fatalf("list should not request workflow confirmation metadata: %+v", res.Metadata)
+	}
+	if len(store.events) != 0 {
+		t.Fatalf("list should not start run: %+v", store.events)
+	}
+}
+
+func TestWorkflowToolResolvesNamedWorkflowWithoutConfirmation(t *testing.T) {
+	root := t.TempDir()
+	writeWorkflowFile(t, filepath.Join(root, "named-resolve.js"), `export const meta = { name: 'named-resolve', description: 'resolve only' }
+log('ok')
+`)
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.Library = NewLibraryWithRoots([]LibraryRoot{{Path: root, Source: "project", Rank: 0}})
+	tool := NewTool(runner, func() string { return "parent-session" })
+
+	res, err := tool.Run(context.Background(), core.ToolCall{
+		ID:    "tool-1",
+		Name:  "workflow",
+		Input: `{"action":"resolve","name":"named-resolve"}`,
+	})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("resolve should not be a tool error: %s", res.Content)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok || !env.Success || env.Code != "workflow_resolved" {
+		t.Fatalf("unexpected envelope: %s", res.Content)
+	}
+	workflowData, _ := env.Data["workflow"].(map[string]any)
+	if workflowData["name"] != "named-resolve" || workflowData["source"] != "project" {
+		t.Fatalf("unexpected workflow data: %+v", workflowData)
+	}
+	if _, hasMeta := res.Metadata["workflow_confirmation_required"]; hasMeta {
+		t.Fatalf("resolve should not request workflow confirmation metadata: %+v", res.Metadata)
+	}
+	if len(store.events) != 0 {
+		t.Fatalf("resolve should not start run: %+v", store.events)
+	}
+}
+
+func TestWorkflowToolResolveMissingReturnsAvailableNames(t *testing.T) {
+	root := t.TempDir()
+	writeWorkflowFile(t, filepath.Join(root, "known-workflow.js"), `export const meta = { name: 'known-workflow', description: 'known' }
+log('ok')
+`)
+	store := &memoryRunEventStore{}
+	manager := NewRunManager(store, NewTaskScheduler(store, &fakeAgentSpawner{}))
+	runner := NewScriptRunner(t.TempDir(), manager)
+	runner.Library = NewLibraryWithRoots([]LibraryRoot{{Path: root, Source: "project", Rank: 0}})
+	tool := NewTool(runner, func() string { return "parent-session" })
+
+	res, err := tool.Run(context.Background(), core.ToolCall{
+		ID:    "tool-1",
+		Name:  "workflow",
+		Input: `{"action":"resolve","name":"missing-workflow"}`,
+	})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !res.IsError {
+		t.Fatalf("missing resolve should be a tool error: %s", res.Content)
+	}
+	env, ok := core.ParseToolEnvelope(res.Content)
+	if !ok || env.Success || env.Code != "workflow_not_found" {
+		t.Fatalf("unexpected envelope: %s", res.Content)
+	}
+	if !strings.Contains(env.Message, "known-workflow") {
+		t.Fatalf("missing resolve should list available workflows, got %q", env.Message)
+	}
+	available, _ := env.Data["available"].([]any)
+	if !containsAnyString(available, "known-workflow") {
+		t.Fatalf("available workflows missing known-workflow: %+v", env.Data["available"])
+	}
+	if len(store.events) != 0 {
+		t.Fatalf("resolve missing should not start run: %+v", store.events)
 	}
 }
 
@@ -251,4 +394,26 @@ func TestWorkflowToolReturnsRejectedScriptAsToolError(t *testing.T) {
 	if len(store.events) != 0 {
 		t.Fatalf("rejected script should not start run: %+v", store.events)
 	}
+}
+
+func containsAnyString(values []any, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func rootStatusExists(values []any, path, status string) bool {
+	for _, value := range values {
+		item, ok := value.(map[string]any)
+		if !ok {
+			continue
+		}
+		if item["path"] == path && item["status"] == status {
+			return true
+		}
+	}
+	return false
 }
