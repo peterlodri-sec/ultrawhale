@@ -44,6 +44,22 @@ func (p *repeatedApprovalProvider) StreamResponse(_ context.Context, _ []Message
 	return eventStream(endTurnEvent("done"))
 }
 
+type retryingDeniedToolProvider struct {
+	calls int
+}
+
+func (p *retryingDeniedToolProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	p.calls++
+	switch p.calls {
+	case 1:
+		return eventStream(toolUseEvent(toolCall("tc-retry-1", "write", `{"file_path":"a.txt","content":"x"}`)))
+	case 2:
+		return eventStream(toolUseEvent(toolCall("tc-retry-2", "write", `{"file_path":"b.txt","content":"y"}`)))
+	default:
+		return eventStream(endTurnEvent("done"))
+	}
+}
+
 type requestUserInputProvider struct {
 	calls int
 }
@@ -298,6 +314,48 @@ func TestRunOptionsReadOnlyRepeatedDenyAddsSingleNoticeMetadata(t *testing.T) {
 	}
 	if notice, _ := second.Metadata["auto_deny_notice"].(string); !strings.Contains(notice, "read-only") {
 		t.Fatalf("expected repeat notice to mention read-only block, got %q", notice)
+	}
+}
+
+func TestRunOptionsReadOnlyRepeatedDenyAcrossModelRetriesKeepsCount(t *testing.T) {
+	store := NewInMemoryStore()
+	prov := &retryingDeniedToolProvider{}
+	a := NewAgentWithRegistry(
+		prov,
+		store,
+		NewToolRegistry([]Tool{writeLikeTool{}}),
+	)
+
+	events, err := a.RunStreamWithTurnOptions(context.Background(), "s-read-only-retry-repeat", "review", RunOptions{
+		ReadOnly: true,
+	})
+	if err != nil {
+		t.Fatalf("run stream with read-only turn failed: %v", err)
+	}
+	var first, second *ToolResult
+	for ev := range events {
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil {
+			switch ev.Result.ToolCallID {
+			case "tc-retry-1":
+				cp := *ev.Result
+				first = &cp
+			case "tc-retry-2":
+				cp := *ev.Result
+				second = &cp
+			}
+		}
+	}
+	if first == nil || second == nil {
+		t.Fatalf("expected both denied retry results, first=%+v second=%+v", first, second)
+	}
+	if _, ok := first.Metadata["auto_deny_repeat_count"]; ok {
+		t.Fatalf("first denied retry should not carry repeat metadata: %+v", first.Metadata)
+	}
+	if second.Metadata["ui_visibility"] != "audit" || second.Metadata["auto_deny_repeat_count"] != 2 {
+		t.Fatalf("second denied retry should carry repeat metadata across dispatches: %+v", second.Metadata)
+	}
+	if notice, _ := second.Metadata["auto_deny_notice"].(string); !strings.Contains(notice, "read-only") {
+		t.Fatalf("expected retry repeat notice to mention read-only block, got %q", notice)
 	}
 }
 

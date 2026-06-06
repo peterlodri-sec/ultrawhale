@@ -32,7 +32,7 @@ type toolDispatchOutcome struct {
 	PrimarySucceeded bool
 }
 
-func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpointMessageID string, history []core.Message, rt *memory.RuntimeState, events chan<- AgentEvent, toolPolicy policy.ToolPolicy, tools *core.ToolRegistry, remainingToolCalls int, opts RunOptions) (core.Message, *core.Message, llm.Usage, string, *telemetry.CacheShape, bool, int, error) {
+func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpointMessageID string, history []core.Message, rt *memory.RuntimeState, events chan<- AgentEvent, toolPolicy policy.ToolPolicy, tools *core.ToolRegistry, remainingToolCalls int, autoDenyCounts map[string]int, opts RunOptions) (core.Message, *core.Message, llm.Usage, string, *telemetry.CacheShape, bool, int, error) {
 	assistant, lastUsage, lastModel, cacheShape, err := a.collectAssistantStream(ctx, sessionID, rt, events, tools, opts)
 	if err != nil {
 		return core.Message{}, nil, llm.Usage{}, "", nil, false, 0, err
@@ -62,6 +62,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpoin
 			Tools:               tools,
 			Events:              events,
 			CheckpointMessageID: checkpointMessageID,
+			AutoDenyCounts:      autoDenyCounts,
 		}, nil, blocked)
 		if err != nil {
 			return core.Message{}, nil, llm.Usage{}, "", nil, false, attemptedToolCalls, err
@@ -76,6 +77,7 @@ func (a *Agent) streamAndHandle(ctx context.Context, sessionID string, checkpoin
 		Tools:               tools,
 		Events:              events,
 		CheckpointMessageID: checkpointMessageID,
+		AutoDenyCounts:      autoDenyCounts,
 	}, dispatchCalls, blocked)
 	if err != nil {
 		return core.Message{}, nil, llm.Usage{}, "", nil, false, attemptedToolCalls, err

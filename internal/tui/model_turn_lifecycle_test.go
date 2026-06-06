@@ -537,3 +537,42 @@ func TestToolDeniedDoesNotAddNoFinalAnswerNotice(t *testing.T) {
 		}
 	}
 }
+
+func TestAuditOnlyToolDeniedDoesNotAddNoFinalAnswerNotice(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 80, height: 24, busy: true}
+	next, _ := m.Update(svcMsg(protocol.Event{Kind: protocol.EventReasoningDelta, Text: "I should run a blocked command."}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{
+		Kind:       protocol.EventToolCall,
+		ToolCallID: "tc-audit-1",
+		ToolName:   "shell_run",
+		Text:       `{"command":"printf whale-auto-deny-test >/tmp/whale-auto-deny-test"}`,
+	}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{
+		Kind:       protocol.EventToolResult,
+		ToolCallID: "tc-audit-1",
+		ToolName:   "shell_run",
+		Text:       `{"success":false,"code":"plan_mode_blocked","message":"shell command not confirmed read-only in plan mode"}`,
+		Metadata: map[string]any{
+			"ui_visibility":       "audit",
+			"auto_denied":         true,
+			"blocked_reason_code": "plan_mode_blocked",
+		},
+	}))
+	m = next.(model)
+	if !m.sawTerminalToolOutcomeThisTurn {
+		t.Fatal("audit-only denial should count as terminal tool outcome")
+	}
+	next, _ = m.Update(svcMsg(protocol.Event{Kind: protocol.EventTurnDone}))
+	m = next.(model)
+	snap := append([]tuirender.UIMessage{}, m.transcript...)
+	if m.assembler != nil {
+		snap = append(snap, m.assembler.Snapshot()...)
+	}
+	for _, entry := range snap {
+		if strings.Contains(entry.Text, "did not produce a visible answer") {
+			t.Fatalf("unexpected reasoning-only status after audit-only tool denial: %+v", snap)
+		}
+	}
+}
