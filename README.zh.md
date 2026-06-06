@@ -99,6 +99,8 @@ return agent("综合两边的发现，写一份简洁指南");
 
 > ✅ **兼容 Claude Code** — 为 Claude Code 编写的 workflow 脚本无需修改即可在 Whale 中运行。
 
+> **⚠️ 默认关闭** — 在 TUI 中运行 `/config` 开启 `Dynamic workflows`，或在 `.whale/config.local.toml` 中添加 `[workflows] enabled = true`。
+
 了解更多：[Workflow 概览](docs/workflows.md) · [自定义 Workflow 指南](docs/custom-workflows.md)
 
 ---

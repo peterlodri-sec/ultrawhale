@@ -1,5 +1,18 @@
 # Dynamic Workflows
 
+> **⚠️ Disabled by default**
+>
+> Dynamic Workflows must be enabled before first use. Run `/config` in the TUI
+> and toggle `Dynamic workflows` on, or add to `.whale/config.local.toml`:
+>
+> ```toml
+> [workflows]
+> enabled = true
+> ```
+>
+> Existing project? Check `.whale/config.local.toml` or `.whale/config.toml`
+> if workflows aren't showing up.
+
 Whale supports **dynamic workflows**: JavaScript scripts that orchestrate multiple
 sub-agents deterministically. The script controls the flow — loops, fan-outs, barriers —
 while each `agent()` call does the actual LLM work.

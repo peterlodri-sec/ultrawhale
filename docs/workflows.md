@@ -1,5 +1,17 @@
 # Dynamic Workflows
 
+> **⚠️ 默认关闭**
+>
+> Dynamic Workflows 在使用前需要先启用。在 TUI 中运行 `/config`，
+> 开启 `Dynamic workflows` 开关；或添加到 `.whale/config.local.toml`：
+>
+> ```toml
+> [workflows]
+> enabled = true
+> ```
+>
+> 已有项目？如果 workflow 不显示，检查 `.whale/config.local.toml` 或 `.whale/config.toml`。
+
 Whale 支持 **dynamic workflows**：JavaScript 脚本编排多个子 agent，
 控制流由脚本决定（循环、扇出、barrier），每个 `agent()` 调用做实际的 LLM 工作。
 
