@@ -171,6 +171,123 @@ func TestHydrateSessionMessages_RestoresUpdatePlanAsPlanUpdate(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionHydrationRestoresHiddenWorkflowResultInsteadOfLaunchReasoning(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 100, height: 24}
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind: protocol.EventSessionHydrated,
+		Messages: protocolMessagesForTest([]core.Message{
+			{
+				Role: core.RoleUser,
+				Text: "run issue251-live workflow",
+			},
+			{
+				Role:      core.RoleAssistant,
+				Reasoning: "The user wants me to run the issue251-live workflow. Let me launch it directly.",
+				ToolCalls: []core.ToolCall{{
+					ID:    "call-workflow-1",
+					Name:  "workflow",
+					Input: `{"name":"issue251-live"}`,
+				}},
+			},
+			{
+				Role: core.RoleTool,
+				ToolResults: []core.ToolResult{{
+					ToolCallID: "call-workflow-1",
+					Name:       "workflow",
+					Content:    `{"success":true,"data":{"status":"workflow_confirmation_required","name":"issue251-live"}}`,
+				}},
+			},
+			{
+				Role:   core.RoleUser,
+				Hidden: true,
+				Text: strings.Join([]string{
+					"<workflow_result>",
+					"run: run-0b379e23-7a1c-4632-9f1f-c0060510a24c",
+					"",
+					"The background workflow completed. Treat this as the authoritative workflow result for later user questions about this run.",
+					"",
+					"Dynamic workflow \"issue251-live\" completed",
+					"",
+					"Result:",
+					"- executiveSummary: visible final result",
+					"</workflow_result>",
+				}, "\n"),
+			},
+		}),
+	}))
+	m = next.(model)
+
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	for _, want := range []string{
+		"run issue251-live workflow",
+		"Dynamic workflow \"issue251-live\" completed",
+		"executiveSummary: visible final result",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected %q in hydrated workflow result transcript:\n%s", want, rendered)
+		}
+	}
+	for _, notWant := range []string{
+		"Reasoning only",
+		"Let me launch it directly",
+		"workflow_confirmation_required",
+	} {
+		if strings.Contains(rendered, notWant) {
+			t.Fatalf("did not expect stale workflow launch output %q in transcript:\n%s", notWant, rendered)
+		}
+	}
+	if m.hasPendingLifecycleItems() {
+		t.Fatalf("workflow result marker should not leave pending lifecycle items: %+v", m.timeline.Snapshot())
+	}
+}
+
+func TestSessionHydrationPreservesAssistantOutputBeforeHiddenWorkflowResult(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 100, height: 24}
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind: protocol.EventSessionHydrated,
+		Messages: protocolMessagesForTest([]core.Message{
+			{
+				Role: core.RoleUser,
+				Text: "what changed?",
+			},
+			{
+				Role:      core.RoleAssistant,
+				Reasoning: "I should summarize the unrelated code change.",
+				Text:      "The unrelated assistant answer should stay visible.",
+			},
+			{
+				Role:   core.RoleUser,
+				Hidden: true,
+				Text: strings.Join([]string{
+					"<workflow_result>",
+					"run: run-background",
+					"",
+					"The background workflow completed. Treat this as the authoritative workflow result for later user questions about this run.",
+					"",
+					"Dynamic workflow \"background\" completed",
+					"",
+					"Result:",
+					"- done",
+					"</workflow_result>",
+				}, "\n"),
+			},
+		}),
+	}))
+	m = next.(model)
+
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	for _, want := range []string{
+		"what changed?",
+		"I should summarize the unrelated code change.",
+		"The unrelated assistant answer should stay visible.",
+		"Dynamic workflow \"background\" completed",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("expected %q after hydrating interleaved workflow marker:\n%s", want, rendered)
+		}
+	}
+}
 func TestHydrateSessionMessages_LimitsVisibleResumeHistory(t *testing.T) {
 	m := &model{assembler: tuirender.NewAssembler()}
 	msgs := make([]core.Message, 0, 12)

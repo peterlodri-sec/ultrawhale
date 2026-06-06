@@ -190,16 +190,24 @@ func (m *model) handleWorkflowResultEvent(ev protocol.Event) {
 
 func (m *model) handleWorkflowSnapshotEvent(ev protocol.Event) {
 	m.clearProviderRetryStatus()
-	m.sawTerminalToolOutcomeThisTurn = true
-	m.removeNoFinalAnswerStatusMessages()
-	m.ensureTimeline().HandleEvent(ev)
-	if !m.hasPendingLifecycleItems() {
-		m.commitLiveTranscript(false)
-	} else {
-		m.refreshLiveViewportContent()
+	if m.mode == modeWorkflowPanel {
+		if ev.LocalResult != nil {
+			m.workflowPanel.result = ev.LocalResult
+			if runID := workflowPanelRunID(ev.LocalResult); runID != "" {
+				m.workflowPanel.runID = runID
+			}
+			m.clampWorkflowPanelSelection()
+			m.clampWorkflowPanelSnapshotSelection()
+		}
+		m.status = "workflows"
+		return
+	}
+	if m.sawTerminalToolOutcomeThisTurn {
+		m.removeNoFinalAnswerStatusMessages()
 	}
 	m.addLog(logEntry{Kind: "workflow_snapshot", Source: "workflow", Summary: truncateLine(ev.Text, 120), Raw: ev.Text})
 	m.status = "workflow"
+	m.refreshViewportContentFollow(false)
 }
 
 func (m *model) handleDiffResultEvent(ev protocol.Event) {
