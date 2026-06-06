@@ -73,8 +73,8 @@ func TestTimelineRendersWorkflowResultAfterSnapshot(t *testing.T) {
 	}))
 	m = next.(model)
 	live := strings.Join(tuirender.ChatLines(m.liveTranscriptMessages(), 100), "\n")
-	if !strings.Contains(live, "Workflow") || !strings.Contains(live, "run-1") || !m.hasPendingLifecycleItems() {
-		t.Fatalf("expected running workflow snapshot live row:\n%s", live)
+	if strings.Contains(live, "Workflow") || strings.Contains(live, "run-1") || m.hasPendingLifecycleItems() {
+		t.Fatalf("running workflow snapshot should not render a chat lifecycle row:\n%s", live)
 	}
 
 	next, _ = m.Update(svcMsg(protocol.Event{
@@ -93,6 +93,62 @@ func TestTimelineRendersWorkflowResultAfterSnapshot(t *testing.T) {
 	}
 	if msg := m.transcript[0]; msg.Role != "assistant" || !strings.Contains(msg.Text, "executiveSummary") || !strings.Contains(msg.Text, "Workflow") {
 		t.Fatalf("workflow result should commit final result, got %+v", msg)
+	}
+}
+
+func TestWorkflowSnapshotPrunesReasoningOnlyFallbackWithoutRenderingSnapshot(t *testing.T) {
+	m := newModel(nil, "", "", "")
+	m.sawTerminalToolOutcomeThisTurn = true
+	m.appendStatus("The model returned reasoning only and did not produce a visible answer. Ask it to answer directly or retry the last step.")
+	m.commitLiveTranscript(false)
+
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind:          protocol.EventWorkflowSnapshot,
+		WorkflowRunID: "run-1",
+		Status:        "running",
+		Text:          "workflow running",
+		LocalResult: &protocol.LocalResult{Kind: "workflow", WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
+			RunID:   "run-1",
+			Status:  "running",
+			Summary: "workflow running",
+		}},
+	}))
+	m = next.(model)
+
+	rendered := strings.Join(tuirender.ChatLines(m.chatMessages(), 100), "\n")
+	if strings.Contains(rendered, "Reasoning only") || strings.Contains(rendered, "Workflow · run-1") || strings.Contains(rendered, "workflow running") {
+		t.Fatalf("workflow snapshot should prune fallback without rendering a chat row:\n%s", rendered)
+	}
+	if m.status != "workflow" {
+		t.Fatalf("workflow snapshot should keep workflow status, got %q", m.status)
+	}
+}
+
+func TestAsyncWorkflowSnapshotDoesNotSuppressUnrelatedReasoningOnlyFallback(t *testing.T) {
+	m := model{assembler: tuirender.NewAssembler(), mode: modeChat, width: 100, height: 24, busy: true}
+	next, _ := m.Update(svcMsg(protocol.Event{Kind: protocol.EventReasoningDelta, Text: "I should answer."}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{
+		Kind:          protocol.EventWorkflowSnapshot,
+		WorkflowRunID: "run-background",
+		Status:        "running",
+		Text:          "background workflow running",
+		LocalResult: &protocol.LocalResult{Kind: "workflow", WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
+			RunID:   "run-background",
+			Status:  "running",
+			Summary: "background workflow running",
+		}},
+	}))
+	m = next.(model)
+	next, _ = m.Update(svcMsg(protocol.Event{Kind: protocol.EventTurnDone}))
+	m = next.(model)
+
+	rendered := strings.Join(tuirender.ChatLines(m.transcript, 100), "\n")
+	if !strings.Contains(rendered, "Reasoning only") || !strings.Contains(rendered, "did not produce a visible answer") {
+		t.Fatalf("background workflow snapshot should not suppress unrelated reasoning-only fallback:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "Workflow · run-background") || strings.Contains(rendered, "background workflow running") {
+		t.Fatalf("background workflow snapshot should not render a chat row:\n%s", rendered)
 	}
 }
 

@@ -165,7 +165,7 @@ func TestWorkflowRunLocalResultDoesNotRenderPlainLaunchNotice(t *testing.T) {
 	messages := m.chatMessages()
 	messages = nonHeaderMessages(messages)
 	if len(messages) != 1 {
-		t.Fatalf("expected only command echo; workflow lifecycle is rendered from workflow_snapshot, got %+v", messages)
+		t.Fatalf("expected only command echo; workflow progress stays out of chat until workflow_result, got %+v", messages)
 	}
 	got := strings.Join(tuirender.ChatLines(messages, 120), "\n")
 	last := messages[len(messages)-1]
@@ -321,6 +321,54 @@ func TestWorkflowPanelViewRendersWithoutChatContent(t *testing.T) {
 	got := m.View()
 	if !strings.Contains(got, "Dynamic workflows") || !strings.Contains(got, "run-123") {
 		t.Fatalf("workflow panel view should render even with an empty chat transcript:\n%s", got)
+	}
+}
+
+func TestWorkflowPanelSnapshotRefreshDoesNotRenderChatLifecycle(t *testing.T) {
+	m := model{
+		assembler: tuirender.NewAssembler(),
+		mode:      modeWorkflowPanel,
+		page:      pageChat,
+		width:     100,
+		height:    30,
+		workflowPanel: workflowPanelState{
+			runID: "run-1",
+			result: &protocol.LocalResult{
+				Kind: "workflow",
+				WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
+					RunID:   "run-1",
+					Status:  "running",
+					Summary: "old summary",
+				},
+			},
+		},
+	}
+	m.append("think", "The user wants me to run the workflow.")
+
+	next, _ := m.Update(svcMsg(protocol.Event{
+		Kind:          protocol.EventWorkflowSnapshot,
+		WorkflowRunID: "run-1",
+		Status:        "completed",
+		LocalResult: &protocol.LocalResult{
+			Kind: "workflow",
+			WorkflowPanelSnapshot: &protocol.WorkflowPanelSnapshot{
+				RunID:   "run-1",
+				Status:  "completed",
+				Summary: "workflow completed",
+			},
+		},
+	}))
+	m = next.(model)
+
+	chat := strings.Join(tuirender.ChatLines(m.chatMessages(), 100), "\n")
+	for _, notWant := range []string{"Reasoning only", "Workflow · run-1", "workflow completed"} {
+		if strings.Contains(chat, notWant) {
+			t.Fatalf("workflow panel snapshot refresh should not render chat lifecycle %q:\n%s", notWant, chat)
+		}
+	}
+	snapshot := workflowPanelSnapshot(m.workflowPanel.result)
+	if snapshot == nil || snapshot.Status != "completed" || snapshot.Summary != "workflow completed" {
+		t.Fatalf("workflow panel snapshot should update panel state, got %+v", snapshot)
 	}
 }
 
