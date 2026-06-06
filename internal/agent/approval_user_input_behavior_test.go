@@ -29,6 +29,21 @@ func (p *approvalProvider) StreamResponse(_ context.Context, history []Message, 
 	return eventStream(endTurnEvent("done"))
 }
 
+type repeatedApprovalProvider struct {
+	calls int
+}
+
+func (p *repeatedApprovalProvider) StreamResponse(_ context.Context, _ []Message, _ []Tool) <-chan ProviderEvent {
+	p.calls++
+	if p.calls == 1 {
+		return eventStream(toolUseEvent(
+			toolCall("tc-w-1", "write", `{"file_path":"a.txt","content":"x"}`),
+			toolCall("tc-w-2", "write", `{"file_path":"b.txt","content":"y"}`),
+		))
+	}
+	return eventStream(endTurnEvent("done"))
+}
+
 type requestUserInputProvider struct {
 	calls int
 }
@@ -215,6 +230,7 @@ func TestRunOptionsReadOnlyDeniesMutatingToolWithoutApproval(t *testing.T) {
 		t.Fatalf("run stream with read-only turn failed: %v", err)
 	}
 	var sawPolicyDeny bool
+	var sawAuditToolResult bool
 	for ev := range events {
 		if ev.Type == AgentEventTypeToolApprovalRequired {
 			t.Fatalf("read-only turn should deny mutating tools without approval")
@@ -222,12 +238,66 @@ func TestRunOptionsReadOnlyDeniesMutatingToolWithoutApproval(t *testing.T) {
 		if ev.Type == AgentEventTypeToolPolicyDecision && ev.Policy != nil && ev.Policy.Code == "read_only_turn_denied" && !ev.Policy.Allow {
 			sawPolicyDeny = true
 		}
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil && ev.Result.ToolCallID == "tc-w-1" {
+			if ev.Result.Metadata["ui_visibility"] != "audit" || ev.Result.Metadata["auto_denied"] != true || ev.Result.Metadata["policy_code"] != "read_only_turn_denied" {
+				t.Fatalf("expected audit auto-deny metadata, got %+v", ev.Result.Metadata)
+			}
+			if !strings.Contains(ev.Result.Content, "do_not_retry_same_call") {
+				t.Fatalf("expected model-facing retry guard in result, got %q", ev.Result.Content)
+			}
+			sawAuditToolResult = true
+		}
 	}
 	if !sawPolicyDeny {
 		t.Fatal("expected read-only policy denial result")
 	}
+	if !sawAuditToolResult {
+		t.Fatal("expected audit-only policy denial tool result")
+	}
 	if asked != 0 {
 		t.Fatalf("approval callback should not be called, got %d", asked)
+	}
+}
+
+func TestRunOptionsReadOnlyRepeatedDenyAddsSingleNoticeMetadata(t *testing.T) {
+	store := NewInMemoryStore()
+	prov := &repeatedApprovalProvider{}
+	a := NewAgentWithRegistry(
+		prov,
+		store,
+		NewToolRegistry([]Tool{writeLikeTool{}}),
+	)
+
+	events, err := a.RunStreamWithTurnOptions(context.Background(), "s-read-only-repeat", "review", RunOptions{
+		ReadOnly: true,
+	})
+	if err != nil {
+		t.Fatalf("run stream with read-only turn failed: %v", err)
+	}
+	var first, second *ToolResult
+	for ev := range events {
+		if ev.Type == AgentEventTypeToolResult && ev.Result != nil {
+			switch ev.Result.ToolCallID {
+			case "tc-w-1":
+				cp := *ev.Result
+				first = &cp
+			case "tc-w-2":
+				cp := *ev.Result
+				second = &cp
+			}
+		}
+	}
+	if first == nil || second == nil {
+		t.Fatalf("expected both denied tool results, first=%+v second=%+v", first, second)
+	}
+	if _, ok := first.Metadata["auto_deny_notice"]; ok {
+		t.Fatalf("first auto-deny should stay audit-only without notice metadata: %+v", first.Metadata)
+	}
+	if second.Metadata["ui_visibility"] != "audit" || second.Metadata["auto_deny_repeat_count"] != 2 {
+		t.Fatalf("second auto-deny should carry repeat audit metadata: %+v", second.Metadata)
+	}
+	if notice, _ := second.Metadata["auto_deny_notice"].(string); !strings.Contains(notice, "read-only") {
+		t.Fatalf("expected repeat notice to mention read-only block, got %q", notice)
 	}
 }
 

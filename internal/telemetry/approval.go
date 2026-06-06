@@ -72,7 +72,7 @@ func ApprovalEventCountsAsPrompt(event string) bool {
 
 func ApprovalEventIsUserVisible(event string) bool {
 	switch ClassifyApprovalEvent(event) {
-	case ApprovalEventClassPromptShown, ApprovalEventClassDecision, ApprovalEventClassPolicyBlock, ApprovalEventClassModeBlock:
+	case ApprovalEventClassPromptShown, ApprovalEventClassDecision:
 		return true
 	default:
 		return false

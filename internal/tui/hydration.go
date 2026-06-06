@@ -93,6 +93,9 @@ func (m *model) hydrateSessionMessages(msgs []protocol.Message) {
 					if strings.TrimSpace(ev.Text) == "" {
 						continue
 					}
+					if auditOnlyToolResultEvent(ev) {
+						continue
+					}
 					m.ensureTimeline().HandleEvent(ev)
 				}
 				m.captureDiffMetadata(tr.Name, tr.Metadata)

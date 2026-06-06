@@ -84,8 +84,8 @@ func TestClassifyApprovalEventSeparatesPromptsFromAuditRows(t *testing.T) {
 		{event: "approval_cached_allowed", wantClass: ApprovalEventClassReused},
 		{event: "approval_prompt_cached_allowed", wantClass: ApprovalEventClassReused},
 		{event: "approval_grant_persisted", wantClass: ApprovalEventClassAudit},
-		{event: "approval_policy_denied", wantClass: ApprovalEventClassPolicyBlock, wantVisible: true},
-		{event: "approval_mode_blocked", wantClass: ApprovalEventClassModeBlock, wantVisible: true},
+		{event: "approval_policy_denied", wantClass: ApprovalEventClassPolicyBlock},
+		{event: "approval_mode_blocked", wantClass: ApprovalEventClassModeBlock},
 		{event: "approval_unrecognized", wantClass: ApprovalEventClassUnknown},
 	}
 	for _, tt := range tests {
