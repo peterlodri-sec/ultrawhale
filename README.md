@@ -100,6 +100,8 @@ return agent("Synthesize both findings into a concise guide");
 
 > ✅ **Claude Code compatible** — workflow scripts written for Claude Code work as-is in Whale.
 
+> **⚠️ Disabled by default** — run `/config` in the TUI and enable `Dynamic workflows`, or add `[workflows] enabled = true` to `.whale/config.local.toml`.
+
 Learn more: [Workflow Overview](docs/workflows.en.md) · [Custom Workflow Guide](docs/custom-workflows.en.md)
 
 ---
