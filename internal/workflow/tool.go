@@ -12,9 +12,10 @@ import (
 )
 
 type Tool struct {
-	runner               *ScriptRunner
-	parentSessionIDFunc  func() string
-	keywordTriggerEnable bool
+	runner              *ScriptRunner
+	library             *Library
+	parentSessionIDFunc func() string
+	enabled             bool
 }
 
 func NewTool(runner *ScriptRunner, parentSessionIDFunc ...func() string) Tool {
@@ -22,47 +23,44 @@ func NewTool(runner *ScriptRunner, parentSessionIDFunc ...func() string) Tool {
 	if len(parentSessionIDFunc) > 0 {
 		fn = parentSessionIDFunc[0]
 	}
-	return Tool{runner: runner, parentSessionIDFunc: fn, keywordTriggerEnable: true}
+	return Tool{runner: runner, library: workflowLibraryFromRunner(runner), parentSessionIDFunc: fn, enabled: true}
 }
 
 type ToolOptions struct {
 	ParentSessionIDFunc   func() string
 	KeywordTriggerEnabled bool
+	Enabled               bool
+	Library               *Library
 }
 
 func NewToolWithOptions(runner *ScriptRunner, opts ToolOptions) Tool {
-	return Tool{runner: runner, parentSessionIDFunc: opts.ParentSessionIDFunc, keywordTriggerEnable: opts.KeywordTriggerEnabled}
+	library := opts.Library
+	if library == nil {
+		library = workflowLibraryFromRunner(runner)
+	}
+	return Tool{runner: runner, library: library, parentSessionIDFunc: opts.ParentSessionIDFunc, enabled: opts.Enabled}
 }
+
+func workflowLibraryFromRunner(runner *ScriptRunner) *Library {
+	if runner == nil {
+		return nil
+	}
+	return runner.Library
+}
+
+const workflowDisabledUserMessage = "Dynamic workflows are disabled in Whale. Enable them in /config before using workflows."
 
 func (t Tool) Name() string { return "workflow" }
 
 func (t Tool) Description() string {
 	return strings.Join([]string{
-		"Launch a restricted Whale workflow script asynchronously for decomposable multi-agent work such as fan-out research, repository inspection, or multi-perspective review.",
-		t.workflowUseGuidance(),
-		"When the user asks what workflows are available, call this workflow tool with action=\"list\". Do not inspect .whale/workflows, search files, or run shell commands to discover workflow names.",
-		"When the user asks whether a named workflow exists, call this workflow tool with action=\"resolve\" and name. The resolver returns project, user, and builtin matches plus available names when missing.",
-		"When the user clearly asks to run a named workflow, call this workflow tool directly with name. Do not call request_user_input or ask a chat question for launch confirmation first; this tool returns the single TUI launch confirmation when confirmation is required. Do not first inspect files, search the workspace, or block confirmation because you think an expected input might be missing unless the user asked for a preflight check.",
-		"When the user clearly asks to create, generate, or write a new workflow, do not inspect existing workflow directories or load skills first. Generate a Claude Code-compatible raw JavaScript workflow script, pass it as script, and set saveAs to the same kebab-case value as meta.name. The tool will request confirmation; if the user confirms, Whale saves it under the project .whale/workflows directory before launching it.",
-		"Use ordinary tools instead for a single quick read, edit, shell-dependent task, or answer.",
-		"When an available named workflow fits, pass name instead of generating a new script; include args only when the user supplied useful input or the workflow contract clearly requires it. Do not ask for a missing args value merely because the args field exists. Use scriptPath for an existing file; generate script only for an explicit ad-hoc workflow with no matching named workflow.",
-		"Workflow scripts are not Node scripts: export const meta must be a pure literal first statement; phases must be objects like { title: 'Review', detail: '...' }; meta/args/budget/phase/log/agent/workflow/parallel/pipeline are runtime globals; host APIs like require/process/fetch/Date.now/Math.random/new Date are unavailable.",
-		"Use phase('Name') only as a statement. Do not call phase('Name', async () => ...); phase() is not a wrapper and returns nothing.",
-		"Await async workflow primitives before reading their results: const result = await agent(...), await parallel(...), await pipeline(...), or await workflow(...). Inside parallel(), thunks may return agent(...).",
-		"Use agent(prompt, { label, phase, schema, max_tool_calls?, agent?, tools?, disallowedTools?, effort?, permissionMode?, maxTurns? }). The first argument is the full prompt; put labels in opts.label. Do not pass opts.system, opts.prompt, or opts.structured. Do not set opts.model unless the user explicitly asks for a provider-supported model; otherwise let Whale use the current model.",
-		"For Claude Code compatibility, do not use Whale-only workflow APIs or fields in generated scripts. Use standard JSON Schema for structured output; enum-only schema properties must also include type: \"string\".",
-		"End generated workflows by returning a final JSON-serializable result, usually the synthesis/report object.",
-		"Use parallel() with thunks, not promises: () => agent(...). Give every agent() a short unique label, include enough context in each prompt, use JSON Schema for structured output, and add a synthesis/verification agent when combining branches.",
-		"Workflow agent leaves are tool-scoped workers. Use agent definitions and opts.tools/opts.disallowedTools to state required tool selectors. Supported selectors include workspace.read, workspace.write, shell.read, shell.run, web.search, web.fetch, mcp.read, and exact tool names; shell.run or workspace.write require an explicit non-read-only permissionMode. If a needed selector is not exposed by the runtime, make the workflow report the missing evidence instead of assuming shell, edit, or host access.",
-		"Returns an async launch receipt; tell the user only that /workflows opens the workflow panel. Do not mention /workflows with run ids or hidden subcommands.",
+		"Official Whale workflow resolver and launcher.",
+		"Use status only when the user explicitly asks whether dynamic workflows are enabled; use list or resolve for discovery.",
+		"Do not inspect .whale/workflows, search files, list directories, or run shell commands to discover workflow names.",
+		"Use run, or omit action, when the user clearly asks to launch a named workflow; do not preflight with status first.",
+		"Use script plus saveAs only when the user clearly asks to create a new workflow.",
+		"If workflows are disabled, this tool returns workflow_disabled; for that tool result only, report that state and stop. On a later user request to list or run workflows, call this tool again because /config may have changed. Use the product name Whale, never Whisper. Do not ask what to do next, present choices, read workflow directories, edit configuration, retry within the same turn, offer shell/manual substitutes for the named workflow, or say you can help after the user enables workflows.",
 	}, " ")
-}
-
-func (t Tool) workflowUseGuidance() string {
-	if t.keywordTriggerEnable {
-		return "Use this when the user explicitly asks for a workflow, fan-out, multi-agent orchestration, or names/describes an available workflow from the system prompt catalog."
-	}
-	return "Use this only when the user explicitly asks Whale to run or create a workflow by name or script. Do not infer workflow use from broad task descriptions, ordinary release tasks, or the presence of the word workflow."
 }
 
 func (t Tool) Parameters() map[string]any {
@@ -72,58 +70,78 @@ func (t Tool) Parameters() map[string]any {
 		"properties": map[string]any{
 			"action": map[string]any{
 				"type":        "string",
-				"enum":        []string{"list", "resolve", "run"},
-				"description": "Optional workflow control action. Use list to discover available workflows, resolve to check a named workflow without launch confirmation, and run to launch. Omit for backward-compatible run behavior.",
+				"enum":        []string{"status", "list", "resolve", "run", "create"},
+				"description": "Optional workflow action. Use status, list, or resolve for discovery; run launches; create uses script+saveAs. Omit for backward-compatible run.",
 			},
 			"script": map[string]any{
 				"type":        "string",
 				"maxLength":   MaxWorkflowScriptBytes,
-				"description": "Self-contained workflow script beginning with a pure literal export const meta = {...}. Use phase(), log(), agent(), workflow(), parallel(thunks), pipeline(), args, and budget; every agent should have a short label.",
+				"description": "Self-contained workflow script used only with saveAs when creating a workflow.",
 			},
 			"saveAs": map[string]any{
 				"type":        "string",
-				"description": "Optional kebab-case workflow name used only when the user asks to create a new workflow. Requires script, must match meta.name, saves to project .whale/workflows/<name>.js, then launches that named workflow.",
+				"description": "Optional kebab-case workflow name used only with script when creating a workflow.",
 			},
 			"scriptPath": map[string]any{
 				"type":        "string",
-				"description": "Path to a workflow script on disk. Takes precedence over script.",
+				"description": "Path to an existing workflow script. Takes precedence over script.",
 			},
 			"args": map[string]any{
-				"description": "Optional JSON-serializable args exposed to the script as read-only args. Omit this field when the user did not provide workflow input and the workflow contract does not clearly require it. May be a string, object, array, number, boolean, or null depending on the workflow contract.",
+				"description": "Optional JSON-serializable args. Omit this field when the user did not provide workflow input.",
 			},
 			"name": map[string]any{
 				"type":        "string",
-				"description": "Named workflow from project or user .whale/workflows. Used only when scriptPath and script are omitted.",
+				"description": "Named workflow used with resolve or run.",
 			},
 			"resumeFromRunId": map[string]any{
 				"type":        "string",
-				"description": "Optional source run id for same-session resume. Unchanged agent() calls reuse cached results; the first changed call and later calls rerun.",
+				"description": "Optional source run id for same-session workflow resume.",
 			},
 			"budgetTokens": map[string]any{
 				"type":        "integer",
 				"minimum":     1,
-				"description": "Optional completion-token budget shared by this workflow and child workflows. agent() calls are blocked once spent completion tokens reach the cap.",
+				"description": "Optional completion-token budget for the workflow.",
 			},
 		},
 	}
 }
 
 func (t Tool) Run(ctx context.Context, call core.ToolCall) (core.ToolResult, error) {
-	if t.runner == nil {
-		return workflowToolError(call, "not_configured", "workflow runner is not configured")
-	}
 	var input WorkflowInput
 	if err := json.Unmarshal([]byte(call.Input), &input); err != nil {
 		return workflowToolError(call, "invalid_input", err.Error())
 	}
-	switch workflowToolAction(input.Action) {
+	action := workflowToolAction(input.Action)
+	switch action {
+	case "status":
+		return t.statusWorkflows(call)
 	case "list":
+		if !t.enabled {
+			return t.workflowDisabled(call)
+		}
 		return t.listWorkflows(ctx, call)
 	case "resolve":
+		if !t.enabled {
+			return t.workflowDisabled(call)
+		}
 		return t.resolveWorkflow(ctx, call, input)
-	case "run":
+	case "run", "create":
 	default:
-		return workflowToolError(call, "invalid_input", "workflow action must be one of list, resolve, or run")
+		return workflowToolError(call, "invalid_input", "workflow action must be one of status, list, resolve, run, or create")
+	}
+	if !t.enabled {
+		return t.workflowDisabled(call)
+	}
+	if t.runner == nil {
+		return workflowToolError(call, "not_configured", "workflow runner is not configured")
+	}
+	if action == "create" {
+		if strings.TrimSpace(input.Script) == "" || strings.TrimSpace(input.SaveAs) == "" {
+			return workflowToolError(call, "invalid_input", "workflow create requires script and saveAs")
+		}
+		if strings.TrimSpace(input.Name) != "" || strings.TrimSpace(input.ScriptPath) != "" {
+			return workflowToolError(call, "invalid_input", "workflow create cannot be combined with name or scriptPath")
+		}
 	}
 	if strings.TrimSpace(input.SaveAs) != "" {
 		prepared, err := t.prepareGenerated(ctx, input)
@@ -196,7 +214,7 @@ func (t Tool) Run(ctx context.Context, call core.ToolCall) (core.ToolResult, err
 }
 
 func (t Tool) prepareGenerated(ctx context.Context, input WorkflowInput) (ResolvedScript, error) {
-	if t.runner == nil || t.runner.Library == nil {
+	if t.library == nil {
 		return ResolvedScript{}, errors.New("workflow library is not configured")
 	}
 	if strings.TrimSpace(input.Script) == "" {
@@ -205,7 +223,7 @@ func (t Tool) prepareGenerated(ctx context.Context, input WorkflowInput) (Resolv
 	if strings.TrimSpace(input.Name) != "" || strings.TrimSpace(input.ScriptPath) != "" {
 		return ResolvedScript{}, errors.New("saveAs cannot be combined with name or scriptPath")
 	}
-	return t.runner.Library.PrepareGenerated(ctx, input.Script, input.SaveAs)
+	return t.library.PrepareGenerated(ctx, input.Script, input.SaveAs)
 }
 
 func validateWorkflowScriptForConfirmation(script string) error {
@@ -220,10 +238,10 @@ func validateWorkflowScriptForConfirmation(script string) error {
 }
 
 func (t Tool) resolveNamedWorkflow(ctx context.Context, name string) (ResolvedScript, error) {
-	if t.runner == nil || t.runner.Library == nil {
+	if t.library == nil {
 		return ResolvedScript{}, errors.New("workflow library is not configured")
 	}
-	return t.runner.Library.Resolve(ctx, name)
+	return t.library.Resolve(ctx, name)
 }
 
 func workflowToolAction(action string) string {
@@ -234,15 +252,70 @@ func workflowToolAction(action string) string {
 	return action
 }
 
+func (t Tool) statusWorkflows(call core.ToolCall) (core.ToolResult, error) {
+	data := t.workflowStatusData()
+	code := "workflow_status"
+	summary := "Dynamic workflows are enabled."
+	if !t.enabled {
+		code = "workflow_disabled"
+		summary = workflowDisabledUserMessage
+	}
+	content, err := core.MarshalToolEnvelope(core.ToolEnvelope{
+		OK:      true,
+		Success: true,
+		Code:    code,
+		Summary: summary,
+		Data:    data,
+	})
+	if err != nil {
+		return core.ToolResult{}, err
+	}
+	return core.ToolResult{ToolCallID: call.ID, Name: call.Name, Content: content}, nil
+}
+
+func (t Tool) workflowDisabled(call core.ToolCall) (core.ToolResult, error) {
+	res, err := workflowToolErrorWithData(call, "workflow_disabled", workflowDisabledUserMessage, t.workflowStatusData())
+	if err != nil {
+		return res, err
+	}
+	res.Metadata = map[string]any{"abort_turn_after_tool_result": true}
+	return res, nil
+}
+
+func (t Tool) workflowStatusData() map[string]any {
+	data := map[string]any{
+		"enabled":          t.enabled,
+		"enableHint":       "Tell the user to enable Dynamic workflows in Whale /config, then stop.",
+		"canList":          t.enabled,
+		"canResolve":       t.enabled,
+		"canRun":           t.enabled,
+		"canCreate":        t.enabled,
+		"autoEnable":       false,
+		"fallbackAllowed":  false,
+		"disabledAction":   "When disabled, report workflow_disabled and stop for this tool result. On a later user request to list or run workflows, call workflow again because /config may have changed. Do not ask what to do next, present choices, read or edit Whale configuration, retry within the same turn, offer shell/manual substitutes, or say you can help after workflows are enabled.",
+		"brandName":        "Whale",
+		"forbiddenBrand":   "Whisper",
+		"modelGuidance":    "Use the product name Whale. Do not say Whisper. This disabled result applies only to the current tool result. On a later user request to list or run workflows, call workflow again because /config may have changed. Do not ask what to do next, present choices, inspect workflow directories, read configuration, edit configuration, retry within the same turn, auto-enable workflows, or offer shell/manual substitutes.",
+		"responseContract": "Reply only with: Dynamic workflows are disabled in Whale. Enable them in /config before using workflows.",
+		"directoryProbing": "Do not inspect .whale/workflows with file or shell tools for workflow discovery.",
+	}
+	if t.enabled {
+		data["roots"] = workflowRootData(t.library)
+	} else {
+		data["workflowDirectoriesHidden"] = true
+	}
+	return data
+}
+
 func (t Tool) listWorkflows(ctx context.Context, call core.ToolCall) (core.ToolResult, error) {
-	if t.runner == nil || t.runner.Library == nil {
+	if t.library == nil {
 		return workflowToolError(call, "not_configured", "workflow library is not configured")
 	}
-	defs, err := t.runner.Library.List(ctx)
+	defs, err := t.library.List(ctx)
 	if err != nil {
 		return workflowToolError(call, "workflow_list_failed", err.Error())
 	}
-	data := workflowDiscoveryData(t.runner.Library, defs)
+	data := workflowDiscoveryData(t.library, defs)
 	content, err := core.MarshalToolEnvelope(core.ToolEnvelope{
 		OK:      true,
 		Success: true,
@@ -257,18 +330,18 @@ func (t Tool) listWorkflows(ctx context.Context, call core.ToolCall) (core.ToolR
 }
 
 func (t Tool) resolveWorkflow(ctx context.Context, call core.ToolCall, input WorkflowInput) (core.ToolResult, error) {
-	if t.runner == nil || t.runner.Library == nil {
+	if t.library == nil {
 		return workflowToolError(call, "not_configured", "workflow library is not configured")
 	}
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return workflowToolError(call, "invalid_input", "workflow name is required for action=resolve")
 	}
-	defs, err := t.runner.Library.List(ctx)
+	defs, err := t.library.List(ctx)
 	if err != nil {
 		return workflowToolError(call, "workflow_resolve_failed", err.Error())
 	}
-	data := workflowDiscoveryData(t.runner.Library, defs)
+	data := workflowDiscoveryData(t.library, defs)
 	data["query"] = name
 	for _, def := range defs {
 		if def.Name != name {
