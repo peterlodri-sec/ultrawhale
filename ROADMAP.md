@@ -69,16 +69,13 @@ Whale's primary users and contributors are likely to read Chinese first. Documen
 - [ ] Add MCP setup tutorial and common server examples
 - [ ] Add Skills usage, installation, creation, and disable guides
 - [ ] Add contribution guide: how to set up the environment, run tests, debug TUI bugs, write evals, and submit PRs
-- [ ] Add debugging guide: how to read logs, telemetry, usage, session, and MCP status
+
 - [ ] Fill in FAQ: API keys, model selection, caching, cost, Windows, terminal compatibility, common errors
 
 Splittable issues:
 
-- [ ] `docs/architecture.md`
-- [ ] `docs/getting-started.md`
 - [ ] `docs/providers.md`
-- [ ] `docs/debugging.md`
-- [ ] `docs/contributing.zh-CN.md`
+- [x] `docs/contributing.zh.md`
 
 ## Test System Improvements
 
