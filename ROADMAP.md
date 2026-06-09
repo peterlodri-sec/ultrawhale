@@ -63,41 +63,14 @@ Splittable issues:
 
 Whale's primary users and contributors are likely to read Chinese first. Documentation should get Chinese solid first, then add English.
 
-- [ ] Add architecture docs explaining the relationship between CLI, TUI, App, Agent, Tools, MCP, and Skills
-- [ ] Add quick-start docs covering install, setup, doctor, TUI, exec, resume, ask, plan
-- [ ] Add provider configuration docs for DeepSeek official, Alibaba Cloud Bailian, Volcano Engine, SiliconFlow, and OpenAI-compatible endpoints
-- [ ] Add MCP setup tutorial and common server examples
-- [ ] Add Skills usage, installation, creation, and disable guides
-- [ ] Add contribution guide: how to set up the environment, run tests, debug TUI bugs, write evals, and submit PRs
+- [x] Add provider configuration docs for DeepSeek official, Alibaba Cloud Bailian, Volcano Engine, SiliconFlow, and OpenAI-compatible endpoints — `docs/providers.md` + `docs/providers.en.md`
+- [x] Add MCP setup tutorial and common server examples — `docs/mcp.md` + `docs/mcp.en.md`
+- [x] Add Skills usage, installation, creation, and disable guides — `docs/skills.md` + `docs/skills.en.md`
+- [x] Add contribution guide — `docs/contributing.zh.md`
 
 - [ ] Fill in FAQ: API keys, model selection, caching, cost, Windows, terminal compatibility, common errors
 
-Splittable issues:
 
-- [ ] `docs/providers.md`
-- [x] `docs/contributing.zh.md`
-
-## Test System Improvements
-
-Whale already has Go unit tests and offline evals, but TUI interactions, end-to-end behavior, and benchmarks need systematizing. The test system should serve real regression, not just chase quantity.
-
-- [x] Fill in core package tests: config, session, policy, tools, agent, mcp, skills, telemetry
-- [x] Add TUI behavior tests covering input, queuing, approval, slash picker, skills picker, session picker, interrupt
-- [ ] Add TUI render/golden tests to freeze key UI output under narrow, wide, and mixed-language layouts
-- [ ] Improve eval harness docs so contributors can add new deterministic evals
-- [x] Add more regression evals: tool parameter repair, failure recovery, ask/plan modes, MCP errors, subagent result aggregation
-- [ ] Organize SWE-bench usage docs, clarifying it is an external benchmark, not a substitute for local regression tests
-- [ ] Add boundary notes for live smoke tests: only for real API verification, not a mandatory CI run
-- [ ] Clarify in the PR template which tests different change types should run
-
-Splittable issues:
-
-- [ ] TUI golden test helper
-- [ ] Compact (auto and manual) tests
-- [ ] Eval task writing guide
-- [ ] Ask/plan mode regression evals
-- [ ] MCP failure recovery evals
-- [ ] SWE-bench usage guide
 
 ## Subagent Capability Optimization
 
@@ -127,7 +100,7 @@ One of Whale's differentiators is DeepSeek's cost and prefix cache. Credible dat
 - [x] Design a comparison task set: read code, fix bugs, run tests, refactor, small multi-turn tasks, large repo exploration
 - [x] Record Whale's token usage, cache hits, latency, tool call count, and success rate
 - [ ] Compare with pi, Codex CLI, Claude Code, DeepSeek-TUI, Aider, and other common agents
-- [ ] Separate the impact of model pricing, cache hits, context strategy, and tool call strategy on cost
+
 - [x] Output reproducible benchmark scripts
 - [x] Output a report explaining which tasks Whale is cheaper for and which tasks it is not good enough at yet (English report done; Chinese report pending)
 - [x] Avoid treating one-shot results as permanent conclusions — note the date, version, model, and config in reports
@@ -138,7 +111,7 @@ Splittable issues:
 - [x] Token/cache collection format
 - [ ] Whale vs pi cost comparison
 - [ ] Whale vs Codex/Claude Code cost comparison
-- [ ] Chinese benchmark report
+- [ ] Benchmark report
 
 ## Common Slash Commands and @-based Workflows
 
@@ -148,7 +121,7 @@ New slash commands should serve real workflows, not expand the command surface f
 - [x] `/fork`: fork the current session to explore an alternative path
 - [ ] `/cwd`: view or change the current working directory; also evaluate whether `/status` or the status bar is a better fit
 - [x] `/btw`: define the semantics clearly before implementing, avoid becoming a vague catch-all
-- [ ] Support `@`-based scoping operations
+- [x] Support `@`-based scoping operations — file path suggestions and skill mentions
 - [ ] Support rules configuration
 
 Splittable issues:
@@ -157,10 +130,7 @@ Splittable issues:
 - [x] `/fork` session semantics design
 - [ ] `/cwd` — should it be a slash command?
 - [x] `/btw` design and implementation
-- [ ] Support `@`-based operations
+- [x] Support `@`-based operations
 - [ ] Support rules configuration
 
-## Not Doing (for now)
 
-- [ ] No rush to build a large dashboard
-- [ ] No overly novel or complex agent designs
