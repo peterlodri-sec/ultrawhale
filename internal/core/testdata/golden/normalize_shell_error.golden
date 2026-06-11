@@ -1,0 +1,4 @@
+exit 1 (43ms) — command failed
+stderr:
+The following paths are ignored by one of your .gitignore files:
+npm/vendor

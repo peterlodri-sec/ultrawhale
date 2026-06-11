@@ -1,0 +1,2 @@
+Patch.cs
+if (elem != null && elem.ValueWithoutLink > 0) HasCondition<ConAnorexia>() // 中文注释

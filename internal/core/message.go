@@ -36,6 +36,21 @@ type Message struct {
 	FinishReason FinishReason
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	// Usage carries the provider-reported token accounting for assistant
+	// turns; ErrorDetail preserves the failure reason for turns that end
+	// with FinishReasonError (session analysis was previously impossible:
+	// error turns persisted with empty text and no cause).
+	Usage       *MessageUsage `json:"Usage,omitempty"`
+	ErrorDetail string        `json:"ErrorDetail,omitempty"`
+}
+
+// MessageUsage is the per-turn token accounting persisted with assistant
+// messages, sourced from the provider's usage response.
+type MessageUsage struct {
+	PromptTokens          int `json:"prompt_tokens,omitempty"`
+	CompletionTokens      int `json:"completion_tokens,omitempty"`
+	PromptCacheHitTokens  int `json:"prompt_cache_hit_tokens,omitempty"`
+	PromptCacheMissTokens int `json:"prompt_cache_miss_tokens,omitempty"`
 }
 
 type MessagePartType string
@@ -175,4 +190,13 @@ type ToolResult struct {
 	Content    string
 	Metadata   map[string]any `json:"metadata,omitempty"`
 	IsError    bool
+	// Channel-separated fields (phase 1): Outcome/Code/Payload are the
+	// structured channel for the TUI, recovery, and evals; ModelText is
+	// the only text the model sees, rendered once at creation and never
+	// re-rendered. Content/IsError remain during the migration and are
+	// removed in the final step.
+	Outcome   ToolOutcome `json:"Outcome,omitempty"`
+	Code      string      `json:"Code,omitempty"`
+	Payload   any         `json:"Payload,omitempty"`
+	ModelText string      `json:"ModelText,omitempty"`
 }

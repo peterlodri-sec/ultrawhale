@@ -640,12 +640,16 @@ func TestAgentPreToolHookHandlerCanRewriteInputAndAddContext(t *testing.T) {
 	found := false
 	for _, msg := range msgs {
 		for _, result := range msg.ToolResults {
-			env, ok := core.ParseToolEnvelope(result.Content)
-			if !ok {
-				t.Fatalf("tool envelope corrupted by hook context: %s", result.Content)
-			}
-			if strings.Contains(result.Content, "hook ctx") && env.Metadata["hook_context"] != nil {
+			if strings.Contains(result.Content, "hook ctx") && result.Metadata["hook_context"] != nil {
 				found = true
+				// Hook injection must not destroy the structured channel:
+				// the TUI and workflow detection read Payload, not the text.
+				if result.Outcome == "" {
+					t.Fatalf("hook-injected result lost its outcome: %+v", result)
+				}
+				if result.ModelText != result.Content {
+					t.Fatalf("model channel must follow the hook-mutated text: ModelText=%q Content=%q", result.ModelText, result.Content)
+				}
 			}
 		}
 	}
