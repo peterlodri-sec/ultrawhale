@@ -21,6 +21,11 @@ WHALE_INSTALL_DIR="${WHALE_INSTALL_DIR:-}"
 VERSION="$WHALE_VERSION"
 BIN_DIR="$WHALE_INSTALL_DIR"
 
+# Shared curl flags: fail fast on dead connections, abort transfers stalled
+# below 1KB/s for 30s (exit 28), and retry transient failures. Stall aborts
+# count as timeouts, so --retry covers them too. Expanded unquoted on purpose.
+CURL_RETRY_OPTS="--connect-timeout 15 --retry 3 --speed-limit 1024 --speed-time 30"
+
 # Validate version format: must be "latest" or start with "v"
 validate_version() {
   version="$1"
@@ -72,7 +77,7 @@ resolve_version() {
     return 0
   fi
   api_url="https://api.github.com/repos/$REPO_SLUG/releases/latest"
-  release_json="$(curl -fsSL "$api_url")"
+  release_json="$(curl -fsSL $CURL_RETRY_OPTS "$api_url")"
   tag="$(printf '%s\n' "$release_json" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
   if [ -z "$tag" ]; then
     printf '%s\n' "failed to resolve latest release tag from $api_url" >&2
@@ -109,15 +114,15 @@ download_asset() {
   url="$1"
   dst="$2"
   if [ -t 2 ]; then
-    curl -fL "$url" -o "$dst"
+    curl -fL $CURL_RETRY_OPTS --progress-bar "$url" -o "$dst"
     return $?
   fi
-  curl -fsL "$url" -o "$dst"
+  curl -fsSL $CURL_RETRY_OPTS "$url" -o "$dst"
 }
 
 asset_exists() {
   url="$1"
-  curl -fsIL "$url" >/dev/null 2>&1
+  curl -fsIL --connect-timeout 15 --max-time 30 --retry 3 "$url" >/dev/null 2>&1
 }
 
 install_binary() {
@@ -199,7 +204,7 @@ else
   DOWNLOAD_PATH="$ASSET_PATH"
 fi
 printf '%s\n' "Downloading checksums.txt..."
-curl -fsSL "$BASE_URL/checksums.txt" -o "$CHECKSUMS_PATH"
+curl -fsSL $CURL_RETRY_OPTS "$BASE_URL/checksums.txt" -o "$CHECKSUMS_PATH"
 
 EXPECTED_SUM="$(awk -v asset="$DOWNLOAD_NAME" '$2 == asset || $2 ~ "/"asset"$" {print $1}' "$CHECKSUMS_PATH")"
 if [ -z "$EXPECTED_SUM" ]; then
