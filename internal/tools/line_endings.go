@@ -1,6 +1,9 @@
 package tools
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 type lineEndingStyle string
 
@@ -19,6 +22,34 @@ type lineEndingSnapshot struct {
 }
 
 var utf8BOMBytes = []byte{0xEF, 0xBB, 0xBF}
+
+// newFileLineEnding picks the on-disk line-ending style for a freshly created
+// file. Windows batch scripts (.bat/.cmd) are parsed by cmd.exe, which
+// mis-handles LF-only files — line continuations ("^"), labels, and set/if
+// blocks get sliced apart. Such files are Windows-only by nature, so we force
+// CRLF by extension (not by host platform): a .bat authored on macOS/Linux for
+// a Windows target still gets correct endings. Everything else defaults to LF.
+//
+// PowerShell (.ps1) is deliberately excluded — it parses LF correctly and
+// forcing CRLF there would be a surprising, unnecessary change.
+func newFileLineEnding(path string) lineEndingStyle {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".bat", ".cmd":
+		return lineEndingCRLF
+	default:
+		return lineEndingLF
+	}
+}
+
+// applyNewFileLineEnding converts model-authored content (always LF) to the
+// on-disk style chosen for a new file at path.
+func applyNewFileLineEnding(path, content string) string {
+	style := newFileLineEnding(path)
+	if style == lineEndingLF {
+		return content
+	}
+	return restoreLineEndings(normalizeLineEndingText(content), lineEndingSnapshot{style: style})
+}
 
 func normalizeTextFileBytes(data []byte) (string, lineEndingSnapshot) {
 	bom := len(data) >= len(utf8BOMBytes) &&

@@ -30,7 +30,7 @@ func (b *Toolset) writeFile(ctx context.Context, call core.ToolCall) (core.ToolR
 		b.afterFileRead(abs)
 	}
 	existing := readErr == nil
-	before, after, content := prepareWriteFileContent(beforeBytes, in.Content, existing)
+	before, after, content := prepareWriteFileContent(in.FilePath, beforeBytes, in.Content, existing)
 	if err := b.commitFilePlans(ctx, []fileCommitPlan{{
 		path:           in.FilePath,
 		abs:            abs,
@@ -67,13 +67,13 @@ func (b *Toolset) previewWriteFile(_ context.Context, call core.ToolCall) (map[s
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
-	before, after, _ := prepareWriteFileContent(beforeBytes, in.Content, err == nil)
+	before, after, _ := prepareWriteFileContent(in.FilePath, beforeBytes, in.Content, err == nil)
 	return fileDiffMetadata([]fileChangePreview{{path: in.FilePath, before: before, after: after}}), nil
 }
 
-func prepareWriteFileContent(beforeBytes []byte, content string, existing bool) (string, string, string) {
+func prepareWriteFileContent(path string, beforeBytes []byte, content string, existing bool) (string, string, string) {
 	if !existing {
-		return "", content, content
+		return "", content, applyNewFileLineEnding(path, content)
 	}
 	before, lineEndings := normalizeTextFileBytes(beforeBytes)
 	if !hasLineEndingBytes(beforeBytes) {
