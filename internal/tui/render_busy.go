@@ -36,6 +36,17 @@ func (m model) renderBusyStatusLine(width int) string {
 	if m.busyTokenCount > 0 && busyElapsed >= busyTokenMinDisplayAge {
 		line += fmt.Sprintf(" · ↓ %s tokens", formatTokenCount(m.busyTokenCount))
 	}
+	if m.stopping {
+		// A turn normally clears via EventTurnDone within a moment, so a fresh
+		// stop shows no extra hint. But once the user starts mashing Ctrl+C the
+		// turn looks wedged (e.g. a hung provider that never emits
+		// EventTurnDone, the trap from session 019ec77f). The quit escape hatch
+		// in interruptBusyTurn is the only way out, so surface it — otherwise
+		// the user just sees a frozen "Stopping" and reports "关不掉，没法输入".
+		if hint := m.stoppingQuitHint(); hint != "" {
+			line += " · " + hint
+		}
+	}
 	if !m.stopping {
 		if m.mode == modeChat {
 			input := m.input.Value()
@@ -60,6 +71,28 @@ func (m model) renderBusyStatusLine(width int) string {
 		Width(width).
 		Foreground(tuitheme.Default.Warn).
 		Render(line)
+}
+
+// stoppingQuitHint returns the force-quit guidance to append while stopping,
+// or "" when the stop still looks routine. It mirrors the escape-hatch state
+// machine in interruptBusyTurn: the first few Ctrl+C presses are absorbed
+// (progressive countdown shown), and once the quit is armed the user is told
+// the next press exits.
+func (m model) stoppingQuitHint() string {
+	if !m.quitArmedUntil.IsZero() && time.Now().Before(m.quitArmedUntil) {
+		return "press Ctrl+C again to quit"
+	}
+	if m.stoppingInterruptCount <= 0 {
+		return ""
+	}
+	remaining := stuckQuitInterruptThreshold - m.stoppingInterruptCount
+	if remaining <= 0 {
+		return "press Ctrl+C again to quit"
+	}
+	if remaining == 1 {
+		return "press Ctrl+C once more to force quit"
+	}
+	return fmt.Sprintf("press Ctrl+C %d more times to force quit", remaining)
 }
 
 func busyStatusLabel(status string) string {
