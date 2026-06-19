@@ -266,6 +266,123 @@ func TestSearchFilesMissingPatternReturnsRecoveryHint(t *testing.T) {
 	}
 }
 
+func TestGrepMissingPatternReturnsRecoveryHint(t *testing.T) {
+	reg := NewToolRegistry([]Tool{snapshotTestTool{
+		name: "grep",
+		params: map[string]any{
+			"type":                 "object",
+			"additionalProperties": false,
+			"properties": map[string]any{
+				"pattern": map[string]any{"type": "string"},
+				"include": map[string]any{"type": "string"},
+				"limit":   map[string]any{"type": "integer"},
+			},
+			"required": []string{"pattern"},
+		},
+		content: `{"ok":true}`,
+	}})
+
+	res, err := reg.Dispatch(context.Background(), ToolCall{
+		ID:    "tc-grep",
+		Name:  "grep",
+		Input: `{"limit":20}`,
+	})
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+	if !res.IsError() {
+		t.Fatalf("expected invalid input error, got %+v", res)
+	}
+	for _, want := range []string{
+		`error (invalid_input)`,
+		`missing required field "pattern"`,
+		"grep requires pattern (a regex); provide pattern and optionally include/path, or use search_files to find file names.",
+		`recovery:`,
+	} {
+		if !strings.Contains(res.ModelText, want) {
+			t.Fatalf("result missing %q:\n%s", want, res.ModelText)
+		}
+	}
+}
+
+func TestUnknownFieldReturnsSchemaDerivedRecoveryHint(t *testing.T) {
+	reg := NewToolRegistry([]Tool{snapshotTestTool{
+		name: "shell_run",
+		params: map[string]any{
+			"type":                 "object",
+			"additionalProperties": false,
+			"properties": map[string]any{
+				"command":    map[string]any{"type": "string"},
+				"cwd":        map[string]any{"type": "string"},
+				"background": map[string]any{"type": "boolean"},
+			},
+			"required": []string{"command"},
+		},
+		content: `{"ok":true}`,
+	}})
+
+	res, err := reg.Dispatch(context.Background(), ToolCall{
+		ID:    "tc-shell",
+		Name:  "shell_run",
+		Input: `{"command":"git status","description":"Show working tree status"}`,
+	})
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+	if !res.IsError() {
+		t.Fatalf("expected invalid input error, got %+v", res)
+	}
+	for _, want := range []string{
+		`error (invalid_input)`,
+		`unknown field "description"`,
+		// Hint is derived from the tool's own schema, with fields sorted.
+		"description is not a parameter of shell_run; supported parameters: background, command, cwd.",
+		`recovery:`,
+	} {
+		if !strings.Contains(res.ModelText, want) {
+			t.Fatalf("result missing %q:\n%s", want, res.ModelText)
+		}
+	}
+}
+
+func TestSchemaFieldRecoveryHintGeneric(t *testing.T) {
+	params := map[string]any{
+		"properties": map[string]any{
+			"alpha": map[string]any{"type": "string"},
+			"beta":  map[string]any{"type": "string"},
+		},
+	}
+	got, ok := schemaFieldRecoveryHint("mytool", `missing required field "alpha"`, params)
+	if !ok {
+		t.Fatalf("expected hint for missing required field")
+	}
+	if want := "mytool requires the alpha field; supported parameters: alpha, beta."; got != want {
+		t.Fatalf("missing-field hint = %q, want %q", got, want)
+	}
+
+	got, ok = schemaFieldRecoveryHint("mytool", `unknown field "gamma"`, params)
+	if !ok {
+		t.Fatalf("expected hint for unknown field")
+	}
+	if want := "gamma is not a parameter of mytool; supported parameters: alpha, beta."; got != want {
+		t.Fatalf("unknown-field hint = %q, want %q", got, want)
+	}
+
+	// No schema properties: still names the offending field without a list.
+	got, ok = schemaFieldRecoveryHint("mytool", `unknown field "gamma"`, nil)
+	if !ok {
+		t.Fatalf("expected hint without schema properties")
+	}
+	if want := "gamma is not a parameter of mytool; remove it."; got != want {
+		t.Fatalf("no-props hint = %q, want %q", got, want)
+	}
+
+	// Unrelated messages do not produce a generic hint.
+	if _, ok := schemaFieldRecoveryHint("mytool", "input must be valid JSON object", params); ok {
+		t.Fatalf("did not expect hint for unrelated message")
+	}
+}
+
 func TestWebFetchMaxResultsReturnsRecoveryHint(t *testing.T) {
 	reg := NewToolRegistry([]Tool{snapshotTestTool{
 		name: "web_fetch",
@@ -349,7 +466,7 @@ func TestFetchFileURLReturnsRecoveryHint(t *testing.T) {
 		`url scheme must be http or https`,
 		`valid url is required`,
 	} {
-		content := invalidToolInputContent("fetch", errString(msg))
+		content := invalidToolInputContent("fetch", nil, errString(msg))
 		for _, want := range []string{
 			`"code":"invalid_input"`,
 			msg,
