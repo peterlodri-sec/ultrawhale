@@ -145,14 +145,7 @@ func (i *InfraBarWidget) renderBar() string {
 	t := i.Theme
 	bg := lipgloss.NewStyle().Background(t.Bg).Foreground(t.Fg)
 
-	// Left: ultrawhale branding
-	metalInfo := blocks.MetalStatus()
-	if strings.Contains(metalInfo, "available") {
-		metalInfo = "gpu"
-	} else {
-		metalInfo = ""
-	}
-	left := lipgloss.NewStyle().Foreground(t.Accent).Bold(true).Render("▸ultrawhale")
+	// Left: ultrawhale branding	left := lipgloss.NewStyle().Foreground(t.Accent).Bold(true).Render("▸ultrawhale")
 	// Shell nesting indicator
 	if ShellActive {
 		left += " " + lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Render("[sh]")

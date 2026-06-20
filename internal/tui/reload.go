@@ -460,3 +460,7 @@ func handleVakedCommand(line string) string {
 		return "/vaked parse|compile|graph|status"
 	}
 }
+
+func handleMetalCommand() string {
+	return blocks.MetalStatus()
+}
