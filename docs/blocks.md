@@ -1,0 +1,70 @@
+# Blocks Engine — Content-Addressed File Primitives
+
+Every file write in ultrawhale flows through `internal/blocks/`. Content-addressed (sha256), journaled for rollback, logged to ring buffer.
+
+## Architecture
+
+```
+blocks.Write(content)
+  ├─ Tier 1: Pure Go crypto/sha256 (always available)
+  ├─ Tier 2: Assembly AVX2+SHA-NI / ARMv8 NEON (auto-detected)
+  ├─ Tier 3: GPU Metal / CUDA (batch >64 files)
+  ├─ Journal: 16-version rollback stack per file
+  └─ Logger: 4096-event ring buffer → ToastSink
+```
+
+## API
+
+| Function | Description | Atomic |
+|----------|-------------|--------|
+| `Read(path)` | Ref-verified read → `*Block` | ✅ sha256 |
+| `Write(path, content)` | Journaled atomic write → `*Block` | ✅ tmp→rename |
+| `WriteAsync(path, content, cb)` | Non-blocking fire-and-forget | ✅ |
+| `Rollback(path)` | Restore previous journaled version | ✅ |
+| `Batch([]BatchOp)` | All-or-nothing multi-file write | ✅ |
+
+## Block struct
+
+```go
+type Block struct {
+    Ref      string    // sha256 of Content
+    Content  []byte    
+    Kind     BlockKind // file, diff, patch, symbol, outline
+    Path     string
+    PrevRef  string    // previous ref (for rollback)
+    Version  int       // journal counter
+}
+```
+
+## Hash tiers
+
+| Tier | Method | Speed | When |
+|------|--------|-------|------|
+| Tier 1 | `crypto/sha256` (Go stdlib) | 1.5 GB/s | Always |
+| Tier 2 | Assembly (AVX2+SHA-NI / ARMv8 NEON) | ~8 GB/s | Auto-detect |
+| Tier 3 | GPU (Metal / CUDA) | ~40 GB/s | Batch >64 |
+
+## Assembly kernels
+
+### Linux (amd64)
+```asm
+// hash_amd64.s — AVX2 + SHA-NI (36 lines)
+VMOVDQU sha256_init<>(SB), X0
+SHA256RNDS2 X0, X1, X0
+```
+
+### macOS (arm64)
+```asm
+// hash_arm64.s — ARMv8 crypto extensions (18 lines)
+SHA256H Q2, Q0, V4.S4
+SHA256H2 Q3, Q0, V4.S4
+```
+
+## Sed engine
+
+```go
+Sed(content, find, replace) → (modified, count)       // single
+SedAll(content, find, replace) → (modified, count)     // global
+SedFile(path, find, replace, global) → (Block, count) // journaled
+SedBatch(paths, find, replace, global) → error         // concurrent
+```
