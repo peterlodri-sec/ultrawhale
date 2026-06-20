@@ -103,6 +103,9 @@ func (p *Plugin) start() {
 	// Generate or load DID
 	p.identity = loadOrCreateIdentity(p.config.DataDir)
 
+	// Persist session to Supabase
+	go p.persistSession("active")
+
 	// Configure Supabase
 	p.supabase = &SupabaseConfig{
 		URL:     p.config.SupabaseURL,
@@ -349,3 +352,20 @@ func (p *Plugin) Manifest() plugintypes.Manifest {
 }
 
 
+
+
+func (p *Plugin) persistSession(status string) {
+	if p.config.SupabaseURL == "" { return }
+	pov := blocks.CurrentPOV()
+	data := map[string]string{
+		"session_id": fmt.Sprintf("%d", time.Now().UnixNano()),
+		"agent":      "ultrawhale",
+		"version":    blocks.CurrentVersion(),
+		"machine":    pov.Machine,
+		"arch":       pov.Arch,
+		"tier":       pov.Tier,
+		"status":     status,
+	}
+	body, _ := json.Marshal(data)
+	http.Post(p.config.SupabaseURL+"/sessions", "application/json", strings.NewReader(string(body)))
+}

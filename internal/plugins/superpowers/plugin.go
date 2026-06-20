@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"net"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +46,7 @@ type Status struct {
 	LangfuseWired   bool
 	NATSWired       bool
 	ComputeAvailable bool
+	SupabaseRunning  bool
 	LastCheck       time.Time
 }
 
@@ -117,6 +120,7 @@ func (p *Plugin) autoWire() {
 	if p.config.AutoWireNATS {
 		p.wireNATS()
 	}
+	go p.startSupabase()
 }
 
 func (p *Plugin) wireFromBao() {
@@ -167,6 +171,11 @@ func (p *Plugin) Doctor() string {
 		parts = append(parts, "langfuse:wired")
 	} else {
 		parts = append(parts, "langfuse:not configured (set LANGFUSE_PUBLIC_KEY)")
+	}
+	if p.status.SupabaseRunning {
+		parts = append(parts, "supabase:running")
+	} else {
+		parts = append(parts, "supabase:not running (docker compose up -d)")
 	}
 	if p.status.NATSWired {
 		parts = append(parts, "nats:wired")
@@ -354,3 +363,57 @@ func (p *Plugin) Manifest() plugintypes.Manifest {
 }
 
 
+
+
+// startSupabase starts the Supabase docker containers if docker is available.
+func (p *Plugin) startSupabase() {
+	// Check if docker is available
+	if _, err := exec.LookPath("docker"); err != nil {
+		return // docker not installed — skip
+	}
+
+	// Check if already running
+	checkCmd := exec.Command("docker", "ps", "--filter", "name=ultrawhale-supabase", "--format", "{{.Names}}")
+	out, _ := checkCmd.Output()
+	if strings.Contains(string(out), "db") || strings.Contains(string(out), "rest") {
+		p.status.SupabaseRunning = true
+		return
+	}
+
+	// Start via docker compose
+	composeFile := "docker/supabase-compose.yml"
+	if _, err := os.Stat(composeFile); os.IsNotExist(err) {
+		// Try absolute path
+		home, _ := os.UserHomeDir()
+		composeFile = filepath.Join(home, "ultrawhale", "docker", "supabase-compose.yml")
+		if _, err := os.Stat(composeFile); os.IsNotExist(err) {
+			return // compose file not found
+		}
+	}
+
+	startCmd := exec.Command("docker", "compose", "-f", composeFile, "up", "-d")
+	startCmd.Stdout = nil
+	startCmd.Stderr = nil
+	if err := startCmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "[superpowers] supabase start: %v\n", err)
+		return
+	}
+
+	// Wait for healthy
+	time.Sleep(2 * time.Second)
+
+	// Initialize schema
+	initSQL := "docker/supabase-init.sql"
+	if _, err := os.Stat(initSQL); os.IsNotExist(err) {
+		home, _ := os.UserHomeDir()
+		initSQL = filepath.Join(home, "ultrawhale", "docker", "supabase-init.sql")
+	}
+	if _, err := os.Stat(initSQL); err == nil {
+		initCmd := exec.Command("docker", "exec", "-i", "ultrawhale-supabase-db-1", "psql", "-U", "postgres", "-d", "ultrawhale", "-f", "/dev/stdin")
+		sqlData, _ := os.ReadFile(initSQL)
+		initCmd.Stdin = strings.NewReader(string(sqlData))
+		initCmd.Run()
+	}
+
+	p.status.SupabaseRunning = true
+}
