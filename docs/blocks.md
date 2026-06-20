@@ -68,3 +68,19 @@ SedAll(content, find, replace) → (modified, count)     // global
 SedFile(path, find, replace, global) → (Block, count) // journaled
 SedBatch(paths, find, replace, global) → error         // concurrent
 ```
+
+
+## Benchmarks (v2.2.0, 16-core EPYC-Rome)
+
+| Benchmark | Result | Notes |
+|-----------|--------|-------|
+| Hash 64KB (Go) | 1,464 MB/s | stdlib SHA-NI |
+| Hash 64KB (Asm) | 1,524 MB/s | AVX2 assembly |
+| Batch-64 | 3.8ms | Atomic |
+| Sed 1KB | 3,972ns / 257 MB/s | SIMD |
+| Lifecycle | 547us | Write-Rollback-Read |
+| Concurrent | 3,200 ops | 32 workers |
+
+## POV Wiring
+
+

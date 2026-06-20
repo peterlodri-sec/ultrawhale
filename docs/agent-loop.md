@@ -65,3 +65,19 @@ POV is injected into: LogSink toasts, Langfuse trace metadata, AgentField API re
 ```
 
 Right section shows POV: `M1·arm64` or `dev-cx53·amd64`.
+
+
+## Self vs Current
+
+/self: who am I (ultrawhale v2.2.0, 6 plugins, DID).
+/current: what is happening now (idle/busy, tokens, cache, memory, cost).
+
+## Full TUI Commands
+
+/reload all|status|hooks|theme|doctor
+/ultracode start|status|next|fail
+/self /current
+Ctrl+Shift+T: cycle themes
+Ctrl+Shift+Z: zen mode
+Ctrl+Shift+B: shader toggle
+Ctrl+Shift+S: sidebar toggle
