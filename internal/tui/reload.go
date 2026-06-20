@@ -7,6 +7,7 @@ import (
 
 	"github.com/usewhale/whale/internal/tui/agui"
 	"github.com/usewhale/whale/internal/blocks"
+	"github.com/usewhale/whale/internal/runner"
 	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/build"
 	"github.com/usewhale/whale/internal/agent"
@@ -336,5 +337,34 @@ func handleRalphCommand(line string) string {
 		return fmt.Sprintf("ralph: version %d not found (current: v%d)", v, ralph.Version)
 	default:
 		return "/ralph status | /ralph reset | /ralph rollback <version>"
+	}
+}
+
+var globalRunner = runner.NewRunner(runner.Config{MaxConcurrency: 8})
+
+func handleRunCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/run"))
+	if len(parts) == 0 {
+		return "/run <name> <script> | /run list | /run status"
+	}
+
+	switch parts[0] {
+	case "list":
+		runs := globalRunner.List()
+		if len(runs) == 0 { return "no active runs" }
+		var lines []string
+		for _, r := range runs {
+			lines = append(lines, fmt.Sprintf("[%s] %s: %s (%s)", r.ID[:8], r.Name, r.Status, time.Since(r.StartedAt).Round(time.Second)))
+		}
+		return strings.Join(lines, "\n")
+	case "status":
+		return globalRunner.Status()
+	default:
+		if len(parts) < 2 { return "usage: /run <name> <script>" }
+		name := parts[0]
+		script := strings.Join(parts[1:], " ")
+		run, err := globalRunner.Execute(name, script)
+		if err != nil { return fmt.Sprintf("run error: %v", err) }
+		return fmt.Sprintf("run started: %s (%s)", run.ID[:8], run.Name)
 	}
 }

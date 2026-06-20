@@ -159,6 +159,13 @@ func (o *Orchestrator) classifyPrompt(prompt string) AgentDef {
 		}
 	}
 
+	// Workflow trigger
+	if strings.HasPrefix(strings.ToLower(prompt), "/workflow") {
+		for _, d := range o.Definitions {
+			if d.Name == "swe" { return d }
+		}
+	}
+
 	// Default: swe
 	for _, d := range o.Definitions {
 		if d.Name == "swe" { return d }

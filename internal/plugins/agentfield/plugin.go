@@ -150,6 +150,23 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	})
 
 	// Execute agent command
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+		cur := blocks.GetCurrent()
+		orch := blocks.GetOrchestrator()
+		fmt.Fprintf(w, "# HELP ultrawhale_plugins Number of loaded plugins\n")
+		fmt.Fprintf(w, "# TYPE ultrawhale_plugins gauge\n")
+		fmt.Fprintf(w, "ultrawhale_plugins 6\n")
+		fmt.Fprintf(w, "# HELP ultrawhale_tokens_total Total tokens used\n")
+		fmt.Fprintf(w, "# TYPE ultrawhale_tokens_total counter\n")
+		fmt.Fprintf(w, "ultrawhale_tokens_total %d\n", cur.TotalTokens)
+		fmt.Fprintf(w, "# HELP ultrawhale_orchestrator_turns Total delegations\n")
+		fmt.Fprintf(w, "# TYPE ultrawhale_orchestrator_turns counter\n")
+		fmt.Fprintf(w, "ultrawhale_orchestrator_turns %d\n", orch.TotalTurns)
+		fmt.Fprintf(w, "# HELP ultrawhale_memory_mb Memory usage\n")
+		fmt.Fprintf(w, "# TYPE ultrawhale_memory_mb gauge\n")
+		fmt.Fprintf(w, "ultrawhale_memory_mb %d\n", cur.MemoryMB)
+	})
 	mux.HandleFunc("/api/v1/edge/status", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": blocks.EdgeStatus()})
 	})
