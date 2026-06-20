@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/usewhale/whale/internal/core"
+	"github.com/usewhale/whale/internal/blocks"
 	"github.com/usewhale/whale/internal/defaults"
 	"github.com/usewhale/whale/internal/llm"
 	llmretry "github.com/usewhale/whale/internal/llm/retry"
@@ -606,6 +607,18 @@ func WithMaxParallelSubagents(maxParallel int) AgentOption {
 }
 
 func (a *Agent) RunSession(ctx context.Context, sessionID, input string) (core.Message, error) {
+	// Orchestrator delegation: classify prompt, delegate to subagent/swarm
+	if defaults.OrchestratorEnabled {
+		orch := blocks.GetOrchestrator()
+		if orch.TotalTurns == 0 {
+			blocks.InitOrchestrator(sessionID)
+		}
+		agentID, role := orch.DelegatePrompt(input)
+		// Spawn subagent via the task runner (handled by app layer)
+		_ = agentID
+		_ = role
+		// TUI monitors via sidepanel — agent runs in background
+	}
 	events, err := a.RunStream(ctx, sessionID, input)
 	if err != nil {
 		return core.Message{}, err
