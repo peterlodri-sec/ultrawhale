@@ -21,6 +21,7 @@ import (
 
 	"github.com/usewhale/whale/internal/agent"
 	"github.com/usewhale/whale/internal/plugintypes"
+	"github.com/usewhale/whale/internal/plugins/natsplugin"
 	"github.com/usewhale/whale/internal/blocks"
 )
 
@@ -181,6 +182,13 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("/api/v1/edge/status", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": blocks.EdgeStatus()})
+	})
+	mux.HandleFunc("/api/v1/mesh", func(w http.ResponseWriter, r *http.Request) {
+		peers := natsplugin.DiscoverMesh()
+		json.NewEncoder(w).Encode(map[string]any{
+			"peers": peers,
+			"mesh":  natsplugin.MeshStatus(),
+		})
 	})
 	mux.HandleFunc("/api/v1/edge/deploy", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" { w.WriteHeader(405); return }

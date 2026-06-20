@@ -103,8 +103,13 @@ func (p *Plugin) connect() {
 	p.conn = conn
 	p.bound = true
 
-	// Send NATS CONNECT message (minimal protocol)
-	fmt.Fprintf(conn, "CONNECT {\"name\":\"ultrawhale\",\"lang\":\"go\",\"version\":\"0.2.0\"}\r\n")
+	// NATS CONNECT with mesh metadata
+	pov := blocks.CurrentPOV()
+	fmt.Fprintf(conn, "CONNECT {\"name\":\"ultrawhale\",\"lang\":\"go\",\"version\":\"v5.2.0\",\"metadata\":{\"machine\":\"%s\",\"arch\":\"%s\",\"tier\":\"%s\"}}\r\n",
+		pov.Machine, pov.Arch, pov.Tier)
+
+	// Announce presence to mesh
+	go p.announceMesh()
 }
 
 func (p *Plugin) disconnect() {
@@ -156,3 +161,46 @@ func (p *Plugin) Manifest() plugintypes.Manifest {
 }
 
 
+
+
+type MeshPeer struct {
+	Name    string
+	Machine string
+	Arch    string
+	Tier    string
+	SeenAt  time.Time
+}
+
+var meshPeers = struct {
+	mu    sync.Mutex
+	peers map[string]MeshPeer
+}{peers: make(map[string]MeshPeer)}
+
+// announceMesh publishes this instance'"'"'s presence to the mesh.
+func (p *Plugin) announceMesh() {
+	pov := blocks.CurrentPOV()
+	msg := fmt.Sprintf(`{"name":"ultrawhale","machine":"%s","arch":"%s","tier":"%s","version":"v5.2.0","ts":"%s"}`,
+		pov.Machine, pov.Arch, pov.Tier, time.Now().UTC().Format(time.RFC3339))
+	for i := 0; i < 3; i++ {
+		p.publish("whale.mesh.announce", map[string]any{"peer": msg})
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// DiscoverMesh returns known mesh peers.
+func DiscoverMesh() []MeshPeer {
+	meshPeers.mu.Lock()
+	defer meshPeers.mu.Unlock()
+	result := make([]MeshPeer, 0, len(meshPeers.peers))
+	for _, p := range meshPeers.peers {
+		result = append(result, p)
+	}
+	return result
+}
+
+// MeshStatus returns compact mesh status.
+func MeshStatus() string {
+	meshPeers.mu.Lock()
+	defer meshPeers.mu.Unlock()
+	return fmt.Sprintf("mesh: %d peers", len(meshPeers.peers))
+}
