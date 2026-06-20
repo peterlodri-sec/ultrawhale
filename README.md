@@ -11,12 +11,6 @@
 > Fork maintained at [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/peterlodri-sec/vaked-base) monorepo.
 
 
-## TUI Screenshot
-
-![ultrawhale TUI](docs/tui-screenshot-212607.png)
-
-*Capture from bench-tui v4.1 load test — 6/6 PASS, 400 concurrent ops, 0 errors.*
-
 ## Quick Start
 
 ```sh
