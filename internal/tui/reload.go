@@ -368,3 +368,37 @@ func handleRunCommand(line string) string {
 		return fmt.Sprintf("run started: %s (%s)", run.ID[:8], run.Name)
 	}
 }
+
+func handleSSHCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/ssh"))
+	if len(parts) == 0 {
+		return "/ssh <host> <command> | /ssh list | /ssh stop <id> | /ssh restart <id>"
+	}
+
+	switch parts[0] {
+	case "list":
+		runs := blocks.SSHList()
+		if len(runs) == 0 { return "no active ssh runs" }
+		var lines []string
+		for _, r := range runs {
+			lines = append(lines, fmt.Sprintf("[%s] %s@%s: %s (%s)", r.ID[:8], r.User, r.Host, r.Status, time.Since(r.StartTime).Round(time.Second)))
+		}
+		return strings.Join(lines, "\n")
+	case "stop":
+		if len(parts) < 2 { return "usage: /ssh stop <id>" }
+		if err := blocks.StopSSH(parts[1]); err != nil { return err.Error() }
+		return fmt.Sprintf("ssh %s: stopped", parts[1][:8])
+	case "restart":
+		if len(parts) < 2 { return "usage: /ssh restart <id>" }
+		run, err := blocks.RestartSSH(parts[1])
+		if err != nil { return err.Error() }
+		return fmt.Sprintf("ssh restarted: %s@%s (%s)", run.User, run.Host, run.ID[:8])
+	default:
+		if len(parts) < 2 { return "usage: /ssh <host> <command>" }
+		host := parts[0]
+		cmd := strings.Join(parts[1:], " ")
+		run, err := blocks.SSHExec(host, cmd)
+		if err != nil { return fmt.Sprintf("ssh error: %v", err) }
+		return fmt.Sprintf("ssh started: %s@%s (%s)", run.User, run.Host, run.ID[:8])
+	}
+}
