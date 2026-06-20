@@ -464,3 +464,28 @@ func handleVakedCommand(line string) string {
 func handleMetalCommand() string {
 	return blocks.MetalStatus()
 }
+
+func handleDyadCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/dyad"))
+	if len(parts) == 0 {
+		return "/dyad status | /dyad ping | /dyad deploy"
+	}
+
+	switch parts[0] {
+	case "status":
+		if d := blocks.GetDyad(); d != nil {
+			return d.DyadStatus()
+		}
+		return "dyad: not initialized. Run 'ultrawhale' on both machines."
+	case "ping":
+		if d := blocks.GetDyad(); d != nil {
+			d.Ping()
+			return "dyad ping sent → " + d.Peer.Machine
+		}
+		return "dyad: not initialized"
+	case "deploy":
+		return "dyad: use /orch-tools run dyad:deploy to deploy to dev-cx53"
+	default:
+		return "/dyad status | /dyad ping | /dyad deploy"
+	}
+}

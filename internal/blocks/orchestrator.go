@@ -133,6 +133,11 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 
 	o.TotalTurns++
 
+	// Dyad heartbeat
+	if dyad := GetDyad(); dyad != nil {
+		dyad.Ping()
+	}
+
 	// Ralph: observe this delegation
 	ralph := GetRalph()
 	ralph.Observe(prompt, def.Name, "delegated", 0, 0)
