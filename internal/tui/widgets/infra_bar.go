@@ -145,7 +145,7 @@ func (i *InfraBarWidget) renderBar() string {
 	t := i.Theme
 	bg := lipgloss.NewStyle().Background(t.Bg).Foreground(t.Fg)
 
-	// Left: ultrawhale branding	left := lipgloss.NewStyle().Foreground(t.Accent).Bold(true).Render("▸ultrawhale")
+	// Left: ultrawhale branding	
 	// Shell nesting indicator
 	if ShellActive {
 		left += " " + lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Render("[sh]")
@@ -168,7 +168,7 @@ func (i *InfraBarWidget) renderBar() string {
 
 	// Assemble: left · services · right
 	center := strings.Join(services, " │ ")
-	full := fmt.Sprintf(" %s │ %s │ %s ", left, center, right)
+	full := fmt.Sprintf(" %s │ %s │ %s ", lipgloss.NewStyle().Foreground(t.Accent).Bold(true).Render("▸ultrawhale"), center, right)
 
 	if lipgloss.Width(full) > i.Width {
 		// Collapse: just ultrawhale + service count + perf
