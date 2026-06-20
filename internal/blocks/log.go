@@ -3,6 +3,7 @@ package blocks
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -39,8 +40,8 @@ type LogSink interface {
 type Logger struct {
 	mu      sync.RWMutex
 	buffer  []LogEvent // ring buffer, capacity 4096
-	head    int
-	count   int
+	head    int64 // atomic — lock-free writes
+	count   int64 // atomic — best-effort tracking
 	sinks   []LogSink
 }
 
@@ -79,15 +80,25 @@ func Log(level LogLevel, operation, path, ref, prevRef string, duration time.Dur
 		event.Error = err.Error()
 	}
 
-	globalLogger.mu.Lock()
-	// Ring buffer write
-	globalLogger.buffer[globalLogger.head] = event
-	globalLogger.head = (globalLogger.head + 1) % len(globalLogger.buffer)
-	if globalLogger.count < len(globalLogger.buffer) {
-		globalLogger.count++
+	// Lock-free ring buffer write via atomic CAS
+	head := atomic.LoadInt64(&globalLogger.head)
+	for {
+		next := (head + 1) % int64(len(globalLogger.buffer))
+		if atomic.CompareAndSwapInt64(&globalLogger.head, head, next) {
+			globalLogger.buffer[head] = event
+			break
+		}
+		head = atomic.LoadInt64(&globalLogger.head)
 	}
+	// Count tracking (best-effort, ok to be slightly off)
+	count := atomic.AddInt64(&globalLogger.count, 1)
+	if count > int64(len(globalLogger.buffer)) {
+		atomic.StoreInt64(&globalLogger.count, int64(len(globalLogger.buffer)))
+	}
+	
+	globalLogger.mu.RLock()
 	sinks := globalLogger.sinks
-	globalLogger.mu.Unlock()
+	globalLogger.mu.RUnlock()
 
 	// Fan-out to sinks (async-safe — each sink is responsible for its own goroutine safety)
 	for _, s := range sinks {
@@ -100,13 +111,15 @@ func Recent(n int) []LogEvent {
 	globalLogger.mu.RLock()
 	defer globalLogger.mu.RUnlock()
 
-	count := globalLogger.count
+	count := int(atomic.LoadInt64(&globalLogger.count))
 	if n > count {
 		n = count
 	}
 	out := make([]LogEvent, n)
 	for i := 0; i < n; i++ {
-		idx := (globalLogger.head - n + i + len(globalLogger.buffer)) % len(globalLogger.buffer)
+		h := int(atomic.LoadInt64(&globalLogger.head))
+		if h < 0 { h += len(globalLogger.buffer) * 2 }
+		idx := (h - n + i + len(globalLogger.buffer)) % len(globalLogger.buffer)
 		out[i] = globalLogger.buffer[idx]
 	}
 	return out

@@ -33,7 +33,7 @@ func init() {
 func NewBrain() *Brain {
 	b := &Brain{
 		POV: CurrentPOV(),
-		shortTerm: make([]string, 0, 32),
+		shortTerm: make([]string, 0, 40), // pre-alloc 32+8 for growth
 		memos:     NewMemoStore(),
 	}
 	b.openLongTerm()

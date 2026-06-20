@@ -2,54 +2,57 @@ package blocks
 
 import "sync"
 
-// Journal is a write-ahead log of previous file states for rollback.
-// In-memory only — survives the session, not restarts.
+const journalShards = 16
+
 type Journal struct {
-	mu       sync.Mutex
-	entries  map[string][]*Block // path → stack of previous versions
+	shards   [journalShards]journalShard
 	maxDepth int
 }
 
+type journalShard struct {
+	mu      sync.Mutex
+	entries map[string][]*Block
+}
+
 func NewJournal() *Journal {
-	return &Journal{
-		entries:  make(map[string][]*Block),
-		maxDepth: 16, // keep up to 16 previous versions per file
+	j := &Journal{maxDepth: 16}
+	for i := range j.shards {
+		j.shards[i].entries = make(map[string][]*Block)
 	}
+	return j
 }
 
-// Push saves the current state of a path before a write.
+func (j *Journal) shard(path string) *journalShard {
+	h := 0
+	for _, c := range path { h = h*31 + int(c) }
+	if h < 0 { h = -h }; return &j.shards[h%journalShards]
+}
+
 func (j *Journal) Push(path string, b *Block) {
-	if b == nil {
-		return
-	}
-	j.mu.Lock()
-	defer j.mu.Unlock()
-
-	stack := j.entries[path]
+	if b == nil { return }
+	s := j.shard(path)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	stack := s.entries[path]
 	stack = append(stack, b)
-	if len(stack) > j.maxDepth {
-		stack = stack[1:] // drop oldest
-	}
-	j.entries[path] = stack
+	if len(stack) > j.maxDepth { stack = stack[1:] }
+	s.entries[path] = stack
 }
 
-// Pop restores the previous state. Returns nil if no previous state.
 func (j *Journal) Pop(path string) *Block {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-
-	stack := j.entries[path]
-	if len(stack) == 0 {
-		return nil
-	}
+	s := j.shard(path)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	stack := s.entries[path]
+	if len(stack) == 0 { return nil }
 	prev := stack[len(stack)-1]
-	j.entries[path] = stack[:len(stack)-1]
+	s.entries[path] = stack[:len(stack)-1]
 	return prev
 }
 
-// Depth returns how many previous versions are stored for a path.
 func (j *Journal) Depth(path string) int {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	return len(j.entries[path])
+	s := j.shard(path)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.entries[path])
 }
