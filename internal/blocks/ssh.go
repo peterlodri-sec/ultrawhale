@@ -63,7 +63,7 @@ func LoadSSHConfig() *SSHConfig {
 	}
 
 	// Try bao first
-	if bao := DetectCF(); bao != nil && os.Getenv("VAULT_TOKEN") != "" {
+	if os.Getenv("VAULT_TOKEN") != "" && os.Getenv("VAULT_TOKEN") != "" {
 		key, err := fetchBaoSSHKey(cfg.BaoKeyPath)
 		if err == nil {
 			cfg.KeyPath = key
