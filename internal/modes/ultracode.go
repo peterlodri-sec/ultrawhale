@@ -93,16 +93,6 @@ func (u *UltracodeMode) StartPhase(name string) (int, error) {
 			u.current = i
 			u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 			return i, nil
 		}
 	}
@@ -142,16 +132,6 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 }
 
 // RollbackPhase undoes the writes from the last phase via blocks.Rollback.
@@ -167,16 +147,6 @@ func (u *UltracodeMode) RollbackPhase(name string) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 }
 
 // SkipPhase marks a phase as skipped (e.g., "fix" when review passes).
@@ -192,16 +162,6 @@ func (u *UltracodeMode) SkipPhase(name string) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 }
 
 // AutoAdvance moves to the next pending phase.
@@ -216,32 +176,12 @@ func (u *UltracodeMode) AutoAdvance() (string, bool) {
 			u.current = i
 			u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 			return u.phases[i].Name, true
 		}
 	}
 	u.status.Verdict = "pass"
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 	return "", false
 }
 
