@@ -1,6 +1,6 @@
 # Changelog
 
-## v6.0.0 (2026-06-20) — Major Release: Pre-Hook Layer + Production Hardening
+## v7.1.0 (2026-06-20) — Major Release: Pre-Hook Layer + Production Hardening
 
 - **Pre-hook layer**: 7 pre-hooks (commit, write, sed, grep, git, deploy, commit)
 - **ADR 001**: Architecture Decision Record — Pre-Hook Layer
@@ -33,3 +33,9 @@
 
 ## v1.x (2026-06-20)
 - Semver, /reload, HUD, deep hooks, superpowers, repomap SIMD
+
+## v7.1.0 (2026-06-21) — Vaked Alignment + Internal Review
+- POV wiring: 10/10 complete (added dyad, watcher)
+- 28 blocks, 7 plugins, 6 widgets, 5 CLIs
+- Dead code: 0 stale files
+- Vaked philosophy alignment documented

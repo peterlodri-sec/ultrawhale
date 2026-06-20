@@ -1,4 +1,4 @@
-# Blocks Engine + Assembly Audit — v6.0.0
+# Blocks Engine + Assembly Audit — v7.1.0
 
 ## Hash Performance Comparison
 
@@ -28,7 +28,7 @@ Recommendation: use BLAKE3's native Go+asm implementation instead of custom asm.
 | Log | Mutex on every write | Atomic CAS + RLock | ✅ No hot spots |
 | Block Write | Synchronous journal push | Sharded mutex, O(1) | ✅ |
 
-## Missing Primitives Added (v6.0.0)
+## Missing Primitives Added (v7.1.0)
 
 | Primitive | Purpose | Lines |
 |-----------|---------|-------|
