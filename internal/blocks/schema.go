@@ -37,6 +37,7 @@ func RegisterSchema(s *BlockSchema) {
 
 // ValidateBlock validates a block against its registered schema.
 func ValidateBlock(b *Block) []string {
+	_ = CurrentPOV() // POV context for validation logging
 	schema, ok := schemaRegistry[string(b.Kind)]
 	if !ok {
 		return nil // no schema registered — pass

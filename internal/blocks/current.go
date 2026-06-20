@@ -46,6 +46,7 @@ func init() {
 
 // GetCurrent returns the current runtime state snapshot.
 func GetCurrent() *Current {
+	_ = CurrentPOV() // POV context for current state
 	c, _ := currentState.Load().(*Current)
 	if c == nil {
 		c = &Current{Tier: "go"}

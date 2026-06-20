@@ -30,7 +30,7 @@ func Notify(title, message string) error {
 		return fmt.Errorf("notify: %w", err)
 	}
 
-	Log(LogInfo, "blocks.Notify", title, "", "", 0, nil)
+	Log(LogInfo, "blocks.Notify", fmt.Sprintf("%s [%s]", title, CurrentPOV().Machine), "", "", 0, nil)
 	return nil
 }
 

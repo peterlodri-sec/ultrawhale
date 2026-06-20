@@ -11,6 +11,7 @@ import (
 // Sed replaces the first occurrence of find with replace in content.
 // Uses bytes.Index (SIMD-accelerated via AVX2/NEON by Go runtime).
 // Returns modified content and number of replacements made.
+// Sed operates under CurrentPOV
 func Sed(content, find, replace []byte) ([]byte, int) {
 	if len(find) == 0 {
 		return content, 0
