@@ -1,0 +1,18 @@
+# ultrawhale local dev config — not committed
+# Copy to ~/.whale/config.toml or .whale/config.toml
+
+model = "deepseek-v4-flash"
+reasoning_effort = "high"
+thinking_enabled = true
+
+[superpowers]
+enabled = true
+auto_wire_secrets = true
+
+[agentfield]
+enabled = true
+port = 8585
+
+[workflows]
+enabled = true
+max_concurrency = 8
