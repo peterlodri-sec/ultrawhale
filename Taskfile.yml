@@ -1,0 +1,72 @@
+version: '3'
+
+vars:
+  BIN_DIR: bin
+  GO_FLAGS: -trimpath -ldflags="-s -w"
+  GO_TEST_FLAGS: -v -race -count=1 -timeout 120s
+
+tasks:
+  default:
+    desc: Run lint, test, build
+    deps: [lint, test, build]
+
+  lint:
+    desc: Run golangci-lint with strict rules
+    cmds:
+      - golangci-lint run --fix ./...
+    sources:
+      - "**/*.go"
+      - .golangci.yml
+    generates:
+      - .golangci-lint-cache.stamp
+    status:
+      - test -f .golangci-lint-cache.stamp
+
+  test:
+    desc: Run all tests with race detection and coverage
+    cmds:
+      - go test {{.GO_TEST_FLAGS}} -coverprofile=coverage.txt ./...
+    sources:
+      - "**/*.go"
+      - "**/*_test.go"
+    generates:
+      - coverage.txt
+
+  build:
+    desc: Build ultrawhale binaries (macOS + Linux + tools)
+    cmds:
+      - mkdir -p {{.BIN_DIR}}
+      - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build {{.GO_FLAGS}} -o {{.BIN_DIR}}/ultrawhale ./cmd/whale
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build {{.GO_FLAGS}} -o {{.BIN_DIR}}/ultrawhale-linux ./cmd/whale
+      - go build -o {{.BIN_DIR}}/ultrawhale-setup ./cmd/setup/
+      - go build -o {{.BIN_DIR}}/ultrawhale-bench-tui ./cmd/bench-tui/
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - "{{.BIN_DIR}}/ultrawhale"
+      - "{{.BIN_DIR}}/ultrawhale-linux"
+
+  ci:
+    desc: Run CI pipeline locally via act
+    cmds:
+      - act -P ubuntu-latest=-self-hosted
+    sources:
+      - .github/workflows/ci.yml
+
+  bench:
+    desc: Run benchmarks + TUI load test
+    cmds:
+      - go test -bench=. -benchmem -benchtime=500ms ./internal/blocks/ ./internal/modes/
+      - "{{.BIN_DIR}}/ultrawhale-bench-tui"
+
+  doctor:
+    desc: Run ultrawhale self-check
+    cmds:
+      - "{{.BIN_DIR}}/ultrawhale --dangerously-skip-permissions doctor"
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf {{.BIN_DIR}} coverage.txt .golangci-lint-cache.stamp
