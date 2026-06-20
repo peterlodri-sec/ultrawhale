@@ -8,6 +8,7 @@ import (
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 	"github.com/usewhale/whale/internal/tui/statusline"
+	"github.com/usewhale/whale/internal/blocks"
 	"github.com/usewhale/whale/internal/build"
 )
 
@@ -269,6 +270,7 @@ func (m *model) buildHUD(width int) {
 	}
 	h.TokenCount = m.busyTokenCount
 	h.Plugins = 5
+	h.Pov = blocks.CurrentPOV().String()
 	if m.viewMode != "" {
 		h.Theme = m.viewMode
 	}

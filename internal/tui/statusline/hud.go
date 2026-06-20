@@ -28,6 +28,7 @@ type HUD struct {
 	InfraLangfuse bool
 	InfraNATS   bool
 	InfraGPU    int
+	Pov         string
 	BgColor     lipgloss.Color
 	FgColor     lipgloss.Color
 	AccentColor lipgloss.Color

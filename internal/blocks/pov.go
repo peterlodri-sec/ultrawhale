@@ -3,6 +3,7 @@ package blocks
 import (
 	"os"
 	"runtime"
+	"github.com/usewhale/whale/internal/build"
 	"strings"
 )
 
@@ -106,5 +107,5 @@ func (t HashTier) String() string {
 func CurrentVersion() string {
 	// This is set by the build system via -ldflags
 	// We import build.Version from the build package
-	return "v1.3.0"
+	return build.CurrentVersion()
 }
