@@ -1,0 +1,22 @@
+[book]
+title = "ultrawhale"
+description = "DeepSeek-native coding agent — documentation"
+authors = ["peterlodri-sec"]
+language = "en"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/peterlodri-sec/ultrawhale"
+git-repository-icon = "github"
+edit-url-template = "https://github.com/peterlodri-sec/ultrawhale/edit/main/{path}"
+
+[output.html.search]
+enable = true
+
+[rust]
+edition = "2021"

@@ -1,0 +1,18 @@
+# Summary
+
+- [Welcome](./README.md)
+- [Quick Start](./quick-start.md)
+- [Architecture](./architecture.md)
+- [Blocks Engine](./blocks.md)
+  - [Internal Blocks](./internal-blocks.md)
+  - [Assembly + Benchmarks](./blocks-asm-audit.md)
+- [Plugins](./plugins.md)
+- [AG-UI](./agui.md)
+- [Agent Loop](./agent-loop.md)
+- [Configuration](./configuration.md)
+- [Hooks](./hooks.md)
+- [MCP](./mcp.md)
+- [Workflows](./workflows.md)
+- [Skills](./skills.md)
+- [Agents](./agents.md)
+- [ADR](./adr/001-prehook-layer.md)
