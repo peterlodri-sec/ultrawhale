@@ -429,3 +429,10 @@ func handleOrchToolsCommand(line string) string {
 		return "/orch-tools list | /orch-tools run <name>"
 	}
 }
+
+func handlePreCommitCommand() string {
+	if err := blocks.RunPreHooks("commit", nil, ""); err != nil {
+		return fmt.Sprintf("pre-commit: FAIL — %v", err)
+	}
+	return "pre-commit: PASS — gofmt + go vet clean"
+}
