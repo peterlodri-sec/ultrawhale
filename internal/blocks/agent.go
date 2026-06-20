@@ -76,6 +76,11 @@ func CompleteAgent(id string, status string, tools int, tokens int64, dur time.D
 		a.Status = status
 
 	// Ralph: observe agent completion
+	// Report to supervisor
+	if status == "failed" || status == "timeout" {
+		ReportAgentFailure(id)
+	}
+
 	ralph := GetRalph()
 	ralph.Observe(fmt.Sprintf("agent:%s", a.Role),
 		fmt.Sprintf("completed:%s", status),
