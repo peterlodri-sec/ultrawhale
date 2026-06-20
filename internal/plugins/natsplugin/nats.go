@@ -44,7 +44,7 @@ func (p *Plugin) ID() string      { return PluginID }
 func (p *Plugin) Name() string    { return "NATS EventBus" }
 func (p *Plugin) Version() string { return "0.2.0" }
 func (p *Plugin) Description() string {
-	return "Publishes ultrawhale lifecycle events to NATS JetStream for fleet orchestration."
+	return "Publishes ultrawhale lifecycle events to NATS JetStream for fleet orchestration. Multi-machine mesh: any ultrawhale instance on the same NATS cluster auto-discovers peers via whale.turn.start events."
 }
 
 func (p *Plugin) Hooks() []agent.HookHandler {

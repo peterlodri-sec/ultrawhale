@@ -109,6 +109,11 @@ func (p *Plugin) autoWire() {
 	if p.config.AutoWireLangfuse {
 		p.wireLangfuse()
 	}
+	// Supabase health check
+	if os.Getenv("SUPABASE_URL") == "" {
+		os.Setenv("SUPABASE_URL", "http://localhost:8586")
+	}
+
 	if p.config.AutoWireNATS {
 		p.wireNATS()
 	}
