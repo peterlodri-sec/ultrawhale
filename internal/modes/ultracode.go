@@ -121,7 +121,7 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 
 	// Ralph: observe ultracode phase
 	if ralph := blocks.GetRalph(); ralph != nil {
-		//ralph.Observe(
+		_ = ralph // Ralph observe pending EndPhase refactor(
 			fmt.Sprintf("ultracode:%s", name),
 			fmt.Sprintf("ultracode-%s", name),
 			status,
@@ -146,7 +146,7 @@ func (u *UltracodeMode) RollbackPhase(name string) {
 
 	// Ralph: observe ultracode phase
 	if ralph := blocks.GetRalph(); ralph != nil {
-		//ralph.Observe(
+		_ = ralph // Ralph observe pending EndPhase refactor(
 			fmt.Sprintf("ultracode:%s", name),
 			fmt.Sprintf("ultracode-%s", name),
 			status,
@@ -171,7 +171,7 @@ func (u *UltracodeMode) SkipPhase(name string) {
 
 	// Ralph: observe ultracode phase
 	if ralph := blocks.GetRalph(); ralph != nil {
-		//ralph.Observe(
+		_ = ralph // Ralph observe pending EndPhase refactor(
 			fmt.Sprintf("ultracode:%s", name),
 			fmt.Sprintf("ultracode-%s", name),
 			status,
