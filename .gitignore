@@ -67,3 +67,12 @@ promo/
 
 # --- Tool Artifacts ---
 .omx/
+
+# --- ultrawhale fork additions ---
+/ultrawhale
+/ultrawhale-once
+/ultrawhale.exe
+docker/supabase-data/
+.whale/agentfield/
+*.wasm
+*.wat

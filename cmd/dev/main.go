@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const versionPackage = "github.com/usewhale/whale/internal/build.Version"
+const versionPackage = "github.com/peterlodri-sec/ultrawhale/internal/build.Version"
 
 type devEnv struct {
 	root       string
