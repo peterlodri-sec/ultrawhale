@@ -46,7 +46,7 @@ Every phase carries a POV context:
 ```go
 type POV struct {
     Agent    string // "ultrawhale"
-    Version  string // "v1.9.0"
+    Version  string // "v4.7.0"
     Machine  string // "M1" | "dev-cx53"
     Arch     string // "arm64" | "amd64"
     Tier     string // "go" | "asm" | "gpu"
@@ -69,7 +69,7 @@ Right section shows POV: `M1·arm64` or `dev-cx53·amd64`.
 
 ## Self vs Current
 
-/self: who am I (ultrawhale v2.2.0, 6 plugins, DID).
+/self: who am I (ultrawhale v4.7.0, 6 plugins, DID).
 /current: what is happening now (idle/busy, tokens, cache, memory, cost).
 
 ## Full TUI Commands
