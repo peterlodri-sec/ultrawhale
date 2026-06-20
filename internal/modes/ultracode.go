@@ -119,15 +119,6 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 	u.emitUpdate()
 
 	// Ralph: observe ultracode phase
-	if ralph := blocks.GetRalph(); ralph != nil {
-		_ = ralph // Ralph observe pending EndPhase refactor(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("ultracode-%s", name),
-			status,
-			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
-			0,
-		)
-	}
 }
 
 // RollbackPhase undoes the writes from the last phase via blocks.Rollback.
@@ -144,15 +135,6 @@ func (u *UltracodeMode) RollbackPhase(name string) {
 	u.emitUpdate()
 
 	// Ralph: observe ultracode phase
-	if ralph := blocks.GetRalph(); ralph != nil {
-		_ = ralph // Ralph observe pending EndPhase refactor(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("ultracode-%s", name),
-			status,
-			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
-			0,
-		)
-	}
 }
 
 // SkipPhase marks a phase as skipped (e.g., "fix" when review passes).
@@ -169,15 +151,6 @@ func (u *UltracodeMode) SkipPhase(name string) {
 	u.emitUpdate()
 
 	// Ralph: observe ultracode phase
-	if ralph := blocks.GetRalph(); ralph != nil {
-		_ = ralph // Ralph observe pending EndPhase refactor(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("ultracode-%s", name),
-			status,
-			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
-			0,
-		)
-	}
 }
 
 // AutoAdvance moves to the next pending phase.
