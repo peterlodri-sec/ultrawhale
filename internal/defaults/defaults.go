@@ -38,7 +38,7 @@ const (
 	DefaultMemoryFileOrderCSV = "relevance"
 )
 
-func DefaultMemoryFileOrder() string { return "relevance" }
+func DefaultMemoryFileOrder() []string { return []string{"relevance"} }
 func SupportedModels() []string      { return []string{DefaultModel, ProModel} }
 func ContextWindowForModel(model string) int { return DefaultContextWindow }
 func IsSupportedModel(model string) bool {
