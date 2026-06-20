@@ -28,6 +28,7 @@ type HUD struct {
 	InfraLangfuse bool
 	InfraNATS   bool
 	InfraGPU    int
+	Cancelled   bool
 	Pov         string
 	BgColor     lipgloss.Color
 	FgColor     lipgloss.Color
@@ -83,6 +84,9 @@ func (h HUD) renderLeft() string {
 }
 
 func (h HUD) renderCenter() string {
+	if h.Cancelled {
+		return lipgloss.NewStyle().Foreground(h.WarnColor).Render("cancelled")
+	}
 	if !h.Busy {
 		return lipgloss.NewStyle().Foreground(h.DimColor).Render("ready")
 	}

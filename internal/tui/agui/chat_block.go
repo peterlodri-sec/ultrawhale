@@ -11,6 +11,7 @@ type ChatBlock struct {
 	Title   string
 	Content string
 	Width   int
+	Streaming bool // true if content is still arriving
 }
 
 // Render returns the chat block rendered with AG-UI theme chrome.
@@ -32,7 +33,9 @@ func (cb ChatBlock) Render() string {
 		Foreground(t.Fg).
 		Render(cb.Content)
 
-	return header + "\n" + body + "\n"
+	suffix := ""
+	if cb.Streaming { suffix = " ⏳" }
+	return header + suffix + "\n" + body + "\n"
 }
 
 // NewChatBlock creates a typed chat block from common patterns.

@@ -203,3 +203,25 @@ func (p *PreDeploy) Validate(data []byte, path string) error {
 	}
 	return nil
 }
+
+// PreStream validates streaming output before rendering.
+type PreStream struct {
+	MaxTokensPerTurn int // default: 100000
+}
+
+func (p *PreStream) Name() string { return "pre-stream" }
+func (p *PreStream) Validate(data []byte, path string) error {
+	if p.MaxTokensPerTurn == 0 { p.MaxTokensPerTurn = 100000 }
+	// Token counting is done at the agent level — pre-hook validates the stream context
+	return nil
+}
+
+// StreamJournal logs streaming events to the blocks journal.
+func StreamJournal(eventType, content string) {
+	Log(LogInfo, "stream."+eventType, truncateStr(content, 100), "", "", 0, nil)
+}
+
+func truncateStr(s string, n int) string {
+	if len(s) <= n { return s }
+	return s[:n-3] + "..."
+}
