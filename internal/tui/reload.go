@@ -8,6 +8,7 @@ import (
 	"github.com/usewhale/whale/internal/tui/agui"
 	"github.com/usewhale/whale/internal/blocks"
 	"github.com/usewhale/whale/internal/runner"
+	orchTool "github.com/usewhale/whale/internal/orchestrator/tool"
 	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/build"
 	"github.com/usewhale/whale/internal/agent"
@@ -400,5 +401,31 @@ func handleSSHCommand(line string) string {
 		run, err := blocks.SSHExec(host, cmd)
 		if err != nil { return fmt.Sprintf("ssh error: %v", err) }
 		return fmt.Sprintf("ssh started: %s@%s (%s)", run.User, run.Host, run.ID[:8])
+	}
+}
+
+func handleOrchToolsCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/orch-tools"))
+	if len(parts) == 0 {
+		return orchTool.Status() + "\n/orch-tools list | /orch-tools run <name>"
+	}
+
+	switch parts[0] {
+	case "list":
+		tools := orchTool.List()
+		var lines []string
+		for _, t := range tools {
+			lines = append(lines, fmt.Sprintf("  %-20s %s", t.Name, t.Description))
+		}
+		return strings.Join(lines, "\n")
+	case "run":
+		if len(parts) < 2 { return "usage: /orch-tools run <name>" }
+		t := orchTool.Get(parts[1])
+		if t == nil { return fmt.Sprintf("tool not found: %s", parts[1]) }
+		out, err := t.Execute()
+		if err != nil { return fmt.Sprintf("%s error: %v\n%s", parts[1], err, out) }
+		return fmt.Sprintf("%s: %s", parts[1], string(out))
+	default:
+		return "/orch-tools list | /orch-tools run <name>"
 	}
 }
