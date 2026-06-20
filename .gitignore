@@ -85,3 +85,4 @@ docker/supabase-data/
 *.prof
 *.pprof
 *.test
+deploy-out/
