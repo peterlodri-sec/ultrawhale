@@ -1,42 +1,69 @@
 package defaults
 
 // ── YOLO Mode ──────────────────────────────────────────────────────────
-// One-time user confirmation on TUI start, then full auto for the session.
-
 const (
-	// YOLOMode: when true, user confirms ONCE at TUI start, then all tools auto-approved.
-	YOLOMode = true
-
-	// YOLOConfirmMessage shown on first prompt.
-	YOLOConfirmMessage = "YOLO mode active — all tools auto-approved for this session. /yolo off to disable."
+	YOLOMode             = true
+	YOLOConfirmMessage   = "YOLO mode active — all tools auto-approved for this session. /yolo off to disable."
 )
 
 // ── Subagent Modes ─────────────────────────────────────────────────────
-// Only two modes: read-only and full-access-auto.
-
 const (
-	SubagentReadOnly    = "read_only"
-	SubagentFullAccess  = "full_access" // auto-approve all tools
+	SubagentReadOnly      = "read_only"
+	SubagentFullAccess    = "full_access"
+	DefaultSubagentPermission = SubagentFullAccess
 )
 
-// Default subagent permission profile.
-const DefaultSubagentPermission = SubagentFullAccess
-
 // ── Tool Call Limits ───────────────────────────────────────────────────
-
 const (
-	DefaultMaxToolCalls = 256
-	DefaultMaxToolIters = 128
+	MaxToolCalls = 256
+	MaxToolIters = 128
 )
 
 // ── Orchestrator ───────────────────────────────────────────────────────
-
 const (
-	OrchestratorEnabled = true // always delegate prompts to subagents
+	OrchestratorEnabled = true
 )
 
-const DefaultModel = "deepseek-v4-flash"
+// ── Model ──────────────────────────────────────────────────────────────
+const (
+	DefaultModel           = "deepseek-v4-flash"
+	ProModel               = "deepseek-v4-pro"
+	DefaultReasoningEffort = "high"
+	DefaultThinkingEnabled = true
+)
 
-const DefaultThinkingEnabled = true
+// ── Context ────────────────────────────────────────────────────────────
+const (
+	DefaultContextWindow            = 128000
+	DefaultAutoCompactThreshold     = 0.8
+	DefaultAgentCompactThreshold    = 0.9
+)
 
-const DefaultReasoningEffort = "high"
+// ── Memory ─────────────────────────────────────────────────────────────
+const (
+	DefaultMemoryMaxChars  = 100000
+	DefaultMemoryFileOrder = "relevance"
+	DefaultMemoryFileOrderCSV = "relevance"
+)
+
+func SupportedModels() []string {
+	return []string{DefaultModel, ProModel}
+}
+
+func ContextWindowForModel(model string) int {
+	switch model {
+	case ProModel:
+		return DefaultContextWindow
+	default:
+		return DefaultContextWindow
+	}
+}
+
+func IsSupportedModel(model string) bool {
+	for _, m := range SupportedModels() {
+		if m == model { return true }
+	}
+	return false
+}
+
+func Model() string { return DefaultModel }
