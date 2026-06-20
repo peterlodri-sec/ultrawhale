@@ -91,7 +91,7 @@ func (h HUD) renderCenter() string {
 		return lipgloss.NewStyle().Foreground(h.DimColor).Render("ready")
 	}
 	var parts []string
-	parts = append(parts, lipgloss.NewStyle().Foreground(h.WarnColor).Render("● "+formatDuration(h.Elapsed)))
+	parts = append(parts, lipgloss.NewStyle().Foreground(h.WarnColor).Render(spinnerTick()+" "+formatDuration(h.Elapsed)))
 	if h.TokenCount > 0 {
 		parts = append(parts, lipgloss.NewStyle().Foreground(h.FgColor).Render(fmt.Sprintf("%dt", h.TokenCount)))
 	}
