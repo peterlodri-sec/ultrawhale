@@ -64,9 +64,20 @@ func GetCurrent() *Current {
 // UpdateCurrent atomically updates the runtime state.
 func UpdateCurrent(fn func(*Current)) {
 	c := GetCurrent()
-	clone := *c
-	fn(&clone)
-	currentState.Store(&clone)
+	clone := &Current{
+		PromptTokens:     c.PromptTokens,
+		CompletionTokens: c.CompletionTokens,
+		TotalTokens:      c.TotalTokens,
+		TokensPerSec:     c.TokensPerSec,
+		CacheHitPct:      c.CacheHitPct,
+		MemoryMB:         c.MemoryMB,
+		CostUSD:          c.CostUSD,
+		Tier:             c.Tier,
+		ActiveHooks:      c.ActiveHooks,
+		QueuedPrompts:    c.QueuedPrompts,
+	}
+	fn(clone)
+	currentState.Store(clone)
 }
 
 // ── Current API ────────────────────────────────────────────────────────

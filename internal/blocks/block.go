@@ -91,7 +91,7 @@ func Write(path string, content []byte) (*Block, error) {
 		return nil, err
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp) // clean up temp file
+		_ = os.Remove(tmp) // clean up temp file
 		Log(LogError, "blocks.Write", path, b.Ref, prevRef, time.Since(start), err)
 		return nil, err
 	}

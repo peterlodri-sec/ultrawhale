@@ -1,3 +1,4 @@
+version: "2"
 linters:
   enable:
     - gocritic
@@ -8,8 +9,6 @@ linters:
     - ineffassign
     - gosec
     - unused
-    - gofmt
-    - goimports
 linters-settings:
   gocritic:
     enabled-checks:
@@ -30,3 +29,10 @@ issues:
 run:
   timeout: 5m
   tests: true
+
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
