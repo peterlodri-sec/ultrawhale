@@ -3,6 +3,7 @@ package blocks
 import (
 	"fmt"
 	"bytes"
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -482,4 +483,40 @@ func TestComplexityScore(t *testing.T) {
 		}
 	}
 	t.Log("Complexity scores OK")
+}
+
+func BenchmarkMMapRead(b *testing.B) {
+	dir := b.TempDir()
+	path := filepath.Join(dir, "mmap-bench.txt")
+	content := bytes.Repeat([]byte("hello world "), 6554) // ~64KB
+	os.WriteFile(path, content, 0o644)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		blk, err := MMapRead(path)
+		if err != nil { b.Fatal(err) }
+		blk.Unmap()
+	}
+}
+
+func BenchmarkMMapVsRead(b *testing.B) {
+	dir := b.TempDir()
+	path := filepath.Join(dir, "vs.txt")
+	content := bytes.Repeat([]byte("benchmark comparison "), 10000) // ~100KB
+	os.WriteFile(path, content, 0o644)
+
+	b.Run("mmap", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			blk, _ := MMapRead(path)
+			blk.Unmap()
+		}
+	})
+	b.Run("osRead", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			os.ReadFile(path)
+		}
+	})
 }
