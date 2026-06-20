@@ -272,6 +272,3 @@ func (m model) layoutDims() (mainWidth, bodyHeight int) {
 }
 
 func (m model) chatRenderWidth() int {
-	mainWidth, _ := m.layoutDims()
-	return max(20, max(10, mainWidth-2))
-}
