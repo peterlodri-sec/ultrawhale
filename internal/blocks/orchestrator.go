@@ -87,6 +87,13 @@ func InitOrchestrator(sessionID string) *Orchestrator {
 
 	orchestrator = o
 
+	// Initialize dyad if running on known machines
+	if o.POV.Machine == "M1" || o.POV.Machine == "dev-cx53" {
+		peer := "dev-cx53"
+		if o.POV.Machine == "dev-cx53" { peer = "M1" }
+		InitDyad(peer, "amd64", "go")
+	}
+
 	// Load previously learned Ralph patterns from brain
 	ralph := GetRalph()
 	loaded := ralph.LoadFromBrain()

@@ -15,4 +15,3 @@
 - [Workflows](./workflows.md)
 - [Skills](./skills.md)
 - [Agents](./agents.md)
-- [ADR](./adr/001-prehook-layer.md)

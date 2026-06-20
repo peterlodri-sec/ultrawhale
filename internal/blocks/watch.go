@@ -147,3 +147,18 @@ func WatchRepo() error {
 
 // GetWatcher returns the global watcher.
 func GetWatcher() *Watcher { return globalWatcher }
+
+
+// StartWatchAndRebuild watches the repo and triggers repomap rebuilds.
+func StartWatchAndRebuild() {
+	WatchRepo()
+	GetWatcher().Start()
+	
+	go func() {
+		for ev := range GetWatcher().Events() {
+			if strings.HasSuffix(ev.Path, ".go") || strings.HasSuffix(ev.Path, ".py") || strings.HasSuffix(ev.Path, ".zig") {
+				Log(LogInfo, "blocks.Watch", fmt.Sprintf("change detected: %s", ev.Path), "", "", 0, nil)
+			}
+		}
+	}()
+}

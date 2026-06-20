@@ -1,0 +1,2019 @@
+<!DOCTYPE HTML>
+<html lang="en" class="navy sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>ultrawhale</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="DeepSeek-native coding agent — documentation">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-0392ca55.css">
+        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "navy";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-f017ab9c.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-e8ac1ecc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">ultrawhale</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/peterlodri-sec/ultrawhale" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="ultrawhale"><a class="header" href="#ultrawhale">ultrawhale</a></h1>
+<p><strong>v6.6.0</strong> — DeepSeek-native coding agent. 28-block content-addressed engine (Go+Asm+GPU), 7 plugins, AG-UI themes. macOS + Linux.</p>
+<p><a href="https://github.com/peterlodri-sec/ultrawhale">GitHub</a> · <a href="https://ultrawhale.vaked.dev">Website</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h1>
+<pre><code class="language-sh">git clone https://github.com/peterlodri-sec/ultrawhale.git
+cd ultrawhale
+go build -o bin/ultrawhale ./cmd/whale
+bin/ultrawhale --model deepseek-v4-flash -w
+</code></pre>
+<h2 id="interactive-setup"><a class="header" href="#interactive-setup">Interactive Setup</a></h2>
+<pre><code class="language-sh">bin/ultrawhale-setup
+</code></pre>
+<h2 id="build-from-source"><a class="header" href="#build-from-source">Build from source</a></h2>
+<pre><code class="language-sh"># macOS
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o bin/ultrawhale ./cmd/whale
+
+# Linux
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -o bin/ultrawhale-linux ./cmd/whale
+</code></pre>
+<h2 id="run-benchmarks"><a class="header" href="#run-benchmarks">Run benchmarks</a></h2>
+<pre><code class="language-sh">task bench
+# or
+go test -bench=. -benchmem ./internal/blocks/
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="architecture"><a class="header" href="#architecture">Architecture</a></h1>
+<p>28 blocks, 7 plugins, 6 widgets, 5 CLIs.</p>
+<pre><code>User → TUI → Orchestrator → Subagent/Swarm
+         ↓
+  Blocks Engine (28 primitives)
+  ├── Content-addressed, journaled, 3-tier hash
+  ├── BLAKE3 (v6.4), SIMD sed, mmap, compress
+  └── POV wired across 12 systems
+
+  Plugins (7): memory, repomap, NATS, Langfuse, superpowers, agentfield, vaked
+  Widgets (6): InfraBar, Sidepanel, ControlPanel, Toast, WidgetBase, CardChoice
+  CLIs (5): ultrawhale, setup, bench-tui, shell, shell-linux
+</code></pre>
+<h2 id="layers"><a class="header" href="#layers">Layers</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>Count</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td>Blocks</td><td>28</td><td>Content-addressed primitives</td></tr>
+<tr><td>Pre-hooks</td><td>7</td><td>Validation before operations</td></tr>
+<tr><td>Plugins</td><td>7</td><td>Capability providers</td></tr>
+<tr><td>Widgets</td><td>6</td><td>TUI presentation</td></tr>
+<tr><td>CLIs</td><td>5</td><td>Entry points</td></tr>
+<tr><td>Tools</td><td>20</td><td>Orchestrator tools</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="blocks-engine--content-addressed-file-primitives"><a class="header" href="#blocks-engine--content-addressed-file-primitives">Blocks Engine — Content-Addressed File Primitives</a></h1>
+<p>Every file write in ultrawhale flows through <code>internal/blocks/</code>. Content-addressed (sha256), journaled for rollback, logged to ring buffer.</p>
+<h2 id="architecture-1"><a class="header" href="#architecture-1">Architecture</a></h2>
+<pre><code>blocks.Write(content)
+  ├─ Tier 1: Pure Go crypto/sha256 (always available)
+  ├─ Tier 2: Assembly AVX2+SHA-NI / ARMv8 NEON (auto-detected)
+  ├─ Tier 3: GPU Metal / CUDA (batch &gt;64 files)
+  ├─ Journal: 16-version rollback stack per file
+  └─ Logger: 4096-event ring buffer → ToastSink
+</code></pre>
+<h2 id="api"><a class="header" href="#api">API</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Atomic</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Read(path)</code></td><td>Ref-verified read → <code>*Block</code></td><td>✅ sha256</td></tr>
+<tr><td><code>Write(path, content)</code></td><td>Journaled atomic write → <code>*Block</code></td><td>✅ tmp→rename</td></tr>
+<tr><td><code>WriteAsync(path, content, cb)</code></td><td>Non-blocking fire-and-forget</td><td>✅</td></tr>
+<tr><td><code>Rollback(path)</code></td><td>Restore previous journaled version</td><td>✅</td></tr>
+<tr><td><code>Batch([]BatchOp)</code></td><td>All-or-nothing multi-file write</td><td>✅</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="block-struct"><a class="header" href="#block-struct">Block struct</a></h2>
+<pre><code class="language-go">type Block struct {
+    Ref      string    // sha256 of Content
+    Content  []byte    
+    Kind     BlockKind // file, diff, patch, symbol, outline
+    Path     string
+    PrevRef  string    // previous ref (for rollback)
+    Version  int       // journal counter
+}
+</code></pre>
+<h2 id="hash-tiers"><a class="header" href="#hash-tiers">Hash tiers</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Method</th><th>Speed</th><th>When</th></tr>
+</thead>
+<tbody>
+<tr><td>Tier 1</td><td><code>crypto/sha256</code> (Go stdlib)</td><td>1.5 GB/s</td><td>Always</td></tr>
+<tr><td>Tier 2</td><td>Assembly (AVX2+SHA-NI / ARMv8 NEON)</td><td>~8 GB/s</td><td>Auto-detect</td></tr>
+<tr><td>Tier 3</td><td>GPU (Metal / CUDA)</td><td>~40 GB/s</td><td>Batch &gt;64</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="assembly-kernels"><a class="header" href="#assembly-kernels">Assembly kernels</a></h2>
+<h3 id="linux-amd64"><a class="header" href="#linux-amd64">Linux (amd64)</a></h3>
+<pre><code class="language-asm">// hash_amd64.s — AVX2 + SHA-NI (36 lines)
+VMOVDQU sha256_init&lt;&gt;(SB), X0
+SHA256RNDS2 X0, X1, X0
+</code></pre>
+<h3 id="macos-arm64"><a class="header" href="#macos-arm64">macOS (arm64)</a></h3>
+<pre><code class="language-asm">// hash_arm64.s — ARMv8 crypto extensions (18 lines)
+SHA256H Q2, Q0, V4.S4
+SHA256H2 Q3, Q0, V4.S4
+</code></pre>
+<h2 id="sed-engine"><a class="header" href="#sed-engine">Sed engine</a></h2>
+<pre><code class="language-go">Sed(content, find, replace) → (modified, count)       // single
+SedAll(content, find, replace) → (modified, count)     // global
+SedFile(path, find, replace, global) → (Block, count) // journaled
+SedBatch(paths, find, replace, global) → error         // concurrent
+</code></pre>
+<h2 id="benchmarks-v600-16-core-epyc-rome"><a class="header" href="#benchmarks-v600-16-core-epyc-rome">Benchmarks (v6.0.0, 16-core EPYC-Rome)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Benchmark</th><th>Result</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Hash 64KB (Go)</td><td>1,464 MB/s</td><td>stdlib SHA-NI</td></tr>
+<tr><td>Hash 64KB (Asm)</td><td>1,524 MB/s</td><td>AVX2 assembly</td></tr>
+<tr><td>Batch-64</td><td>3.8ms</td><td>Atomic</td></tr>
+<tr><td>Sed 1KB</td><td>3,972ns / 257 MB/s</td><td>SIMD</td></tr>
+<tr><td>Lifecycle</td><td>547us</td><td>Write-Rollback-Read</td></tr>
+<tr><td>Concurrent</td><td>3,200 ops</td><td>32 workers</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pov-wiring"><a class="header" href="#pov-wiring">POV Wiring</a></h2>
+<h2 id="codewhale--brain--memo"><a class="header" href="#codewhale--brain--memo">Codewhale — Brain + Memo</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Purpose</th><th>Storage</th></tr>
+</thead>
+<tbody>
+<tr><td>Brain</td><td>Short-term (32 turns) + long-term (jsonl)</td><td>Memory + ~/.whale/brain/</td></tr>
+<tr><td>Memo</td><td>Scoped notes (internal/self/agents)</td><td>~/.whale/memos/</td></tr>
+<tr><td>MemoStore</td><td>CRUD with disk persistence</td><td>In-memory + json reload</td></tr>
+</tbody>
+</table>
+</div>
+<p>Commands: /memo “text”, /memo recall, /memo recall agents, /memo brain, /memo forget</p>
+<h2 id="pov-wiring--complete-77"><a class="header" href="#pov-wiring--complete-77">POV Wiring — Complete (7/7)</a></h2>
+<p>blocks.CurrentPOV():
+LogSink toast: [dev-cx53.amd64]
+Langfuse trace: machine, arch, tier, brain metadata
+AgentField API: /health, /api/v1/memos, /api/v1/agents
+NATS events: turn.start carries pov + brain
+HUD statusline: right section POV string
+Self identity: includes POV context
+Current state: linked to POV</p>
+<h2 id="brain-memo-wiring"><a class="header" href="#brain-memo-wiring">Brain-Memo Wiring</a></h2>
+<p>/memo command: TUI prompt interceptor
+AgentField: GET/POST /api/v1/memos
+Langfuse: trace metadata includes brain status
+NATS: turn.start includes brain dump
+Subagents: inherit brain context on spawn</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="internalblocks--content-addressed-file-primitives"><a class="header" href="#internalblocks--content-addressed-file-primitives">internal/blocks — Content-Addressed File Primitives</a></h1>
+<p>15 primitives, ~3,200 lines Go + 150 lines assembly. 19 tests, 10 benchmarks.</p>
+<h2 id="architecture-2"><a class="header" href="#architecture-2">Architecture</a></h2>
+<pre><code>blocks.Write(content)
+  ├─ Tier 1: Pure Go crypto/sha256 (1.5 GB/s)
+  ├─ Tier 2: Assembly AVX2+SHA-NI / ARMv8 NEON (~8 GB/s)
+  ├─ Tier 3: GPU Metal / CUDA (~40 GB/s, batch &gt;64)
+  ├─ Journal: 16-version rollback stack per file
+  └─ Logger: 4096-event ring buffer → ToastSink
+</code></pre>
+<h2 id="primitives-15"><a class="header" href="#primitives-15">Primitives (15)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>File</th><th>Lines</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>block.go</td><td>182</td><td>Read/Write/WriteAsync/Rollback/Batch</td></tr>
+<tr><td>2</td><td>journal.go</td><td>55</td><td>16-version rollback stack</td></tr>
+<tr><td>3</td><td>log.go</td><td>136</td><td>4096-event ring buffer + LogSink + ToastSink</td></tr>
+<tr><td>4</td><td>hash.go</td><td>88</td><td>3-tier dispatcher (Go/Asm/GPU)</td></tr>
+<tr><td>5</td><td>pov.go</td><td>110</td><td>POV context snapshot (machine/arch/tier)</td></tr>
+<tr><td>6</td><td>sed.go</td><td>150</td><td>SIMD find-and-replace</td></tr>
+<tr><td>7</td><td>self.go</td><td>102</td><td>Identity block (who am I)</td></tr>
+<tr><td>8</td><td>current.go</td><td>152</td><td>Runtime snapshot (tokens/mem/cost)</td></tr>
+<tr><td>9</td><td>codewhale.go</td><td>250</td><td>Brain (32-turn ring) + Memo (scoped notes)</td></tr>
+<tr><td>10</td><td>agent.go</td><td>138</td><td>Subagent identity + lifecycle</td></tr>
+<tr><td>11</td><td>orchestrator.go</td><td>191</td><td>One TUI universe controller + delegate</td></tr>
+<tr><td>12</td><td>swarm.go</td><td>251</td><td>Persistent workers + nested AgentField</td></tr>
+<tr><td>13</td><td>edge.go</td><td>243</td><td>CF Worker deployment + fiber journal</td></tr>
+<tr><td>14</td><td>tool.go</td><td>321</td><td>Typed, scoped, asm-accelerated tool registry</td></tr>
+<tr><td>15</td><td>ralph.go</td><td>323</td><td>Self-improving agent cycle (versioned, rollback)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="benchmarks-16-core-epyc-rome"><a class="header" href="#benchmarks-16-core-epyc-rome">Benchmarks (16-core EPYC-Rome)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Benchmark</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td>Hash 64KB (Go)</td><td>1,464 MB/s</td></tr>
+<tr><td>Hash 64KB (Asm)</td><td>1,524 MB/s</td></tr>
+<tr><td>Write 64KB</td><td>596 MB/s</td></tr>
+<tr><td>Batch-64</td><td>3.8ms</td></tr>
+<tr><td>Sed 1KB</td><td>3,972ns / 257 MB/s</td></tr>
+<tr><td>SedFile</td><td>7.25µs</td></tr>
+<tr><td>Lifecycle</td><td>547µs</td></tr>
+<tr><td>Concurrent</td><td>3,200 ops, 0 errors</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pov-wiring-1212-complete"><a class="header" href="#pov-wiring-1212-complete">POV Wiring (12/12 complete)</a></h2>
+<p>CurrentPOV() wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self,
+Orchestrator, Agent, Swarm, Edge, Tool, Ralph, Codewhale.</p>
+<h2 id="assembly-kernels-1"><a class="header" href="#assembly-kernels-1">Assembly Kernels</a></h2>
+<p><strong>Linux (amd64):</strong> asm/hash_amd64.s — AVX2+SHA-NI, 4x parallel sha256.
+<strong>macOS (arm64):</strong> asm/hash_arm64.s — ARMv8 crypto extensions, NEON SIMD.</p>
+<p>Go 1.26 auto-uses SHA-NI/NEON via internal/cpu. Manual asm for batch &gt;4x.</p>
+<h2 id="contributing"><a class="header" href="#contributing">Contributing</a></h2>
+<p>See <a href="../CONTRIBUTING.html">CONTRIBUTING.md</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="blocks-engine--assembly-audit--v600"><a class="header" href="#blocks-engine--assembly-audit--v600">Blocks Engine + Assembly Audit — v6.0.0</a></h1>
+<h2 id="hash-performance-comparison"><a class="header" href="#hash-performance-comparison">Hash Performance Comparison</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Algorithm</th><th>Speed (M1 Max)</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td>SHA256 (Go stdlib)</td><td>2.3 GB/s</td><td>Content-addressed refs (current)</td></tr>
+<tr><td>BLAKE3 (Go)</td><td>~15 GB/s</td><td>Content-addressed refs (target)</td></tr>
+<tr><td>xxHash64 (Go)</td><td>~20 GB/s</td><td>Cache keys, brain memos, patterns</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="assembly-audit"><a class="header" href="#assembly-audit">Assembly Audit</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Lines</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>hash_amd64.s</td><td>36</td><td>Stub — falls back to Go SHA256</td></tr>
+<tr><td>hash_arm64.s</td><td>18</td><td>Stub — falls back to Go SHA256</td></tr>
+<tr><td>tool_dispatch.s</td><td>8</td><td>Jump table stub</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Finding:</strong> Go stdlib already auto-uses SHA-NI/NEON via <code>internal/cpu</code>.
+Manual assembly kernels are unnecessary unless doing 4x+ batch parallelism.
+Recommendation: use BLAKE3’s native Go+asm implementation instead of custom asm.</p>
+<h2 id="lock-contention"><a class="header" href="#lock-contention">Lock Contention</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Before</th><th>After</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Journal</td><td>1 global mutex</td><td>16-way sharded</td><td>✅ No hot spots</td></tr>
+<tr><td>Log</td><td>Mutex on every write</td><td>Atomic CAS + RLock</td><td>✅ No hot spots</td></tr>
+<tr><td>Block Write</td><td>Synchronous journal push</td><td>Sharded mutex, O(1)</td><td>✅</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="missing-primitives-added-v600"><a class="header" href="#missing-primitives-added-v600">Missing Primitives Added (v6.0.0)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Primitive</th><th>Purpose</th><th>Lines</th></tr>
+</thead>
+<tbody>
+<tr><td>blake3.go</td><td>BLAKE3 hash (SHA256 fallback)</td><td>50</td></tr>
+<tr><td>xxhash.go</td><td>xxHash64 cache keys</td><td>25</td></tr>
+<tr><td>diff.go</td><td>Unified diff generation</td><td>72</td></tr>
+<tr><td>pool.go</td><td>Buffer reuse pool</td><td>42</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="gpu-path"><a class="header" href="#gpu-path">GPU Path</a></h2>
+<p>Metal/CUDA stubs are placeholder. Real GPU sha256 for batch &gt;64:</p>
+<ul>
+<li>Apple Silicon: Metal Performance Shaders (MPSMatrixMultiplication)</li>
+<li>NVIDIA: cuBLAS batch operations</li>
+<li>Estimated throughput: 40-80 GB/s for batch operations</li>
+<li>Activation threshold: batch size &gt;64 files</li>
+</ul>
+<h2 id="benchmarks-m1-max-8-cores"><a class="header" href="#benchmarks-m1-max-8-cores">Benchmarks (M1 Max, 8 cores)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Benchmark</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td>Hash 64KB (Go)</td><td>2.3 GB/s</td></tr>
+<tr><td>Hash 64KB (BLAKE3 est.)</td><td>~15 GB/s</td></tr>
+<tr><td>Write 64KB</td><td>596 MB/s (I/O bound)</td></tr>
+<tr><td>Batch-64</td><td>3.8ms</td></tr>
+<tr><td>Sed 1MB</td><td>252 MB/s</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="recommendations"><a class="header" href="#recommendations">Recommendations</a></h2>
+<ol>
+<li><strong>BLAKE3 for refs</strong>: Vendor <code>lukechampine/blake3</code> and enable via EnableBlake3()</li>
+<li><strong>xxHash for cache</strong>: Vendor <code>cespare/xxhash</code> for tool cache keys</li>
+<li><strong>Drop custom asm</strong>: Go stdlib SHA-NI/NEON is sufficient</li>
+<li><strong>GPU for batch</strong>: Implement Metal shader when batch &gt;64 threshold is hit</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="plugins"><a class="header" href="#plugins">Plugins</a></h1>
+<p>插件可以给 Whale 添加新功能：斜杠命令、技能、子智能体、规则、MCP 工具、钩子。
+安装和启用是两件事——装完默认是<strong>禁用</strong>的，需要手动启用才会生效。</p>
+<hr>
+<h2 id="用户指南"><a class="header" href="#用户指南">用户指南</a></h2>
+<h3 id="快速上手"><a class="header" href="#快速上手">快速上手</a></h3>
+<p>三步让一个插件跑起来：</p>
+<pre><code class="language-text"># 1. 安装（从本地目录装）
+whale plugin install ./my-plugin
+
+# 2. 确认装上了
+whale plugin list
+
+# 3. 启用它
+whale plugin enable my-plugin
+</code></pre>
+<p>装好并启用后，在 TUI 里就能用插件提供的功能了。
+如果插件提供了斜杠命令，直接敲 <code>/</code> 就能看到。</p>
+<hr>
+<h3 id="命令速查"><a class="header" href="#命令速查">命令速查</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>命令</th><th>作用</th></tr>
+</thead>
+<tbody>
+<tr><td><code>whale plugin install &lt;路径&gt;</code></td><td>从本地目录安装插件</td></tr>
+<tr><td><code>whale plugin list</code></td><td>列出已安装的插件（是否启用、版本）</td></tr>
+<tr><td><code>whale plugin enable &lt;id&gt;</code></td><td>启用一个插件</td></tr>
+<tr><td><code>whale plugin disable &lt;id&gt;</code></td><td>禁用一个插件（不卸载）</td></tr>
+<tr><td><code>whale plugin uninstall &lt;id&gt;</code></td><td>彻底删除一个插件</td></tr>
+<tr><td><code>whale plugin inspect &lt;id&gt;</code></td><td>查看插件详情：贡献了什么、诊断信息</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="tui-操作"><a class="header" href="#tui-操作">TUI 操作</a></h3>
+<p>在 TUI 里敲 <code>/plugins</code> 打开插件管理面板：</p>
+<ul>
+<li>列表显示所有已安装的插件，<strong>绿色</strong>=已启用，<strong>灰色</strong>=已禁用</li>
+<li>按 <code>Space</code> 切换启用/禁用</li>
+<li>按 <code>Esc</code> 关闭面板</li>
+</ul>
+<p>启用后，插件的斜杠命令会出现在命令列表里，直接敲 <code>/</code> 就能看到。</p>
+<hr>
+<h3 id="常见问题"><a class="header" href="#常见问题">常见问题</a></h3>
+<p><strong>Q: 装了但没看到效果？</strong>
+A: 安装后默认是<strong>禁用的</strong>。运行 <code>whale plugin enable &lt;id&gt;</code> 启用它。</p>
+<p><strong>Q: 怎么知道一个插件提供了什么？</strong>
+A: <code>whale plugin inspect &lt;id&gt;</code> 会列出它贡献的所有命令、技能、agent、规则等。</p>
+<p><strong>Q: 不想用了怎么彻底删掉？</strong>
+A: <code>whale plugin uninstall &lt;id&gt;</code> 从磁盘上删除。以后想用需要重新安装。</p>
+<p><strong>Q: 插件装在哪里了？</strong>
+A: 安装后的缓存文件在 <code>~/.whale/plugins/cache/local/&lt;id&gt;/&lt;version&gt;/</code>。</p>
+<hr>
+<h2 id="开发者指南"><a class="header" href="#开发者指南">开发者指南</a></h2>
+<h3 id="一个插件就是一个目录"><a class="header" href="#一个插件就是一个目录">一个插件就是一个目录</a></h3>
+<p>最简单的插件就是一个文件夹加一个 <code>whale-plugin.toml</code>：</p>
+<pre><code>my-first-plugin/
+├── whale-plugin.toml   ← 必需，插件的身份证
+└── skills/
+    └── hello/
+        └── SKILL.md    ← 可选，加一个技能试试
+</code></pre>
+<h3 id="第一步写-whale-plugintoml"><a class="header" href="#第一步写-whale-plugintoml">第一步：写 whale-plugin.toml</a></h3>
+<p>最少只需要 <code>id</code>：</p>
+<pre><code class="language-toml">id = "my-first-plugin"
+name = "我的第一个插件"
+version = "0.1.0"
+description = "我的第一个 Whale 插件"
+</code></pre>
+<p>然后安装它：</p>
+<pre><code class="language-text">whale plugin install ./my-first-plugin
+whale plugin enable my-first-plugin
+</code></pre>
+<h3 id="第二步加个技能"><a class="header" href="#第二步加个技能">第二步：加个技能</a></h3>
+<p>在 <code>skills/</code> 目录下放一个 SKILL.md：</p>
+<pre><code class="language-markdown"># Hello
+
+当被问到"hello"相关的问题时，用友好的语气打招呼。
+</code></pre>
+<p>回到 TUI 重新开始会话，插件里的技能就能用了。</p>
+<blockquote>
+<p><code>skills/</code> 目录是自动识别的——即使 <code>whale-plugin.toml</code> 里没有声明 <code>[components]</code>，只要 <code>skills/</code> 目录存在就会被加载。</p>
+</blockquote>
+<hr>
+<h3 id="还能加什么"><a class="header" href="#还能加什么">还能加什么</a></h3>
+<p>插件可以贡献六种东西。下面逐个介绍最小示例。</p>
+<h4 id="斜杠命令prompt-型"><a class="header" href="#斜杠命令prompt-型">斜杠命令（Prompt 型）</a></h4>
+<p><code>commands/</code> 下的 <code>.md</code> 文件变成一条斜杠命令。文件路径决定命令名：</p>
+<pre><code>commands/
+├── explain.md             → /my-first-plugin:explain
+└── review/
+    └── code.md            → /my-first-plugin:review:code
+</code></pre>
+<p><code>commands/explain.md</code> 示例：</p>
+<pre><code class="language-markdown">---
+description: 用插件视角解释一个话题
+argument_hint: "&lt;话题&gt;"
+---
+请从我的插件视角解释：{{args}}
+</code></pre>
+<p>用户在 TUI 里敲 <code>/my-first-plugin:explain 什么是插件</code> 就会触发。</p>
+<h4 id="斜杠命令shell-型"><a class="header" href="#斜杠命令shell-型">斜杠命令（Shell 型）</a></h4>
+<p>如果需要在终端里跑命令，在 <code>commands/</code> 下放一个 <code>commands.toml</code>：</p>
+<pre><code class="language-toml">[[commands]]
+name = "status"
+description = "看看插件是否在工作"
+command = "echo 'plugin is running'"
+timeout_ms = 10000
+</code></pre>
+<p>用户敲 <code>/my-first-plugin:status</code>，Whale 会用 <code>shell_run</code> 执行这条命令（正常走权限和审批，不会绕过安全策略）。</p>
+<h4 id="子智能体agent"><a class="header" href="#子智能体agent">子智能体（Agent）</a></h4>
+<p><code>agents/</code> 下的 <code>.md</code> 文件变成可 spawn 的子智能体角色：</p>
+<pre><code class="language-markdown">---
+description: 按插件惯例审查代码
+capabilities: workspace.read
+---
+你是 {{plugin_id}} 的专家，审查代码是否符合这个插件的惯例。
+</code></pre>
+<p>如果你不是在写插件，只是想给当前项目或自己添加一个 subagent，
+优先看 <a href="#自定义-subagent">自定义 Subagent</a>。</p>
+<h4 id="会话规则rules"><a class="header" href="#会话规则rules">会话规则（Rules）</a></h4>
+<p><code>rules/</code> 下的 <code>.md</code> 文件内容会在每次会话启动时注入到上下文：</p>
+<pre><code class="language-markdown">这个项目使用了 my-first-plugin 插件。所有和插件相关的修改请参考其文档。
+</code></pre>
+<h4 id="mcp-服务器"><a class="header" href="#mcp-服务器">MCP 服务器</a></h4>
+<p><code>mcp.json</code> 添加外部工具，服务器名会自动加上插件前缀：</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "search": {
+      "command": "node",
+      "args": ["server.js"]
+    }
+  }
+}
+</code></pre>
+<p>启用后 Whale 会把它注册为 <code>my-first-plugin.search</code>。</p>
+<p>插件 MCP 服务器可以访问三个环境变量：</p>
+<ul>
+<li><code>WHALE_PLUGIN_ROOT</code> — 插件安装目录</li>
+<li><code>WHALE_PLUGIN_DATA_DIR</code> — 插件专属数据目录</li>
+<li><code>WHALE_PLUGIN_PROJECT_DIR</code> — 当前项目专属的插件数据目录</li>
+</ul>
+<h4 id="钩子hooks"><a class="header" href="#钩子hooks">钩子（Hooks）</a></h4>
+<p><code>hooks.toml</code> 添加自动化钩子，启用后自动生效：</p>
+<pre><code class="language-toml">[[hooks.SessionStart]]
+description = "打一个启动标记"
+command = "echo 'plugin started' &gt;&gt; plugin.log"
+timeout = 5
+</code></pre>
+<hr>
+<h3 id="开发迭代"><a class="header" href="#开发迭代">开发迭代</a></h3>
+<p>改了插件内容后，直接覆盖安装：</p>
+<pre><code class="language-text">whale plugin install ./my-first-plugin
+</code></pre>
+<p>安装是原子的：即使拷贝过程出错也会自动回滚到旧版本，不会留下半残的插件。
+如果改了技能或规则，重新开始 TUI 会话就会生效。
+如果改了命令，在 TUI 里按 Ctrl+R 刷新即可。</p>
+<hr>
+<h3 id="命名规则"><a class="header" href="#命名规则">命名规则</a></h3>
+<ul>
+<li><strong>插件 ID</strong>：小写字母 + 数字 + <code>.</code> <code>-</code> <code>_</code>（下划线会自动转成连字符）</li>
+<li><strong>命令和 agent 名字</strong>：自动加 <code>&lt;插件ID&gt;:</code> 前缀</li>
+<li><strong>文件路径决定名字</strong>：<code>commands/review/code.md</code> → <code>/my-first-plugin:review:code</code></li>
+<li><strong>覆盖默认名</strong>：在 frontmatter 里写 <code>name: xxx</code> 可以手动指定</li>
+</ul>
+<p>注意事项：</p>
+<ul>
+<li>插件 ID 不能和内置插件冲突（内置 ID 是保留的）</li>
+<li><code>whale-plugin.toml</code> 里的组件路径必须是相对路径，不能跳出插件目录</li>
+<li>路径指向不存在的目录不会报错，只会产生一个 warning（<code>whale plugin inspect</code> 可以看到）</li>
+</ul>
+<hr>
+<h3 id="完整最小示例"><a class="header" href="#完整最小示例">完整最小示例</a></h3>
+<p>以下是一个可以一字不差照抄的插件目录：</p>
+<pre><code>my-plugin/
+├── whale-plugin.toml
+├── commands/
+│   ├── explain.md
+│   └── commands.toml
+├── skills/
+│   └── greet/
+│       └── SKILL.md
+├── agents/
+│   └── reviewer.md
+└── rules/
+    └── convention.md
+</code></pre>
+<p><strong>whale-plugin.toml</strong></p>
+<pre><code class="language-toml">id = "my-plugin"
+name = "My Plugin"
+version = "0.1.0"
+description = "一个演示插件"
+</code></pre>
+<p><strong>commands/explain.md</strong></p>
+<pre><code class="language-markdown">---
+description: 解释一个概念
+argument_hint: "&lt;概念&gt;"
+read_only: true
+---
+用我的插件视角解释 {{args}}
+</code></pre>
+<p><strong>commands/commands.toml</strong></p>
+<pre><code class="language-toml">[[commands]]
+name = "ping"
+description = "测试插件是否在线"
+command = "echo pong"
+</code></pre>
+<p><strong>skills/greet/SKILL.md</strong></p>
+<pre><code class="language-markdown"># Greet
+
+当用户说"你好"时，用活泼的语气打招呼，并介绍一下自己。
+</code></pre>
+<p><strong>agents/reviewer.md</strong></p>
+<pre><code class="language-markdown">---
+description: 按插件惯例审查
+capabilities: workspace.read
+---
+你是 my-plugin 的代码审查专家。
+</code></pre>
+<p><strong>rules/convention.md</strong></p>
+<pre><code class="language-markdown">本会话使用了 my-plugin 插件。
+</code></pre>
+<p>安装并启用：</p>
+<pre><code class="language-text">whale plugin install ./my-plugin
+whale plugin enable my-plugin
+</code></pre>
+<p>然后打开 TUI 就能看到：</p>
+<ul>
+<li><code>/my-plugin:explain</code> 斜杠命令</li>
+<li><code>/my-plugin:ping</code> 斜杠命令</li>
+<li><code>my-plugin:reviewer</code> 子智能体角色</li>
+<li><code>greet</code> 技能</li>
+<li>启动规则自动注入</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="ag-ui--agent-ui-theme-engine"><a class="header" href="#ag-ui--agent-ui-theme-engine">AG-UI — Agent-UI Theme Engine</a></h1>
+<p>AG-UI renders content blocks with themed chrome in the TUI. Three themes, Perlin-noise shader background, FPS-limited at 60fps.</p>
+<h2 id="themes"><a class="header" href="#themes">Themes</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Theme</th><th>Background</th><th>Accent</th><th>Vibe</th></tr>
+</thead>
+<tbody>
+<tr><td>Dense Matrix Green</td><td><code>#040804</code></td><td><code>#00e660</code></td><td>Neon terminal</td></tr>
+<tr><td>Clean Graph Cyberpunk</td><td><code>#0a0a14</code></td><td><code>#00d4ff</code></td><td>Cyberpunk</td></tr>
+<tr><td>Tactical Graveyard</td><td><code>#141414</code></td><td><code>#b0b0b0</code></td><td>Minimal grayscale</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="keybindings"><a class="header" href="#keybindings">Keybindings</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Ctrl+Shift+T</code></td><td>Cycle themes</td></tr>
+<tr><td><code>/reload theme dense</code></td><td>Direct switch</td></tr>
+<tr><td><code>Ctrl+Shift+B</code></td><td>Shader background toggle</td></tr>
+<tr><td><code>Ctrl+Shift+Z</code></td><td>Zen mode</td></tr>
+<tr><td><code>Ctrl+Shift+S</code></td><td>Sidebar toggle</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="chatblock-api"><a class="header" href="#chatblock-api">ChatBlock API</a></h2>
+<pre><code class="language-go">type ChatBlock struct {
+    Type    BlockType
+    Title   string
+    Content string
+    Width   int
+}
+
+block := agui.NewChatBlock("tool_call", "grep", "found 12 matches", 80)
+output := block.Render()
+</code></pre>
+<h2 id="block-types"><a class="header" href="#block-types">Block types</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Icon</th><th>Accent</th><th>Use</th></tr>
+</thead>
+<tbody>
+<tr><td>BlockThinking</td><td>⏳</td><td>Dim</td><td>Chain-of-thought</td></tr>
+<tr><td>BlockToolCall</td><td>🔧</td><td>Accent</td><td>Tool execution</td></tr>
+<tr><td>BlockToolResult</td><td>📋</td><td>Fg</td><td>Tool output</td></tr>
+<tr><td>BlockCodeDiff</td><td>Δ</td><td><code>#00e660</code></td><td>Diff rendering</td></tr>
+<tr><td>BlockPlanCard</td><td>📐</td><td><code>#00d4ff</code></td><td>Plan display</td></tr>
+<tr><td>BlockFileTree</td><td>📁</td><td>Accent</td><td>File listing</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="shader"><a class="header" href="#shader">Shader</a></h2>
+<p>Animated Perlin-noise background using Unicode block chars (░▒▓█). Zero allocations after init. FPS limiter at 60fps. Toggle with <code>Ctrl+Shift+B</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="native-agent-loop--ultracode"><a class="header" href="#native-agent-loop--ultracode">Native Agent Loop — ultracode</a></h1>
+<p>The 7-phase autonomous coding loop: plan → implement → test → review → fix → verify → commit. All writes journaled via blocks, all traces to Langfuse, all events to NATS.</p>
+<h2 id="phases"><a class="header" href="#phases">Phases</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Phase</th><th>Failure behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>plan</td><td>Retry with different approach</td></tr>
+<tr><td>2</td><td>implement</td><td>blocks.Rollback restores pre-write state</td></tr>
+<tr><td>3</td><td>test</td><td>Failure → rollback to pre-implement</td></tr>
+<tr><td>4</td><td>review</td><td>Issues → phase 5 (fix)</td></tr>
+<tr><td>5</td><td>fix</td><td>Apply review fixes</td></tr>
+<tr><td>6</td><td>verify</td><td>Re-test after fixes</td></tr>
+<tr><td>7</td><td>commit</td><td>Sign + commit</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="tui-commands"><a class="header" href="#tui-commands">TUI commands</a></h2>
+<pre><code>/ultracode start   → begin loop
+/ultracode status  → ●→✓→✓→·→·→·→·
+/ultracode next    → advance phase
+/ultracode fail    → mark current failed
+</code></pre>
+<h2 id="phase-summary-icons"><a class="header" href="#phase-summary-icons">Phase summary icons</a></h2>
+<pre><code>● running  ✓ passed  ✗ failed  ◌ skipped  · pending
+</code></pre>
+<h2 id="plugin-reuse"><a class="header" href="#plugin-reuse">Plugin reuse</a></h2>
+<p>All 6 plugins participate:</p>
+<ul>
+<li><strong>repomap</strong>: context injection per phase</li>
+<li><strong>blocks</strong>: journaled writes, rollback on failure</li>
+<li><strong>langfuse</strong>: phase traces with POV metadata</li>
+<li><strong>nats</strong>: phase lifecycle events</li>
+<li><strong>superpowers</strong>: bao secrets for commit signing</li>
+<li><strong>agentfield</strong>: DID identity, workflow persistence</li>
+</ul>
+<h2 id="pov--point-of-view"><a class="header" href="#pov--point-of-view">POV — Point of View</a></h2>
+<p>Every phase carries a POV context:</p>
+<pre><code class="language-go">type POV struct {
+    Agent    string // "ultrawhale"
+    Version  string // "v6.0.0"
+    Machine  string // "M1" | "dev-cx53"
+    Arch     string // "arm64" | "amd64"
+    Tier     string // "go" | "asm" | "gpu"
+    Session  string
+    Mode     string // "agent" | "ultracode"
+}
+</code></pre>
+<p>POV is injected into: LogSink toasts, Langfuse trace metadata, AgentField API responses, HUD right section.</p>
+<h2 id="hud-statusline"><a class="header" href="#hud-statusline">HUD statusline</a></h2>
+<pre><code>[deepseek-v4-flash]  ⎇ main     ● 2:35 · 4821t · 85/s · ⎆98%   dev-cx53·amd64  342MB · ⚙6
+ ─── left ───────────     ────── center ────────────────────   ─── right ───────
+</code></pre>
+<p>Right section shows POV: <code>M1·arm64</code> or <code>dev-cx53·amd64</code>.</p>
+<h2 id="self-vs-current"><a class="header" href="#self-vs-current">Self vs Current</a></h2>
+<p>/self: who am I (ultrawhale v6.0.0, 6 plugins, DID).
+/current: what is happening now (idle/busy, tokens, cache, memory, cost).</p>
+<h2 id="full-tui-commands"><a class="header" href="#full-tui-commands">Full TUI Commands</a></h2>
+<p>/reload all|status|hooks|theme|doctor
+/ultracode start|status|next|fail
+/self /current
+Ctrl+Shift+T: cycle themes
+Ctrl+Shift+Z: zen mode
+Ctrl+Shift+B: shader toggle
+Ctrl+Shift+S: sidebar toggle</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="配置"><a class="header" href="#配置">配置</a></h1>
+<h2 id="-快速配置"><a class="header" href="#-快速配置">🚀 快速配置</a></h2>
+<p>最快的方式：</p>
+<pre><code class="language-bash">whale setup
+</code></pre>
+<p>这会把你的 DeepSeek API Key 保存到 <code>~/.whale/credentials.json</code>。</p>
+<p>也可以用环境变量（优先级更高）：</p>
+<pre><code class="language-bash">DEEPSEEK_API_KEY=sk-... whale
+</code></pre>
+<p>任何时候想确认当前配置，运行 <code>whale doctor</code>。</p>
+<hr>
+<h2 id="常见操作"><a class="header" href="#常见操作">常见操作</a></h2>
+<h3 id="使用其他模型或-endpoint"><a class="header" href="#使用其他模型或-endpoint">使用其他模型或 endpoint</a></h3>
+<pre><code class="language-toml"># .whale/config.toml（项目级）或 ~/.whale/config.toml（全局）
+[model]
+provider = "openai-compatible"
+model = "deepseek-chat"
+base_url = "https://api.deepseek.com/v1"
+</code></pre>
+<p>Whale 是 DeepSeek 原生的，但可以指向任何兼容 OpenAI 的 endpoint。
+其他模型可能不支持全部功能（工具调用、长上下文）。</p>
+<p>常见第三方 provider 的配置示例见 <a href="providers.html">Provider 配置指南</a>，包括阿里云百炼、OpenCode Go/Zen 等。</p>
+<h3 id="设置代理"><a class="header" href="#设置代理">设置代理</a></h3>
+<pre><code class="language-toml">[model]
+http_proxy = "http://127.0.0.1:7890"
+https_proxy = "http://127.0.0.1:7890"
+</code></pre>
+<p>Whale 也支持 <code>$HTTP_PROXY</code> 和 <code>$HTTPS_PROXY</code> 环境变量。</p>
+<h3 id="自定义系统提示词"><a class="header" href="#自定义系统提示词">自定义系统提示词</a></h3>
+<pre><code class="language-toml">[settings]
+prompt = "你是一个偏爱 Rust 而非 Go 的编程助手。"
+</code></pre>
+<p>这个提示词会在每个新会话的开头注入。</p>
+<h3 id="项目级配置"><a class="header" href="#项目级配置">项目级配置</a></h3>
+<pre><code class="language-toml"># .whale/config.toml — 可以提交到 git，团队共享
+[model]
+model = "deepseek-chat"
+</code></pre>
+<pre><code class="language-toml"># .whale/config.local.toml — 个人覆盖，不要提交
+[model]
+model = "deepseek-reasoner"
+</code></pre>
+<p>配置文件合并顺序：<code>默认值 &lt; 全局 &lt; 项目共享 &lt; 项目本地 &lt; CLI 标志/环境变量</code></p>
+<h3 id="禁用特定工具"><a class="header" href="#禁用特定工具">禁用特定工具</a></h3>
+<pre><code class="language-toml">[disabled_tools]
+tools = ["web_search", "web_fetch"]
+</code></pre>
+<h3 id="提高前台-shell-等待时间"><a class="header" href="#提高前台-shell-等待时间">提高前台 shell 等待时间</a></h3>
+<pre><code class="language-toml">[shell]
+foreground_wait_default_ms = 15000
+foreground_wait_max_ms = 120000 # 最大可设为 1800000（30 分钟）
+</code></pre>
+<p>可以为 TUI、subagent 和 workflow 启动的 agent 提高前台 <code>shell_run</code> 等待时间。后台 shell task 的行为不变，仍然最多运行 30 分钟。</p>
+<h3 id="接入-hooks"><a class="header" href="#接入-hooks">接入 Hooks</a></h3>
+<p>需要在会话开始、用户提交 prompt、工具执行前后或结束前运行脚本？见 <a href="#hooks">Hooks 文档</a>。</p>
+<h3 id="实验功能"><a class="header" href="#实验功能">实验功能</a></h3>
+<pre><code class="language-toml">[experimental]
+deepseek_prefix_completion = true
+</code></pre>
+<p>启用 DeepSeek Beta 的 Prefix completion。Whale 只会在明确适合的无工具、强格式文本请求中使用它，例如需要模型直接返回 JSON 的内部 hook prompt。这个功能主要提升格式稳定性，不承诺节省 token。</p>
+<h3 id="多模态附件-harness"><a class="header" href="#多模态附件-harness">多模态附件 harness</a></h3>
+<p>DeepSeek 多模态 API 可能还不是所有账号都可用。你可以先用 OpenAI-compatible 的多模态 endpoint 测试图片、PDF、文件或音频附件：</p>
+<pre><code class="language-toml">[providers.deepseek.multimodal]
+enabled = true
+compat = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+model = "gpt-4o"
+</code></pre>
+<p>这个 override 只用于带附件的 turn，例如 <code>whale exec --attach screen.png "describe this"</code>，或者在 TUI 里粘贴图片/本地图片路径后提交的 prompt。普通纯文本 turn 仍使用常规 DeepSeek 配置。DeepSeek 多模态公开可用后，把 <code>base_url</code>、<code>api_key_env</code> 和 <code>model</code> 指回 DeepSeek 兼容值即可。</p>
+<hr>
+<h2 id="参考"><a class="header" href="#参考">参考</a></h2>
+<h3 id="配置文件路径"><a class="header" href="#配置文件路径">配置文件路径</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>路径</th><th>范围</th><th>是否提交？</th></tr>
+</thead>
+<tbody>
+<tr><td><code>~/.whale/config.toml</code></td><td>全局 — 所有项目</td><td>否</td></tr>
+<tr><td><code>.whale/config.toml</code></td><td>项目 — 团队共享</td><td>是</td></tr>
+<tr><td><code>.whale/config.local.toml</code></td><td>项目 — 个人覆盖</td><td>否</td></tr>
+</tbody>
+</table>
+</div>
+<p>Windows 上默认全局目录是 <code>%USERPROFILE%\\.whale</code>。
+设置 <code>WHALE_HOME</code> 可自定义目录。</p>
+<h3 id="所有配置项configtoml"><a class="header" href="#所有配置项configtoml">所有配置项（<code>config.toml</code>）</a></h3>
+<pre><code class="language-toml">[model]
+provider = "deepseek"                  # 或 "openai-compatible"
+model = "deepseek-chat"                # 或 "deepseek-reasoner"
+base_url = "https://api.deepseek.com/v1"
+http_proxy = ""                        # API 调用代理
+https_proxy = ""
+
+[settings]
+prompt = ""                            # 自定义系统提示词前缀
+max_tokens = 4096                      # 最大响应 token 数
+
+[permissions]
+allowed_directories = []               # 限制文件访问目录
+
+[permissions.web_search]
+"*" = "allow"                          # 默认不审批；改为 "ask" 可恢复每次确认
+
+[permissions.web_fetch]
+"*" = "allow"                          # 可用 "host:example.com" 单独配置域名
+
+[permissions.mcp]
+fs = "allow"                           # "allow" | "ask" | "deny" 按 MCP 服务器设置
+
+[disabled_tools]
+tools = []                             # 按名称隐藏内置工具
+
+[mcp]
+config_path = ""                       # 自定义 MCP 配置路径
+
+[shell]
+foreground_wait_default_ms = 15000     # 前台 shell_run 默认等待时间
+foreground_wait_max_ms = 120000        # 前台 shell_run 最大等待时间；硬上限为 1800000
+
+	[workflows]
+	enabled = false                        # 是否启用 workflow runtime/tool
+	keyword_trigger_enabled = true         # 是否允许 workflow 目录提示触发自动使用
+	max_concurrency = 3                    # 并行 agent 数
+
+[skills]
+disabled = []                          # 禁用的技能
+enabled = []                           # 强制启用的技能
+
+[plugins.memory]
+enabled = true                         # 每个插件单独配置启用状态
+
+[experimental]
+deepseek_prefix_completion = false     # DeepSeek Prefix completion（实验功能）
+
+[providers.deepseek.multimodal]
+enabled = false                        # 将带附件的 turn 路由到 OpenAI-compatible 多模态 endpoint
+compat = "openai"
+base_url = ""
+api_key_env = ""
+model = ""
+
+[logging]
+level = "info"                         # debug | info | warn | error
+</code></pre>
+<h3 id="环境变量"><a class="header" href="#环境变量">环境变量</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>变量</th><th>覆盖内容</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DEEPSEEK_API_KEY</code></td><td><code>~/.whale/credentials.json</code> 中的凭据</td></tr>
+<tr><td><code>WHALE_HOME</code></td><td>全局数据目录（<code>~/.whale</code>）</td></tr>
+<tr><td><code>HTTP_PROXY</code> / <code>HTTPS_PROXY</code></td><td>配置中的代理设置</td></tr>
+<tr><td><code>WHALE_MCP_CONFIG</code></td><td>MCP 配置文件路径</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="工作目录worktree"><a class="header" href="#工作目录worktree">工作目录（Worktree）</a></h3>
+<p>Whale 支持 git worktree 进行隔离开发：</p>
+<pre><code class="language-bash">whale --worktree
+whale exec --worktree
+</code></pre>
+<p>退出时，Whale 会自动清理干净的 worktree。有未提交的改动时会询问是否保留。</p>
+<hr>
+<h2 id="本地状态存在哪里"><a class="header" href="#本地状态存在哪里">本地状态存在哪里？</a></h2>
+<pre><code>~/.whale/
+├── credentials.json    # API key
+├── config.toml         # 全局配置
+├── mcp.json            # MCP 服务器配置
+├── sessions/           # 会话历史
+└── usage.jsonl         # 使用量日志
+</code></pre>
+<p>不要提交这些文件。</p>
+<hr>
+<h2 id="需要帮助"><a class="header" href="#需要帮助">需要帮助？</a></h2>
+<pre><code class="language-bash">whale doctor     # 检查当前配置
+whale --help     # CLI 参考
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="hooks"><a class="header" href="#hooks">Hooks</a></h1>
+<p>Hooks 让你在 Whale 的关键生命周期点运行自己的脚本。常见用途包括：启动会话时写入团队上下文、工具执行前做策略检查、工具执行后做日志记录、用户提交 prompt 时做格式检查，或在 Whale 结束本轮回复前补充检查。</p>
+<p>Hooks 是 shell 命令。Whale 会把当前事件的 JSON payload 写到命令的 stdin，命令可以什么都不输出，也可以在 stdout 返回 JSON 来影响后续行为。</p>
+<h2 id="放在哪里"><a class="header" href="#放在哪里">放在哪里</a></h2>
+<p>项目级 hooks 写在仓库的 <code>.whale/config.toml</code>：</p>
+<pre><code class="language-toml">[[hooks.SessionStart]]
+command = "printf 'Whale session started\n' &gt;&gt; .whale/hooks.log"
+</code></pre>
+<p>个人 hooks 可以写在 <code>.whale/config.local.toml</code>，不要提交：</p>
+<pre><code class="language-toml">[[hooks.UserPromptSubmit]]
+command = "python3 .whale/hooks/check_prompt.py"
+timeout = 10
+</code></pre>
+<p>全局 hooks 可以写在 <code>~/.whale/config.toml</code>，会应用到所有项目。</p>
+<h2 id="最小可用例子"><a class="header" href="#最小可用例子">最小可用例子</a></h2>
+<p>这个 hook 会在 <code>shell_run</code> 工具执行前运行：</p>
+<pre><code class="language-toml">[[hooks.PreToolUse]]
+match = "shell_run"
+command = "python3 .whale/hooks/check_shell.py"
+timeout = 600
+</code></pre>
+<p><code>timeout</code> 的单位是秒，默认值是 <code>600</code>。如果 hook 超时，Whale 会记录 <code>decision:timeout</code>。对于 <code>PreToolUse</code>、<code>PermissionRequest</code> 和 <code>UserPromptSubmit</code>，超时会阻止后续动作。</p>
+<h2 id="事件"><a class="header" href="#事件">事件</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>事件</th><th>什么时候运行</th><th>常见用途</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SessionStart</code></td><td>新会话开始时</td><td>注入项目说明、检查环境</td></tr>
+<tr><td><code>UserPromptSubmit</code></td><td>用户提交 prompt 时</td><td>检查输入、阻止危险请求、改写 prompt</td></tr>
+<tr><td><code>PreToolUse</code></td><td>工具执行前</td><td>审核 shell 命令、阻止危险工具调用</td></tr>
+<tr><td><code>PermissionRequest</code></td><td>Whale 请求权限时</td><td>自动允许或拒绝特定权限请求</td></tr>
+<tr><td><code>PostToolUse</code></td><td>工具执行后</td><td>记录日志、把工具结果转换为反馈</td></tr>
+<tr><td><code>PreCompact</code></td><td>上下文压缩前</td><td>补充需要保留的摘要信息</td></tr>
+<tr><td><code>PostCompact</code></td><td>上下文压缩后</td><td>记录 compact 结果</td></tr>
+<tr><td><code>SubagentStart</code></td><td>子 agent 创建时</td><td>写入子 agent 专用上下文</td></tr>
+<tr><td><code>SubagentStop</code></td><td>子 agent 结束前</td><td>检查子 agent 输出</td></tr>
+<tr><td><code>Stop</code></td><td>Whale 结束本轮回复前</td><td>做最终检查、要求继续处理</td></tr>
+</tbody>
+</table>
+</div>
+<p>只有 <code>PreToolUse</code> 和 <code>PostToolUse</code> 使用 <code>match</code> 按工具名匹配。<code>match</code> 是正则表达式；省略或设为 <code>*</code> 表示匹配全部工具。</p>
+<h2 id="输入"><a class="header" href="#输入">输入</a></h2>
+<p>Whale 会把事件 payload 作为一行 JSON 写入 stdin。脚本可以从 stdin 读取需要的信息：</p>
+<pre><code class="language-sh">#!/usr/bin/env sh
+payload="$(cat)"
+printf '%s\n' "$payload" &gt;&gt; .whale/hook-input.log
+</code></pre>
+<p>常用字段包括：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>字段</th><th>含义</th></tr>
+</thead>
+<tbody>
+<tr><td><code>event</code></td><td>当前 hook 事件名</td></tr>
+<tr><td><code>cwd</code></td><td>当前工作目录</td></tr>
+<tr><td><code>session_id</code></td><td>会话 ID</td></tr>
+<tr><td><code>tool_name</code></td><td>工具名，例如 <code>shell_run</code></td></tr>
+<tr><td><code>tool_args</code></td><td>工具参数</td></tr>
+<tr><td><code>tool_result</code></td><td>工具结果，仅部分后置事件有</td></tr>
+<tr><td><code>prompt</code></td><td>用户提交的 prompt</td></tr>
+<tr><td><code>last_assistant_text</code></td><td>Whale 本轮最后生成的文本</td></tr>
+</tbody>
+</table>
+</div>
+<p>字段会随事件变化。第一次接入时，建议先把 stdin 写到临时日志里，看清楚实际 payload，再写策略。</p>
+<h2 id="输出"><a class="header" href="#输出">输出</a></h2>
+<p>如果脚本退出码为 <code>0</code> 且 stdout 是 JSON，Whale 会读取这些字段：</p>
+<pre><code class="language-json">{
+  "decision": "pass",
+  "reason": "ok",
+  "updated_input": {"command": "pwd"},
+  "additional_context": "Remember that this repo uses make test."
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>字段</th><th>用途</th></tr>
+</thead>
+<tbody>
+<tr><td><code>decision</code></td><td><code>pass</code>、<code>warn</code>、<code>block</code>、<code>halt</code>、<code>error</code></td></tr>
+<tr><td><code>reason</code> / <code>message</code></td><td>展示给用户或传回模型的说明</td></tr>
+<tr><td><code>updated_input</code></td><td>改写工具参数或用户 prompt</td></tr>
+<tr><td><code>additional_context</code></td><td>给模型补充上下文</td></tr>
+<tr><td><code>metadata</code></td><td>自定义结构化信息</td></tr>
+</tbody>
+</table>
+</div>
+<p>对于 <code>PreToolUse</code>、<code>PermissionRequest</code> 和 <code>UserPromptSubmit</code>，<code>decision = "block"</code> 会阻止后续动作。其他事件返回 <code>block</code> 会降级为 warning，不会直接挡住主流程。</p>
+<h2 id="退出码"><a class="header" href="#退出码">退出码</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>退出码</th><th>行为</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0</code></td><td>成功；如果 stdout 是 JSON，Whale 会解析输出</td></tr>
+<tr><td><code>2</code></td><td>对 blocking 事件表示阻止；stderr 会作为原因</td></tr>
+<tr><td>其他非零</td><td>记录为 warning 或 error，取决于事件</td></tr>
+</tbody>
+</table>
+</div>
+<p>即使 stdout 里有 <code>"decision":"pass"</code>，只要进程超时或启动失败，Whale 不会让这个输出覆盖真实失败。</p>
+<h2 id="信任与启停"><a class="header" href="#信任与启停">信任与启停</a></h2>
+<p>共享项目配置 <code>.whale/config.toml</code> 里的 hooks 会执行 shell 命令，所以 Whale 会把它们当作需要 review 的内容。未信任或已修改的共享项目 hooks 不会运行。</p>
+<p>个人配置 <code>.whale/config.local.toml</code> 和全局配置 <code>~/.whale/config.toml</code> / <code>$WHALE_HOME/config.toml</code> 默认视为用户本人信任的配置，会直接生效；仍然可以用 <code>/hooks disable &lt;key&gt;</code> 临时关闭。</p>
+<p>在 TUI 中运行：</p>
+<pre><code class="language-text">/hooks
+</code></pre>
+<p>你可以查看所有 hooks、哪些正在生效、哪些需要 review。常用命令：</p>
+<pre><code class="language-text">/hooks trust all
+/hooks trust &lt;key&gt;
+/hooks disable &lt;key&gt;
+/hooks enable &lt;key&gt;
+</code></pre>
+<p>建议团队把共享 hooks 放在 <code>.whale/config.toml</code>，个人实验放在 <code>.whale/config.local.toml</code>。</p>
+<h2 id="接入建议"><a class="header" href="#接入建议">接入建议</a></h2>
+<p>先从只记录日志的 hook 开始，确认事件触发点和 payload。再加入 <code>decision:block</code> 这类会改变主流程的逻辑。</p>
+<p>不要在 hook 中写无限等待、长时间网络请求或交互式命令。需要外部服务时，给 hook 设置明确的 <code>timeout</code>，并让脚本失败时输出清楚的 stderr。</p>
+<p>不要把 API key、token 或个人路径提交到 <code>.whale/config.toml</code>。需要秘密值时用环境变量，或放到不提交的 <code>.whale/config.local.toml</code>。</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="mcp"><a class="header" href="#mcp">MCP</a></h1>
+<p>Whale can load tools from MCP servers at startup.</p>
+<p>MCP tools are registered as normal Whale tools with names like <code>mcp__server__tool</code>. Normal approval behavior still applies.
+Whale does not inspect MCP tool arguments for filesystem paths; configure filesystem access in the MCP server itself and use <code>[permissions.mcp]</code> or <code>disabled_tools</code> to control which MCP tools can run.
+If you previously relied on Whale-side path checks for <code>@modelcontextprotocol/server-filesystem</code>, move those limits into the filesystem server’s own directory arguments and use <code>[permissions.mcp]</code> only for tool-level <code>allow</code>, <code>ask</code>, or <code>deny</code> rules.</p>
+<h2 id="config-file"><a class="header" href="#config-file">Config file</a></h2>
+<p>By default, Whale reads:</p>
+<pre><code class="language-text">~/.whale/mcp.json
+</code></pre>
+<p>On Windows this resolves under <code>%USERPROFILE%\.whale</code> by default. If <code>WHALE_HOME</code>
+is set, Whale reads the default MCP config from <code>$WHALE_HOME/mcp.json</code>.</p>
+<p>You can use another file by setting <code>[mcp].config_path</code> in <code>config.toml</code>:</p>
+<pre><code class="language-toml">[mcp]
+config_path = "/path/to/mcp.json"
+</code></pre>
+<p>Whale reads MCP config when the process starts. Restart Whale after editing the file.
+Servers are started concurrently, so <code>/mcp</code> can show some servers as <code>starting</code>
+while other servers are already connected and usable.</p>
+<h2 id="supported-transports"><a class="header" href="#supported-transports">Supported transports</a></h2>
+<p>Whale currently supports:</p>
+<ul>
+<li>stdio MCP servers using <code>command</code> and <code>args</code></li>
+<li>Streamable HTTP MCP servers using <code>url</code> and optional <code>headers</code></li>
+</ul>
+<p>Whale does not currently support SSE MCP servers.</p>
+<h2 id="config-format"><a class="header" href="#config-format">Config format</a></h2>
+<p>Put servers under <code>mcpServers</code>:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["-y", "some-mcp-server"]
+    }
+  }
+}
+</code></pre>
+<p>Whale also accepts <code>servers</code>, but <code>mcpServers</code> is the recommended format because it matches common MCP examples.</p>
+<h2 id="stdio-examples"><a class="header" href="#stdio-examples">stdio examples</a></h2>
+<p>Filesystem server:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "fs": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "timeout": 15
+    }
+  }
+}
+</code></pre>
+<p>Context7 server:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
+</code></pre>
+<p>If the server requires an API key, prefer environment variables instead of committing secrets to the config:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "${CONTEXT7_API_KEY}"
+      ]
+    }
+  }
+}
+</code></pre>
+<h2 id="streamable-http-example"><a class="header" href="#streamable-http-example">Streamable HTTP example</a></h2>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "remote": {
+      "type": "http",
+      "url": "https://example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_TOKEN}"
+      },
+      "timeout": 15
+    }
+  }
+}
+</code></pre>
+<p><code>type</code> may be <code>http</code>, <code>streamable-http</code>, <code>streamable_http</code>, or <code>streamablehttp</code>.</p>
+<p>Header values and stdio env values can reference environment variables with <code>${NAME}</code>. Whale fails startup for that server if the variable is missing.</p>
+<h2 id="optional-fields"><a class="header" href="#optional-fields">Optional fields</a></h2>
+<ul>
+<li><code>timeout</code>: startup and call timeout in seconds. Default: <code>15</code>.</li>
+<li><code>disabled</code>: set to <code>true</code> to skip a server.</li>
+<li><code>disabled_tools</code>: list of original MCP tool names to hide from Whale. Use the tool name reported by the MCP server, such as <code>read_file</code> or <code>write_file</code>, not Whale’s registered <code>mcp__server__tool</code> name.</li>
+<li><code>env</code>: environment variables for stdio servers.</li>
+<li><code>headers</code>: HTTP headers for Streamable HTTP servers.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "fs": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "disabled_tools": ["write_file"]
+    }
+  }
+}
+</code></pre>
+<h2 id="check-status"><a class="header" href="#check-status">Check status</a></h2>
+<p>Inside the TUI, run:</p>
+<pre><code class="language-text">/mcp
+</code></pre>
+<p>It shows the config path, server count, connection status, tool count, and startup errors.</p>
+<p>Example:</p>
+<pre><code class="language-text">MCP Tools
+
+config: /Users/me/.whale/mcp.json
+servers: 2
+
+- context7
+  status: connected
+  auth: unsupported
+  command: npx -y @upstash/context7-mcp
+  tools: resolve-library-id, get-library-docs
+
+- remote
+  status: failed
+  auth: bearer token
+  url: https://example.com/mcp
+  http headers: Authorization=*****
+  tools: none
+  error: mcp server "remote" failed during connect: ... (transport=http url=https://example.com/mcp status=401 Unauthorized)
+</code></pre>
+<h2 id="smoke-test"><a class="header" href="#smoke-test">Smoke test</a></h2>
+<p>For a user-path regression with a real model call, run:</p>
+<pre><code class="language-sh">DEEPSEEK_API_KEY=... scripts/smoke/mcp_tools.sh
+</code></pre>
+<p>The smoke uses a temporary <code>WHALE_HOME</code>, probes <code>/mcp</code> through the TUI, verifies
+secret-like MCP command arguments are redacted, and runs <code>whale exec</code> to confirm
+the model can call the configured filesystem MCP tool.</p>
+<h2 id="common-issues"><a class="header" href="#common-issues">Common issues</a></h2>
+<p>If only one server appears, make sure every server is inside <code>mcpServers</code>:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "fs": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
+</code></pre>
+<p>Do not put a server at the top level next to <code>mcpServers</code>; Whale will not load it.</p>
+<p>For HTTP servers:</p>
+<ul>
+<li><code>401</code> or <code>403</code>: check <code>headers</code>, API keys, and environment variables.</li>
+<li><code>404</code>: check that the URL is the MCP endpoint, not a product homepage or API root.</li>
+<li><code>429</code> or <code>5xx</code>: check provider rate limits or service status.</li>
+</ul>
+<p>Whale omits query strings from HTTP startup errors, but config files can still contain secrets. Do not commit <code>~/.whale/mcp.json</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="自定义-workflow"><a class="header" href="#自定义-workflow">自定义 Workflow</a></h1>
+<p>本指南介绍如何编写、调试和分享自定义 workflow 脚本。</p>
+<blockquote>
+<p><strong>Claude Code 兼容</strong></p>
+<p>Whale 的 workflow 脚本格式与 <strong>Claude Code raw script 完全兼容</strong>。
+以下所有 API（<code>agent</code>、<code>parallel</code>、<code>pipeline</code>、<code>phase</code>、<code>log</code>、<code>budget</code>、<code>args</code>）
+与 Claude Code 的全局函数一致。为 Claude Code 编写的 workflow 脚本
+可以直接复制到 <code>.whale/workflows/</code>（项目级）
+或 <code>~/.whale/workflows/</code>（全局）下运行。</p>
+</blockquote>
+<hr>
+<h2 id="快速开始"><a class="header" href="#快速开始">快速开始</a></h2>
+<h3 id="1-创建-workflow-文件"><a class="header" href="#1-创建-workflow-文件">1. 创建 workflow 文件</a></h3>
+<p>Workflows 可以放在两个位置：</p>
+<ul>
+<li><strong>项目级</strong>（推荐，可版本控制）：<code>.whale/workflows/&lt;name&gt;.js</code></li>
+<li><strong>全局</strong>（个人所有项目可用）：<code>~/.whale/workflows/&lt;name&gt;.js</code></li>
+</ul>
+<p>例如，创建一个项目级 workflow：</p>
+<pre><code>.whale/workflows/my-workflow.js
+</code></pre>
+<h3 id="2-写入基础结构"><a class="header" href="#2-写入基础结构">2. 写入基础结构</a></h3>
+<pre><code class="language-javascript">export const meta = {
+  name: "my-workflow",
+  description: "一句话描述这个 workflow 的用途",
+  phases: [
+    { title: "收集", detail: "收集需要的信息" },
+    { title: "分析", detail: "分析结果并生成报告" },
+  ],
+};
+
+export default async function main(args) {
+  const input = args || "默认输入";
+
+  phase("收集");
+  const data = await agent(`收集关于 ${input} 的信息`, {
+    label: "collector",
+    schema: {
+      type: "object",
+      required: ["findings"],
+      properties: {
+        findings: { type: "array", items: { type: "string" } },
+      },
+    },
+  });
+
+  phase("分析");
+  const report = await agent(`基于这些发现生成报告: ${JSON.stringify(data)}`, {
+    label: "analyst",
+  });
+
+  return report;
+}
+</code></pre>
+<h3 id="3-命名规则"><a class="header" href="#3-命名规则">3. 命名规则</a></h3>
+<ul>
+<li>文件名必须为 <strong>kebab-case</strong>（如 <code>my-workflow.js</code>）</li>
+<li><code>meta.name</code> 必须与文件名一致（不含 <code>.js</code>）</li>
+<li>名称只能包含小写字母、数字和连字符</li>
+</ul>
+<h3 id="4-使用"><a class="header" href="#4-使用">4. 使用</a></h3>
+<p>在对话中描述你的需求，或者直接说“跑一下 my-workflow“，
+Whale 会自动识别并调用该 workflow。</p>
+<hr>
+<h2 id="全局-api-参考"><a class="header" href="#全局-api-参考">全局 API 参考</a></h2>
+<h3 id="agentprompt-opts"><a class="header" href="#agentprompt-opts"><code>agent(prompt, opts?)</code></a></h3>
+<p>启动一个子 agent。</p>
+<p>如果你只是想定义一个可复用的 reviewer、researcher 或 architect 角色，先看
+<a href="#自定义-subagent">自定义 Subagent</a>。Workflow 适合把多个 subagent 调用编排成固定流程。</p>
+<pre><code class="language-javascript">const result = await agent("分析这段代码", {
+  label: "code-reviewer",        // 面板中显示的名字
+  phase: "审查",                 // 覆盖当前 phase
+  model: "deepseek-chat",        // 可选，指定模型
+  schema: { /* JSON Schema */ }, // 约束结构化输出
+  capabilities: [],              // 可选，限制工具权限
+  max_tool_iters: 10,            // 最大工具调用轮次
+  max_tool_calls: 20,            // 最大工具调用次数
+});
+</code></pre>
+<p>也可以复用 <code>.whale/agents</code> 中的自定义角色：</p>
+<pre><code class="language-javascript">const review = await agent("审查当前改动", {
+  agent: { name: "reviewer" },
+  label: "reviewer",
+});
+</code></pre>
+<h4 id="使用-json-schema-约束输出"><a class="header" href="#使用-json-schema-约束输出">使用 JSON Schema 约束输出</a></h4>
+<pre><code class="language-javascript">const result = await agent("列出 3 个改进建议", {
+  schema: {
+    type: "object",
+    required: ["suggestions"],
+    properties: {
+      suggestions: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["title", "impact"],
+          properties: {
+            title:  { type: "string" },
+            impact: { type: "string", enum: ["high", "medium", "low"] },
+            detail: { type: "string" },
+          },
+        },
+      },
+    },
+  },
+});
+// result.suggestions 是带类型约束的数组
+</code></pre>
+<h3 id="parallelthunks"><a class="header" href="#parallelthunks"><code>parallel(thunks)</code></a></h3>
+<p>并发执行多个 agent，等待所有完成。</p>
+<pre><code class="language-javascript">const [resultA, resultB] = await parallel([
+  () =&gt; agent("分析方案 A", { label: "analysis-a" }),
+  () =&gt; agent("分析方案 B", { label: "analysis-b" }),
+]);
+</code></pre>
+<p><strong>注意：</strong> thunk 必须是 <code>() =&gt; agent(...)</code> 箭头函数，不能直接传 <code>agent(...)</code> 返回的 promise。</p>
+<h3 id="pipelineitems-stages"><a class="header" href="#pipelineitems-stages"><code>pipeline(items, ...stages)</code></a></h3>
+<p>流式处理：每项独立经过各阶段，无 barrier。</p>
+<pre><code class="language-javascript">const results = await pipeline(
+  items,
+  (item) =&gt; agent(`审查: ${item}`),
+  (review) =&gt; agent(`打分: ${review}`),
+);
+</code></pre>
+<p><code>pipeline()</code> 适合“每项独立处理“的场景；
+<code>parallel()</code> 适合“需要全部结果才能进行下一步“的场景。</p>
+<h3 id="workflowname-args"><a class="header" href="#workflowname-args"><code>workflow(name, args?)</code></a></h3>
+<p>调用另一个 workflow（最多嵌套一层）。</p>
+<pre><code class="language-javascript">const deepResult = await workflow("deep-research", "量子计算的现状");
+</code></pre>
+<h3 id="phasetitle"><a class="header" href="#phasetitle"><code>phase(title)</code></a></h3>
+<p>标记当前阶段，UI 面板会显示进度。</p>
+<pre><code class="language-javascript">phase("数据收集");
+// ... agents ...
+phase("数据分析");
+// ... agents ...
+</code></pre>
+<h3 id="logmessage"><a class="header" href="#logmessage"><code>log(message)</code></a></h3>
+<p>在面板中输出日志信息。</p>
+<pre><code class="language-javascript">log(`已处理 ${count} 条记录`);
+</code></pre>
+<h3 id="budget"><a class="header" href="#budget"><code>budget</code></a></h3>
+<p>控制 token 预算。</p>
+<pre><code class="language-javascript">if (budget.remaining() &lt; 5000) {
+  log("预算不足，跳过详细分析");
+  return fallbackResult;
+}
+</code></pre>
+<ul>
+<li><code>budget.total</code> — 总预算（未设置则为 <code>null</code>）</li>
+<li><code>budget.spent()</code> — 已消耗 tokens</li>
+<li><code>budget.remaining()</code> — 剩余 tokens</li>
+</ul>
+<h3 id="args"><a class="header" href="#args"><code>args</code></a></h3>
+<p>从调用时传入的只读参数。</p>
+<pre><code class="language-javascript">export default async function main(args) {
+  const topic = args?.topic || "默认主题";
+}
+</code></pre>
+<hr>
+<h2 id="完整示例"><a class="header" href="#完整示例">完整示例</a></h2>
+<h3 id="多视角代码审查"><a class="header" href="#多视角代码审查">多视角代码审查</a></h3>
+<pre><code class="language-javascript">export const meta = {
+  name: "review-code",
+  description: "从多个维度审查代码变更",
+  phases: [
+    { title: "审查", detail: "并行从 3 个视角审查" },
+    { title: "综合", detail: "汇总审查结果" },
+  ],
+};
+
+export default async function main(args) {
+  phase("审查");
+  const perspectives = await parallel([
+    () =&gt; agent("审查这段代码的正确性和边界条件", {
+      label: "correctness",
+      schema: {
+        type: "object",
+        properties: {
+          issues: { type: "array", items: { type: "string" } },
+          score:  { type: "number" },
+        },
+      },
+    }),
+    () =&gt; agent("审查这段代码的安全隐患", {
+      label: "security",
+      schema: {
+        type: "object",
+        properties: {
+          issues: { type: "array", items: { type: "string" } },
+          score:  { type: "number" },
+        },
+      },
+    }),
+    () =&gt; agent("审查这段代码的性能和可维护性", {
+      label: "performance",
+      schema: {
+        type: "object",
+        properties: {
+          issues: { type: "array", items: { type: "string" } },
+          score:  { type: "number" },
+        },
+      },
+    }),
+  ]);
+
+  phase("综合");
+  const summary = await agent(
+    `综合以下审查结果，给出最终建议：\n${JSON.stringify(perspectives)}`,
+    { label: "synthesizer" },
+  );
+
+  return { perspectives, summary };
+}
+</code></pre>
+<h3 id="循环直到枯竭loop-until-dry"><a class="header" href="#循环直到枯竭loop-until-dry">循环直到枯竭（Loop-until-dry）</a></h3>
+<pre><code class="language-javascript">export const meta = {
+  name: "find-all-issues",
+  description: "持续发现代码问题直到枯竭",
+  phases: [{ title: "扫描", detail: "多轮扫描未引用代码" }],
+};
+
+export default async function main(args) {
+  phase("扫描");
+  const allIssues = [];
+  let emptyRounds = 0;
+  const MAX_EMPTY_ROUNDS = 2;
+
+  for (let round = 1; round &lt;= 10; round++) {
+    const result = await agent(
+      `找出未引用的符号（已知已发现的：${allIssues.join(", ")}）`,
+      { label: `round-${round}` },
+    );
+    if (!result || !result.length) {
+      emptyRounds++;
+      if (emptyRounds &gt;= MAX_EMPTY_ROUNDS) break;
+      continue;
+    }
+    emptyRounds = 0;
+    allIssues.push(...result);
+  }
+
+  return { totalIssues: allIssues.length, issues: allIssues };
+}
+</code></pre>
+<hr>
+<h2 id="claude-code-兼容性对照"><a class="header" href="#claude-code-兼容性对照">Claude Code 兼容性对照</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>差异点</th><th>Claude Code</th><th>Whale</th></tr>
+</thead>
+<tbody>
+<tr><td>脚本格式</td><td>raw script（<code>export const meta</code>）</td><td>完全一致</td></tr>
+<tr><td>全局 API</td><td><code>agent</code> / <code>parallel</code> / <code>pipeline</code> / <code>workflow</code> / <code>phase</code> / <code>log</code> / <code>budget</code> / <code>args</code></td><td>完全一致</td></tr>
+<tr><td><code>agent()</code> options</td><td><code>schema</code> / <code>label</code> / <code>phase</code> / <code>model</code> / <code>capabilities</code> / <code>max_tool_iters</code> / <code>max_tool_calls</code></td><td>完全一致</td></tr>
+<tr><td>项目级路径</td><td><code>.claude/workflows/</code></td><td><code>.whale/workflows/</code></td></tr>
+<tr><td>全局路径</td><td><code>~/.claude/workflows/</code></td><td><code>~/.whale/workflows/</code></td></tr>
+<tr><td>高级特性</td><td>—</td><td>resume、budget 控制</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>迁移方法：</strong> 直接把 <code>.claude/workflows/&lt;name&gt;.js</code> 复制到 <code>.whale/workflows/&lt;name&gt;.js</code> 即可运行。</p>
+<hr>
+<h2 id="排错"><a class="header" href="#排错">排错</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>问题</th><th>原因</th><th>解决</th></tr>
+</thead>
+<tbody>
+<tr><td><code>script must begin with export const meta</code></td><td>脚本开头格式不对</td><td>确保第一行非注释代码是 <code>export const meta = { ... }</code></td></tr>
+<tr><td><code>invalid workflow filename</code></td><td>文件名不是 kebab-case</td><td>用 <code>my-workflow.js</code> ✅，不要用 <code>MyWorkflow.js</code> ❌</td></tr>
+<tr><td><code>filename must match meta.name</code></td><td>文件名与 <code>meta.name</code> 不一致</td><td>保持 <code>my-workflow.js</code> ⇔ <code>name: "my-workflow"</code></td></tr>
+<tr><td><code>agent call limit exceeded</code></td><td>超 workflow 最大 agent 调用数</td><td>增加 budget 或减少 agent 数量</td></tr>
+<tr><td><code>workflow() cannot be called from within</code></td><td>workflow 嵌套超过 1 层</td><td>只能主 workflow 调子 workflow，不能子调子</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="skills"><a class="header" href="#skills">Skills</a></h1>
+<p>Whale supports local Agent Skills: reusable instruction folders that teach the
+agent a specific workflow, domain, or tool pattern.</p>
+<p>A skill is a directory containing a <code>SKILL.md</code> file. Whale keeps only skill names
+and descriptions in the model-visible skill index. The full <code>SKILL.md</code> body is
+loaded only when a skill is invoked or clearly matches the task.</p>
+<h2 id="skill-locations"><a class="header" href="#skill-locations">Skill Locations</a></h2>
+<p>Whale discovers skills from these directories:</p>
+<ul>
+<li><code>.whale/skills</code></li>
+<li><code>.agents/skills</code></li>
+<li><code>~/.whale/skills</code></li>
+<li><code>~/.agents/skills</code></li>
+</ul>
+<p>Workspace skills are discovered before user-global skills, so a project can
+override a global skill with the same name.</p>
+<h2 id="installing-skills"><a class="header" href="#installing-skills">Installing Skills</a></h2>
+<p>Whale does not ship a built-in skill installer yet, but it is compatible with
+the open Agent Skills ecosystem. Browse skills at <a href="https://skills.sh">https://skills.sh</a>, then
+install them with the <code>skills</code> CLI:</p>
+<pre><code class="language-bash">npx skills find review
+npx skills add https://github.com/mattpocock/skills --skill grill-me
+</code></pre>
+<p>The <code>skills</code> CLI can install skills at project scope, usually under
+<code>.agents/skills</code>, or at user scope, usually under <code>~/.agents/skills</code>. Whale
+discovers both locations. Use the CLI’s global flag when you want the skill
+available in every Whale workspace:</p>
+<pre><code class="language-bash">npx skills add vercel-labs/skills --skill find-skills -g
+</code></pre>
+<p>After installing, reopen <code>/skills</code> or type <code>$</code> in the Whale TUI to find the new
+skill. If a <code>$</code> picker was already open before installation, close it with
+<code>Esc</code> and open it again.</p>
+<p>The external CLI also provides update commands:</p>
+<pre><code class="language-bash">npx skills check
+npx skills update
+</code></pre>
+<p>Whale will pick up updated files the next time it scans the skill directories.</p>
+<h2 id="creating-a-skill"><a class="header" href="#creating-a-skill">Creating a Skill</a></h2>
+<p>Each skill lives in a directory named after the skill:</p>
+<pre><code class="language-text">~/.whale/skills/my-skill/
+└── SKILL.md
+</code></pre>
+<p><code>SKILL.md</code> must start with frontmatter containing <code>name</code> and <code>description</code>:</p>
+<pre><code class="language-markdown">---
+name: my-skill
+description: Use this when Whale should follow my custom workflow.
+when: Use when the user asks for my custom workflow.
+requires:
+  commands: [git]
+  env: [GITHUB_TOKEN]
+  mcp: [github]
+---
+
+# My Skill
+
+Instructions for Whale go here.
+</code></pre>
+<p>The skill name must use letters, digits, and hyphens, and the directory name
+must match the <code>name</code> field.</p>
+<p><code>when</code> and <code>requires</code> are optional. Whale uses them to show when a skill fits
+and what setup is missing. They do not execute scripts, install dependencies, or
+grant extra permissions.</p>
+<h2 id="invoking-skills"><a class="header" href="#invoking-skills">Invoking Skills</a></h2>
+<p>There are two ways to start using a skill in the TUI.</p>
+<p>Type <code>$</code> in the composer to search local skills. Pick a skill with <code>Tab</code> or
+<code>Enter</code>; Whale inserts the selected <code>$skill-name</code> into the composer so you can
+finish the prompt:</p>
+<pre><code class="language-text">$my-skill apply this workflow to the current task
+</code></pre>
+<p>Run <code>/skills</code> in the TUI to open the Skills menu:</p>
+<ul>
+<li><code>List skills</code> opens the same <code>$</code> picker. Selecting a skill inserts
+<code>$skill-name</code> into the composer; it does not run the skill immediately.</li>
+<li><code>Enable/Disable Skills</code> opens the searchable manager for turning skills on or
+off.</li>
+</ul>
+<p>The manager supports:</p>
+<ul>
+<li><code>↑/↓</code> selects a skill</li>
+<li>typing filters the list</li>
+<li><code>Space</code> or <code>Enter</code> toggles the selected skill</li>
+<li><code>Esc</code> closes the manager</li>
+</ul>
+<p>Changes are saved automatically to <code>.whale/config.local.toml</code>.</p>
+<p>Whale stores the original <code>$my-skill ...</code> message as the visible user turn and
+injects the loaded skill instructions as hidden context for that turn. The
+<code>loaded skill: ...</code> notice is kept in status/logs instead of being added to the
+chat transcript.</p>
+<p>The model can also use the read-only <code>load_skill</code> tool when the task clearly
+matches a discovered skill. This lets Whale load global skills without relaxing
+the workspace boundary on <code>read_file</code>.</p>
+<h2 id="disabling-skills"><a class="header" href="#disabling-skills">Disabling Skills</a></h2>
+<p>Disable skills from the <code>/skills</code> manager. Whale stores the result in the
+project local <code>.whale/config.local.toml</code>:</p>
+<pre><code class="language-toml">[skills]
+disabled = ["legacy-review"]
+</code></pre>
+<p>If shared project config disables a skill, enabling it locally writes an
+override:</p>
+<pre><code class="language-toml">[skills]
+enabled = ["legacy-review"]
+</code></pre>
+<p>Disabled skills do not appear in the <code>$</code> picker. Explicit <code>$legacy-review</code> or
+<code>load_skill</code> attempts return a disabled-skill error.</p>
+<h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
+<p>Whale’s first skill implementation is instruction-only.</p>
+<p>It does not currently provide:</p>
+<ul>
+<li>skill install, update, or uninstall commands</li>
+<li>custom <code>skills_paths</code> configuration</li>
+<li>script execution or trust management</li>
+<li>automatic dependency installation or MCP setup</li>
+</ul>
+<p>Use <code>npx skills</code> or put skills directly in one of the discovery directories
+above.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="自定义-subagent"><a class="header" href="#自定义-subagent">自定义 Subagent</a></h1>
+<p>Subagent 是 Whale 临时启动的子智能体。你可以把它理解成一个有固定角色的小助手：</p>
+<ul>
+<li><code>reviewer</code> 只负责审查代码</li>
+<li><code>researcher</code> 只负责查资料和引用来源</li>
+<li><code>architect</code> 只负责看设计和边界</li>
+</ul>
+<p>主会话仍然由 Whale 控制。Subagent 只做一次明确的小任务，完成后把结果交回主会话。</p>
+<hr>
+<h2 id="什么时候需要自定义-subagent"><a class="header" href="#什么时候需要自定义-subagent">什么时候需要自定义 Subagent</a></h2>
+<p>如果你只是想让 Whale 记住一些偏好，先看 <a href="#skills">Skills</a>。如果你想把多个步骤固定成脚本，先看 <a href="custom-workflows.html">Workflow</a>。</p>
+<p>适合自定义 subagent 的情况：</p>
+<ul>
+<li>你经常让 Whale 做同一种角色判断，比如安全审查、API 设计审查、测试策略审查</li>
+<li>你希望这个角色默认只读，或者只暴露一小组工具</li>
+<li>你希望团队共享同一个 reviewer/architect/researcher 角色</li>
+<li>你希望 workflow 里复用同一个角色，而不是每次都写很长的 prompt</li>
+</ul>
+<p>不太适合的情况：</p>
+<ul>
+<li>只是补充项目规则：用 <code>AGENTS.md</code> 或 rules/skills 更合适</li>
+<li>只是想改主 agent 的语气：用配置里的自定义系统提示词</li>
+<li>需要固定多步流程：用 workflow</li>
+</ul>
+<hr>
+<h2 id="最小例子创建一个代码审查-subagent"><a class="header" href="#最小例子创建一个代码审查-subagent">最小例子：创建一个代码审查 Subagent</a></h2>
+<p>在项目根目录创建文件：</p>
+<pre><code class="language-text">.whale/agents/reviewer.md
+</code></pre>
+<p>写入：</p>
+<pre><code class="language-markdown">---
+description: Review local code changes for bugs, regressions, and missing tests.
+whenToUse: Use when the user asks for a code review or before merging local changes.
+tools: workspace.read
+permissionMode: read_only
+---
+
+You are a focused code reviewer.
+
+Prioritize concrete bugs, behavior regressions, security risks, and missing tests.
+Start with findings ordered by severity. Include file and line references when possible.
+Do not rewrite code unless the main agent explicitly asks you to propose a patch.
+</code></pre>
+<p>然后重新打开 Whale，或者开始一个新会话。</p>
+<p>现在你可以直接说：</p>
+<pre><code class="language-text">用 reviewer subagent 审查当前改动
+</code></pre>
+<p>Whale 会把 <code>reviewer</code> 当作一个可用的子智能体角色。需要时，主 agent 会通过 <code>spawn_subagent</code> 启动它。</p>
+<hr>
+<h2 id="文件放在哪里"><a class="header" href="#文件放在哪里">文件放在哪里</a></h2>
+<p>Whale 会自动发现两个位置：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>位置</th><th>适合谁</th><th>是否建议提交</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.whale/agents/&lt;name&gt;.md</code></td><td>当前项目或团队共享</td><td>是</td></tr>
+<tr><td><code>~/.whale/agents/&lt;name&gt;.md</code></td><td>你个人所有项目通用</td><td>否</td></tr>
+</tbody>
+</table>
+</div>
+<p>同名时，项目级 <code>.whale/agents</code> 优先于全局 <code>~/.whale/agents</code>。</p>
+<p>文件名就是默认名字。例如 <code>reviewer.md</code> 的角色名是 <code>reviewer</code>。也可以在 frontmatter 里显式写 <code>name</code>。</p>
+<p>名字只能包含字母、数字和连字符，长度最多 64 个字符。推荐使用 kebab-case，例如 <code>security-reviewer</code>。</p>
+<hr>
+<h2 id="markdown-格式"><a class="header" href="#markdown-格式">Markdown 格式</a></h2>
+<p>一个 subagent 文件由两部分组成：</p>
+<ol>
+<li>顶部 <code>---</code> 之间的 frontmatter：描述名字、工具、权限等配置</li>
+<li>下面的正文：这个 subagent 的角色说明和工作方式</li>
+</ol>
+<pre><code class="language-markdown">---
+name: security-reviewer
+description: Review changes for security risks.
+whenToUse: Use before merging authentication, authorization, or secret-handling changes.
+tools:
+  - workspace.read
+  - shell.read
+permissionMode: read_only
+maxTurns: 8
+---
+
+You are a security reviewer.
+
+Look for authorization bypasses, secret leaks, unsafe shell usage, injection risks,
+and missing validation. Report evidence and uncertainty clearly.
+</code></pre>
+<p><code>description</code> 是必填项。<code>whenToUse</code> 可选，但强烈建议写清楚，这样主 agent 更容易知道什么时候该用它。</p>
+<hr>
+<h2 id="常用字段"><a class="header" href="#常用字段">常用字段</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>字段</th><th>作用</th><th>示例</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>显式指定 subagent 名字；不写时用文件名</td><td><code>security-reviewer</code></td></tr>
+<tr><td><code>description</code></td><td>一句话说明这个角色做什么</td><td><code>Review local code changes.</code></td></tr>
+<tr><td><code>whenToUse</code></td><td>什么时候应该使用它</td><td><code>Use before merging auth changes.</code></td></tr>
+<tr><td><code>tools</code></td><td>允许使用的工具能力</td><td><code>workspace.read</code></td></tr>
+<tr><td><code>disallowedTools</code></td><td>从允许工具里排除某些能力或工具</td><td><code>web.fetch</code></td></tr>
+<tr><td><code>model</code></td><td>指定模型；通常不用写</td><td><code>deepseek-chat</code></td></tr>
+<tr><td><code>effort</code></td><td>推理强度</td><td><code>high</code></td></tr>
+<tr><td><code>permissionMode</code></td><td>权限模式</td><td><code>read_only</code></td></tr>
+<tr><td><code>maxTurns</code></td><td>子会话最多轮数</td><td><code>8</code></td></tr>
+<tr><td><code>skills</code></td><td>给这个 subagent 加载的技能名</td><td><code>review-skill</code></td></tr>
+<tr><td><code>mcpServers</code></td><td>给这个 subagent 暴露的 MCP server</td><td><code>github</code></td></tr>
+<tr><td><code>initialPrompt</code></td><td>子会话开始前先注入的提示</td><td><code>Read the diff first.</code></td></tr>
+<tr><td><code>memory</code></td><td>可用记忆范围</td><td><code>project</code></td></tr>
+<tr><td><code>background</code></td><td>是否后台运行</td><td><code>true</code></td></tr>
+<tr><td><code>isolation</code></td><td>是否使用 worktree 隔离</td><td><code>worktree</code></td></tr>
+<tr><td><code>generation</code></td><td>高级生成控制</td><td>见下方</td></tr>
+</tbody>
+</table>
+</div>
+<p>新手建议只先用这几个字段：</p>
+<pre><code class="language-yaml">description: ...
+whenToUse: ...
+tools: workspace.read
+permissionMode: read_only
+</code></pre>
+<hr>
+<h2 id="高级生成控制"><a class="header" href="#高级生成控制">高级：生成控制</a></h2>
+<p><code>generation</code> 可以给 model-only subagent 配置 assistant 回复前缀。如果当前 provider 支持 prefix completion，Whale 会让模型从这个前缀继续生成。</p>
+<pre><code class="language-yaml">description: Return a compact classification.
+tools: []
+generation:
+  assistantPrefix: "{"
+  prefixCompletion: true
+</code></pre>
+<p>这个功能只在没有工具的 subagent 上启用。带 <code>workspace.read</code>、<code>shell.read</code> 等工具的 subagent 会继续走普通生成路径，避免因为 prefix completion 失去工具调用能力。</p>
+<hr>
+<h2 id="工具和权限怎么选"><a class="header" href="#工具和权限怎么选">工具和权限怎么选</a></h2>
+<p>默认从最小权限开始。大多数 reviewer、architect、explainer 都应该只读。</p>
+<p>常见 <code>tools</code>：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>工具能力</th><th>能做什么</th><th>新手建议</th></tr>
+</thead>
+<tbody>
+<tr><td><code>workspace.read</code></td><td>读取项目文件、搜索代码</td><td>默认使用</td></tr>
+<tr><td><code>shell.read</code></td><td>运行偏只读的 shell 命令</td><td>需要看 git diff、测试列表时使用</td></tr>
+<tr><td><code>web.search</code></td><td>搜索网页</td><td>research 类型使用</td></tr>
+<tr><td><code>web.fetch</code></td><td>抓取网页内容</td><td>research 类型使用</td></tr>
+<tr><td><code>mcp.read</code></td><td>使用已配置 MCP 工具</td><td>需要 MCP 时使用</td></tr>
+<tr><td><code>workspace.write</code></td><td>修改文件</td><td>谨慎使用</td></tr>
+<tr><td><code>shell.run</code></td><td>执行命令</td><td>谨慎使用</td></tr>
+</tbody>
+</table>
+</div>
+<p>权限模式：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>permissionMode</code></th><th>含义</th><th>适合场景</th></tr>
+</thead>
+<tbody>
+<tr><td><code>read_only</code></td><td>只读，最安全</td><td>默认推荐</td></tr>
+<tr><td><code>ask</code></td><td>需要敏感操作时询问</td><td>需要偶尔修改或执行命令</td></tr>
+<tr><td><code>auto</code></td><td>自动接受部分操作</td><td>你信任这个 subagent 的编辑任务</td></tr>
+<tr><td><code>trusted</code></td><td>更高信任级别</td><td>只给非常明确、受控的角色</td></tr>
+</tbody>
+</table>
+</div>
+<p>如果你给 subagent <code>workspace.write</code> 或 <code>shell.run</code>，请同时明确写 <code>permissionMode</code>。不要把写权限给模糊角色。</p>
+<hr>
+<h2 id="在-workflow-里使用自定义-subagent"><a class="header" href="#在-workflow-里使用自定义-subagent">在 Workflow 里使用自定义 Subagent</a></h2>
+<p>如果你已经有 <code>.whale/agents/reviewer.md</code>，workflow 可以这样调用：</p>
+<pre><code class="language-javascript">export const meta = {
+  name: "review-with-custom-agent",
+  description: "Review changes with the custom reviewer subagent",
+};
+
+export default async function main() {
+  return agent("Review the current local changes.", {
+    agent: { name: "reviewer" },
+    label: "reviewer",
+  });
+}
+</code></pre>
+<p>也可以在 workflow 里临时写一个 agent 定义，不落盘：</p>
+<pre><code class="language-javascript">return agent("Check the API design for long-term maintainability.", {
+  agent: {
+    name: "api-architect",
+    description: "Review API design and boundaries.",
+    tools: ["workspace.read"],
+    permissionMode: "read_only",
+  },
+});
+</code></pre>
+<p>落盘定义适合复用；临时定义适合某个 workflow 独有的角色。</p>
+<hr>
+<h2 id="插件里的-subagent"><a class="header" href="#插件里的-subagent">插件里的 Subagent</a></h2>
+<p>如果你在写插件，也可以在插件目录下放：</p>
+<pre><code class="language-text">my-plugin/
+└── agents/
+    └── reviewer.md
+</code></pre>
+<p>安装并启用插件后，它会变成带插件前缀的角色，例如：</p>
+<pre><code class="language-text">my-plugin:reviewer
+</code></pre>
+<p>插件方式适合发布给别人安装。只给自己或团队项目用时，优先用 <code>.whale/agents</code>。</p>
+<p>更多插件说明见 <a href="#plugins">Plugins</a>。</p>
+<hr>
+<h2 id="排错-1"><a class="header" href="#排错-1">排错</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>问题</th><th>可能原因</th><th>解决方法</th></tr>
+</thead>
+<tbody>
+<tr><td>Whale 没有使用我的 subagent</td><td>文件不在 <code>.whale/agents</code> 或 <code>~/.whale/agents</code></td><td>检查路径，然后开新会话</td></tr>
+<tr><td>提示 unsupported subagent role</td><td>名字写错，或文件名不符合规则</td><td>确认角色名和文件名一致</td></tr>
+<tr><td>文件被忽略</td><td>Markdown 没有 frontmatter</td><td>文件必须以 <code>---</code> 开头并有结束的 <code>---</code></td></tr>
+<tr><td>提示 description is required</td><td>没写 <code>description</code></td><td>增加 <code>description</code></td></tr>
+<tr><td>Subagent 不能执行命令</td><td>只给了 <code>workspace.read</code></td><td>加 <code>shell.read</code> 或 <code>shell.run</code>，并确认权限模式</td></tr>
+<tr><td>Subagent 不能改文件</td><td>没有 <code>workspace.write</code></td><td>只在确实需要时添加，并使用 <code>ask</code> 或更高权限模式</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="和-skillsworkflow-的区别"><a class="header" href="#和-skillsworkflow-的区别">和 Skills、Workflow 的区别</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>能力</th><th>你在定义什么</th><th>适合</th></tr>
+</thead>
+<tbody>
+<tr><td>Skill</td><td>给主 agent 的知识、流程、偏好</td><td>“遇到这种任务时按这个方法做”</td></tr>
+<tr><td>Subagent</td><td>一个可被启动的角色化子智能体</td><td>“让 reviewer 单独审查这件事”</td></tr>
+<tr><td>Workflow</td><td>一段固定编排脚本</td><td>“先并行研究，再综合，再复核”</td></tr>
+</tbody>
+</table>
+</div>
+<p>三者可以一起用：workflow 启动自定义 subagent，自定义 subagent 再加载特定 skill。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
