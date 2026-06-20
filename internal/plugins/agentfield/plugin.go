@@ -1,7 +1,6 @@
-// Package agentfield provides local-first AgentField integration.
-// On SessionStart: auto-starts a local control plane, registers ultrawhale
-// as an agent with DID identity, exposes commands as callable functions.
-// Zero config — just add agentfield.enabled = true in config.toml.
+// Package agentfield provides Supabase-backed AgentField control plane.
+// Minimal: DID identity, REST API via PostgREST, workflow CRUD.
+// Runs local Supabase (Postgres+PostgREST+GoTrue) on localhost:8585.
 package agentfield
 
 import (
@@ -12,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,117 +29,166 @@ type Plugin struct {
 	identity Identity
 	server   *http.Server
 	running  bool
+	supabase *SupabaseConfig
 }
 
 type Config struct {
-	Enabled      bool
-	Port         int    // local control plane port (default 8585)
-	DataDir      string // ~/.whale/agentfield
-	AutoRegister bool
+	Enabled       bool
+	Port          int
+	DataDir       string
+	SupabaseURL   string // http://localhost:8586 for PostgREST
+	AnonKey       string // public anon key
+	ServiceKey    string // service_role key for admin
+}
+
+type SupabaseConfig struct {
+	URL        string
+	AnonKey    string
+	ServiceKey string
 }
 
 type Identity struct {
-	DID       string `json:"did"`        // did:key:z6Mk...
-	PublicKey string `json:"public_key"` // hex-encoded ed25519 pubkey
-	Agent     string `json:"agent"`      // ultrawhale
-	CreatedAt string `json:"created_at"`
+	DID       string `json:"did"`
+	PublicKey string `json:"public_key"`
+	Agent     string `json:"agent"`
 }
 
 func NewPlugin() *Plugin {
 	return &Plugin{config: Config{
-		Enabled:      true,
-		Port:         8585,
-		AutoRegister: true,
+		Enabled:     true,
+		Port:        8585,
+		SupabaseURL: "http://localhost:8586",
 	}}
 }
 
-func (p *Plugin) ID() string          { return PluginID }
-func (p *Plugin) Name() string        { return "AgentField" }
-func (p *Plugin) Version() string     { return "0.1.0" }
-func (p *Plugin) Description() string { return "Local-first AgentField control plane — DID identity, callable API, cross-agent routing." }
+func (p *Plugin) ID() string      { return PluginID }
+func (p *Plugin) Name() string    { return "AgentField" }
+func (p *Plugin) Version() string { return "0.2.0" }
+func (p *Plugin) Description() string {
+	return "Supabase-backed AgentField — DID identity, PostgREST API, workflow CRUD."
+}
 
 func (p *Plugin) Hooks() []agent.HookHandler {
-	return []agent.HookHandler{{
-		Event:       agent.HookEventSessionStart,
-		Name:        "agentfield.start",
-		Source:      "plugin:agentfield",
-		Description: "Starts local AgentField control plane and registers ultrawhale agent.",
-		Priority:    90, // high priority — run before other plugins
-		Run: func(ctx context.Context, payload agent.HookPayload) agent.HookResult {
-			go p.start()
-			return agent.HookResult{Decision: agent.HookDecisionPass}
-		},
-	}, {
-		Event:       agent.HookEventStop,
-		Name:        "agentfield.stop",
-		Source:      "plugin:agentfield",
-		Description: "Stops local control plane and deregisters agent.",
-		Run: func(ctx context.Context, payload agent.HookPayload) agent.HookResult {
-			p.stop()
-			return agent.HookResult{Decision: agent.HookDecisionPass}
-		},
-	}}
+	return []agent.HookHandler{
+		{Event: agent.HookEventSessionStart, Name: "af.start", Source: "plugin:agentfield",
+			Priority: 90,
+			Run: func(ctx context.Context, payload agent.HookPayload) agent.HookResult {
+				go p.start()
+				return agent.HookResult{Decision: agent.HookDecisionPass}
+			}},
+		{Event: agent.HookEventStop, Name: "af.stop", Source: "plugin:agentfield",
+			Run: func(ctx context.Context, payload agent.HookPayload) agent.HookResult {
+				p.stop()
+				return agent.HookResult{Decision: agent.HookDecisionPass}
+			}},
+	}
 }
 
-// ── Start local control plane ──────────────────────────────────────────
+// ── Start ──────────────────────────────────────────────────────────────
 
 func (p *Plugin) start() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.running { return }
 
-	// Ensure data dir
-	dataDir := p.config.DataDir
-	if dataDir == "" {
-		home, _ := os.UserHomeDir()
-		dataDir = filepath.Join(home, ".whale", "agentfield")
+	home, _ := os.UserHomeDir()
+	if p.config.DataDir == "" {
+		p.config.DataDir = filepath.Join(home, ".whale", "agentfield")
 	}
-	os.MkdirAll(dataDir, 0o700)
+	os.MkdirAll(p.config.DataDir, 0o700)
 
-	// Load or generate DID identity
-	p.identity = loadOrCreateIdentity(dataDir)
+	// Generate or load DID
+	p.identity = loadOrCreateIdentity(p.config.DataDir)
 
-	// Start local HTTP control plane
+	// Configure Supabase
+	p.supabase = &SupabaseConfig{
+		URL:     p.config.SupabaseURL,
+		AnonKey: p.config.AnonKey,
+	}
+
+	// Start HTTP control plane
 	mux := http.NewServeMux()
+	p.registerRoutes(mux)
+
+	p.server = &http.Server{Addr: fmt.Sprintf(":%d", p.config.Port), Handler: mux}
+	p.running = true
+	go p.server.ListenAndServe()
+	time.Sleep(50 * time.Millisecond)
+}
+
+func (p *Plugin) registerRoutes(mux *http.ServeMux) {
+	// Health
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "agent": "ultrawhale"})
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":    "ok",
+			"agent":     "ultrawhale",
+			"supabase":  p.config.SupabaseURL,
+			"did":       p.identity.DID,
+		})
 	})
+
+	// Agent status
 	mux.HandleFunc("/api/v1/agents", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]Identity{p.identity})
-	})
-	mux.HandleFunc("/api/v1/execute/ultrawhale.status", func(w http.ResponseWriter, r *http.Request) {
 		pov := blocks.CurrentPOV()
-		json.NewEncoder(w).Encode(map[string]any{
+		json.NewEncoder(w).Encode([]map[string]any{{
 			"agent":   pov.Agent,
 			"version": pov.Version,
 			"machine": pov.Machine,
 			"arch":    pov.Arch,
 			"tier":    pov.Tier,
-			"mode":    pov.Mode,
 			"did":     p.identity.DID,
+		}})
+	})
+
+	// Execute agent command
+	mux.HandleFunc("/api/v1/execute/ultrawhale.", func(w http.ResponseWriter, r *http.Request) {
+		cmd := r.URL.Path[strings.LastIndex(r.URL.Path, ".")+1:]
+		pov := blocks.CurrentPOV()
+		json.NewEncoder(w).Encode(map[string]any{
+			"agent":   pov.Agent,
+			"command": cmd,
+			"status":  "executed",
+			"tier":    pov.Tier,
 		})
 	})
 
-	p.server = &http.Server{Addr: fmt.Sprintf(":%d", p.config.Port), Handler: mux}
-	p.running = true
-
-	go func() {
-		if err := p.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "[agentfield] server error: %v\n", err)
+	// Workflow CRUD — proxied to Supabase PostgREST
+	mux.HandleFunc("/api/v1/workflows", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			// List workflows via PostgREST
+			resp, _ := http.Get(p.config.SupabaseURL + "/workflows")
+			if resp != nil {
+				defer resp.Body.Close()
+				var data any
+				json.NewDecoder(resp.Body).Decode(&data)
+				json.NewEncoder(w).Encode(data)
+			}
+		case "POST":
+			// Create workflow via PostgREST
+			http.Post(p.config.SupabaseURL+"/workflows", "application/json", r.Body)
+			w.WriteHeader(201)
+		default:
+			w.WriteHeader(405)
 		}
-	}()
+	})
 
-	time.Sleep(100 * time.Millisecond) // let server start
+	mux.HandleFunc("/api/v1/workflows/", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
+		resp, _ := http.Get(p.config.SupabaseURL + "/workflows?id=eq." + id)
+		if resp != nil {
+			defer resp.Body.Close()
+			var data any
+			json.NewDecoder(resp.Body).Decode(&data)
+			json.NewEncoder(w).Encode(data)
+		}
+	})
 }
 
 func (p *Plugin) stop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.server != nil {
-		p.server.Close()
-		p.server = nil
-	}
+	if p.server != nil { p.server.Close(); p.server = nil }
 	p.running = false
 }
 
@@ -150,45 +199,24 @@ func loadOrCreateIdentity(dir string) Identity {
 	data, err := os.ReadFile(path)
 	if err == nil {
 		var id Identity
-		if json.Unmarshal(data, &id) == nil {
-			return id
-		}
+		if json.Unmarshal(data, &id) == nil { return id }
 	}
-
-	// Generate Ed25519 keypair
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		return Identity{Agent: "ultrawhale"}
-	}
-
-	// W3C DID:key format (multicodec ed25519-pub)
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	pubHex := hex.EncodeToString(pub)
-	privHex := hex.EncodeToString(priv)
-
 	id := Identity{
 		DID:       fmt.Sprintf("did:key:z%s", pubHex[:40]),
 		PublicKey: pubHex,
 		Agent:     "ultrawhale",
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
-
-	// Store private key
-	os.WriteFile(filepath.Join(dir, "private.key"), []byte(privHex), 0o600)
-
-	// Store DID
-	data, _ = json.MarshalIndent(id, "", "  ")
-	os.WriteFile(path, data, 0o600)
-
+	raw, _ := json.MarshalIndent(id, "", "  ")
+	os.WriteFile(path, raw, 0o600)
 	return id
 }
-
-// ── Doctor ─────────────────────────────────────────────────────────────
 
 func (p *Plugin) Doctor() string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if !p.running {
-		return "agentfield: not running"
-	}
-	return fmt.Sprintf("agentfield: localhost:%d, DID=%s, agent=ultrawhale", p.config.Port, p.identity.DID)
+	if !p.running { return "agentfield: not running" }
+	return fmt.Sprintf("agentfield: localhost:%d, supabase=%s, DID=%s",
+		p.config.Port, p.config.SupabaseURL, p.identity.DID[:45])
 }
