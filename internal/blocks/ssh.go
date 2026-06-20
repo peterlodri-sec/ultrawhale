@@ -236,7 +236,7 @@ func StopSSH(id string) error {
 // RestartSSH re-runs the same command on the same host.
 func RestartSSH(id string) (*SSHBlock, error) {
 	run := getSSHRun(id)
-	if run == nil { return fmt.Errorf("ssh run not found: %s", id) }
+	if run == nil { return nil, fmt.Errorf("ssh run not found: %s", id) }
 
 	// Stop existing
 	_ = StopSSH(id)
