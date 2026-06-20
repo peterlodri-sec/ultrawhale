@@ -73,44 +73,17 @@ func (m model) View() string {
 		if m.chatViewNeedsBottomGap(body, bottom) {
 			separator = "\n\n"
 		}
-		// InfraBar at top (width adjusts for sidepanel)
-		if m.infraBar != nil && m.infraBar.Visible {
-			m.infraBar.Width = mainWidth
-			if m.orchPanel != nil && m.orchPanel.Visible {
-				m.infraBar.Width -= 32
-			}
-			if infra := m.infraBar.View(); infra != "" {
-				out = infra + "\n" + out
-			}
+		if infra := m.renderInfraBar(); infra != "" {
+			out = infra + "\n" + out
 		}
-
-		// Sidepanel on right
-		if m.orchPanel != nil && m.orchPanel.Visible {
-			panel := m.orchPanel.View()
-			if panel != "" {
-				body = lipgloss.JoinHorizontal(lipgloss.Top, body, "  " + panel)
-			}
-		}
-
-		// Zen mode: only chat + HUD
-		if zenActive {
+		body = m.renderSidebar(body)
+		if m.isZenMode() {
 			return body + separator + bottom
 		}
-
 		out = body + separator + bottom
 	}
 	// InfraBar at top
 	if m.infraBar != nil if m.infraBar != nil && m.infraBar.Visible {
-		m.infraBar.Width = m.width
-		if m.orchPanel != nil && m.orchPanel.Visible {
-			m.infraBar.Width -= 32
-		}
-		if infra := m.infraBar.View(); infra != "" {
-			out = infra + "\n" + out
-		}
-	}
-	// InfraBar at top — width adjusts for sidepanel
-	if m.infraBar != nil && m.infraBar.Visible {
 		m.infraBar.Width = m.width
 		if m.orchPanel != nil && m.orchPanel.Visible {
 			m.infraBar.Width -= 32
@@ -129,16 +102,6 @@ func (m model) View() string {
 		}
 	}
 
-	// InfraBar at top — width adjusts for sidepanel
-	if m.infraBar != nil && m.infraBar.Visible {
-		m.infraBar.Width = m.width
-		if m.orchPanel != nil && m.orchPanel.Visible {
-			m.infraBar.Width -= 32
-		}
-		if infra := m.infraBar.View(); infra != "" {
-			out = infra + "\n" + out
-		}
-	}
 	recordFrame(start, out, m.page, m.width, m.height)
 	m.rememberView(out)
 	return out
