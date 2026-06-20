@@ -56,6 +56,14 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/api/v1/vaked/graph", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "vaked plugin loaded",
+			"message": "use /vaked parse <file> to parse .vaked files",
+		})
+	})
+
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
