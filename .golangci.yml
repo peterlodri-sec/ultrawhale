@@ -9,30 +9,30 @@ linters:
     - ineffassign
     - gosec
     - unused
-linters-settings:
-  gocritic:
-    enabled-checks:
-      - wrapperFunc
-      - appendCombine
-      - rangeExprCopy
-  revive:
+  settings:
+    gocritic:
+      enabled-checks:
+        - wrapperFunc
+        - appendCombine
+        - rangeExprCopy
+    revive:
+      rules:
+        - name: exported
+        - name: blank-imports
+    govet:
+      enable:
+        - nilness
+        - shadow
+  exclusions:
     rules:
-      - name: exported
-      - name: blank-imports
-  govet:
-    enable:
-      - nilness
-      - shadow
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+formatters:
+  enable:
+    - gofmt
+    - goimports
 run:
   timeout: 5m
   tests: true
-
-
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
