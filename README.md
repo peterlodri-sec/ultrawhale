@@ -64,6 +64,17 @@ GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-d
 go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v2.0.0" ./cmd/whale
 ```
 
+
+## Contributing
+
+See [docs/internal-blocks.md](docs/internal-blocks.md) for the blocks engine
+architecture, performance patterns, benchmarks, and review checklist.
+
+Build: GOOS=darwin GOARCH=arm64 go build ./cmd/whale (macOS)
+      GOOS=linux GOARCH=amd64 GOAMD64=v3 go build ./cmd/whale (Linux)
+Test:  go test -count=1 -race ./internal/...
+Bench: go test -bench=. -benchmem ./internal/blocks/
+
 ## License
 
 Apache 2.0 (upstream). Fork maintained by [peterlodri-sec](https://github.com/peterlodri-sec).
