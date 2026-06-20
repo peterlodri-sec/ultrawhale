@@ -3,6 +3,7 @@ package blocks
 import (
 	"fmt"
 	"os"
+	"context"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ func LoadSSHConfig() *SSHConfig {
 
 	cfg := &SSHConfig{
 		DefaultUser: "dev",
-		KnownHosts:  filepath.Join(home, ".ssh", "known_hosts"),
+		KnownHosts:  filepath.Join(home, ".whale", "ssh", "known_hosts"),
 		BaoKeyPath:  "secret/data/ssh/ultrawhale",
 	}
 
@@ -132,6 +133,7 @@ func SSHExec(host, command string) (*SSHBlock, error) {
 
 	// Create PID file lock
 	os.MkdirAll(filepath.Dir(run.PIDFile), 0o700)
+	os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".whale", "ssh", "sockets"), 0o700)
 	os.WriteFile(run.PIDFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0o600)
 
 	sshStore.mu.Lock()
@@ -140,18 +142,34 @@ func SSHExec(host, command string) (*SSHBlock, error) {
 
 	// Build SSH command
 	args := []string{
-		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "StrictHostKeyChecking=yes",
 		"-o", fmt.Sprintf("UserKnownHostsFile=%s", cfg.KnownHosts),
+		"-o", "ControlMaster=auto",
+		"-o", "ControlPath=~/.whale/ssh/sockets/%r@%h:%p",
+		"-o", "ControlPersist=60",
 		"-i", cfg.KeyPath,
 		"-l", user,
 		host,
 		command,
 	}
 
-	run.cmd = exec.Command("ssh", args...)
+	if run.Timeout > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), run.Timeout)
+		run.cancelFn = cancel
+		run.cmd = exec.CommandContext(ctx, "ssh", args...)
+	} else {
+		run.cmd = exec.Command("ssh", args...)
+	}
 
 	// Start asynchronously
+	// Zombie reaper: clean up on completion
 	go func() {
+		defer func() {
+			os.Remove(run.PIDFile)
+			sshStore.mu.Lock()
+			delete(sshStore.runs, id)
+			sshStore.mu.Unlock()
+		}()
 		output, err := run.cmd.CombinedOutput()
 		run.EndTime = time.Now()
 		run.mu.Lock()
@@ -171,9 +189,6 @@ func SSHExec(host, command string) (*SSHBlock, error) {
 			run.ExitCode = 0
 		}
 		run.PID = run.cmd.Process.Pid
-
-		// Clean PID file
-		os.Remove(run.PIDFile)
 
 		// Log the execution
 		Log(LogInfo, "blocks.SSH", fmt.Sprintf("%s@%s: %s", user, host, command),
