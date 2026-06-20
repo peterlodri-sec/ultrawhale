@@ -272,3 +272,4 @@ func (m model) layoutDims() (mainWidth, bodyHeight int) {
 }
 
 func (m model) chatRenderWidth() int {
+}
