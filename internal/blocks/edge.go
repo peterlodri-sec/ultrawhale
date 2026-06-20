@@ -32,6 +32,7 @@ type EdgeAgent struct {
 	// State
 	Status   string    // "deploying", "active", "idle"
 	DeployedAt time.Time
+	POV       POV
 }
 
 // Fiber is a resumable agent state journal.

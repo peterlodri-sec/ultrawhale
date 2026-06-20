@@ -130,6 +130,29 @@ Orchestrator, Agent, Swarm, Brain-memo.
 
 
 
+
+## Tool Cache (v3.8.0)
+
+Per-agent KV cache for subagent tool calls. SHA256-keyed, 5-min TTL, 256-entry LRU.
+Orchestrator never caches. Invalidated on file writes.
+
+## Edge Agent (v3.6-3.7)
+
+CF Worker deployment for pure subagents. Fiber journal for resumability.
+Swarm agents (with AgentField) cannot be edge-deployed.
+
+## POV Wiring (10/10 complete)
+
+CurrentPOV wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self,
+Orchestrator, Agent, Swarm, Edge, Tool.
+
+## Features since v3.0.0
+
+v3.1: YOLO defaults | v3.2: Swarm mode | v3.3: POV complete
+v3.4: Plugin refactor | v3.5: Orchestrator→Agent loop
+v3.6: Edge agent + setup CLI | v3.7: Edge subclass
+v3.8: Tool cache | v3.9: Final review
+
 ## Contributing
 
 ### Adding a new block primitive

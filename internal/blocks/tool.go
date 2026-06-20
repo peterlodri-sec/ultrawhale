@@ -10,6 +10,7 @@ import (
 // Each subagent has its own cache. Orchestrator NEVER caches.
 // Invalidated on file writes for related paths.
 type ToolCache struct {
+	POV      POV
 	mu       sync.RWMutex
 	entries  map[string]CacheEntry
 	maxSize  int
@@ -30,7 +31,9 @@ type CacheEntry struct {
 
 // NewToolCache creates a tool cache for a subagent.
 func NewToolCache() *ToolCache {
+	pov := CurrentPOV()
 	return &ToolCache{
+		POV:      pov,
 		entries: make(map[string]CacheEntry),
 		maxSize: 256,
 	}
