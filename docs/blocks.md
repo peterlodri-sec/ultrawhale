@@ -70,7 +70,7 @@ SedBatch(paths, find, replace, global) → error         // concurrent
 ```
 
 
-## Benchmarks (v7.1.0, 16-core EPYC-Rome)
+## Benchmarks (v8.1.0, 16-core EPYC-Rome)
 
 | Benchmark | Result | Notes |
 |-----------|--------|-------|
