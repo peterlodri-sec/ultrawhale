@@ -10,12 +10,15 @@ import (
 )
 
 func main() {
+	headless := false
+	for _, arg := range os.Args[1:] {
+		if arg == "--headless" || arg == "-H" { headless = true }
+	}
 	// --headless: run without TUI (for CI, swarms, edge agents)
 	headless := false
 	for _, arg := range os.Args {
 		if arg == "--headless" || arg == "-H" {
 			headless = true
-		_ = headless // used by app init
 		}
 	}
 	if os.Getenv(execenv.WrapperModeEnv) == "1" {

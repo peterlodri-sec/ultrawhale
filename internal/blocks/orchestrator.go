@@ -122,6 +122,10 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	// Classify the prompt to pick the right agent
 	def := o.classifyPrompt(prompt)
 
+	// Capabilities check
+	profile := GetCapProfile(def.Name)
+	_ = profile
+
 	// Spawn subagent
 	agent := SpawnAgent(
 		fmt.Sprintf("%s-%d", def.Name, o.TotalTurns),

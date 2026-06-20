@@ -489,3 +489,21 @@ func handleDyadCommand(line string) string {
 		return "/dyad status | /dyad ping | /dyad deploy"
 	}
 }
+
+func handleA2ACommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/a2a"))
+	if len(parts) == 0 {
+		return "/a2a status | /a2a ping <agent> | /a2a delegate <agent> <task>"
+	}
+	switch parts[0] {
+	case "status": return blocks.A2AStatus()
+	case "ping":
+		if len(parts) < 2 { return "usage: /a2a ping <agent>" }
+		resp := blocks.SendA2A("orchestrator", parts[1], "ping", "")
+		return fmt.Sprintf("a2a: %s → %s", resp.Action, resp.Payload)
+	default: return "/a2a status | /a2a ping <agent>"
+	}
+}
+
+func handleA2CCommand() string { return blocks.A2CStatus() }
+func handleCapsCommand() string { return blocks.CapStatus() }
