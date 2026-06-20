@@ -60,6 +60,9 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		case "ctrl+shift+b":
 			m.toggleShader()
 			return nil, false, true
+		case "ctrl+shift+i":
+			if m.infraBar != nil { m.infraBar.ToggleExpanded(); m.refreshLiveViewportContent() }
+			return nil, false, true
 		case "ctrl+shift+s":
 			m.toggleSidebar()
 			return nil, false, true

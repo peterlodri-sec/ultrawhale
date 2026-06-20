@@ -18,6 +18,7 @@ import (
 	"github.com/usewhale/whale/internal/runtime/timeline"
 	"github.com/usewhale/whale/internal/tui/composer"
 	"github.com/usewhale/whale/internal/tui/statusline"
+	"github.com/usewhale/whale/internal/tui/widgets"
 	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/tui/agui"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
@@ -240,6 +241,7 @@ type model struct {
 	viewCache                        *modelViewCache
 	hud                             *statusline.HUD
 	ultracode *modes.UltracodeMode
+	infraBar *widgets.InfraBarWidget
 }
 
 type modelViewCache struct {
@@ -360,6 +362,7 @@ func newModel(rt Runtime, modelName, effort, thinking string) model {
 		historyIndex:      -1,
 		viewCache:         &modelViewCache{},
 		hud:                statusline.DefaultHUD(80),
+		infraBar:            widgets.NewInfraBar(),
 	}
 	if rt != nil {
 		m.dispatch = rt.Dispatch
