@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"bytes"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -218,4 +219,122 @@ func TestPOVMetadata(t *testing.T) {
 		}
 	}
 	t.Logf("POV metadata: %d keys", len(md))
+}
+
+// ── Sed tests ──────────────────────────────────────────────────────────
+
+func TestSedSingle(t *testing.T) {
+	content := []byte("hello world")
+	modified, count := Sed(content, []byte("world"), []byte("blocks"))
+	if count != 1 { t.Fatalf("expected 1, got %d", count) }
+	if string(modified) != "hello blocks" { t.Fatalf("got %s", modified) }
+	t.Log("Sed OK: hello world → hello blocks")
+}
+
+func TestSedAll(t *testing.T) {
+	content := []byte("foo bar foo baz foo")
+	modified, count := SedAll(content, []byte("foo"), []byte("qux"))
+	if count != 3 { t.Fatalf("expected 3, got %d", count) }
+	if string(modified) != "qux bar qux baz qux" { t.Fatalf("got %s", modified) }
+	t.Log("SedAll OK: 3 replacements")
+}
+
+func TestSedDelete(t *testing.T) {
+	content := []byte("remove all spaces here")
+	modified, count := SedAll(content, []byte(" "), []byte{})
+	if count != 3 { t.Fatalf("expected 3, got %d", count) }
+	if string(modified) != "removeallspaceshere" { t.Fatalf("got %s", modified) }
+	t.Log("SedDelete OK: spaces removed")
+}
+
+func TestSedFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sedfile.txt")
+	Write(path, []byte("version: 1.2.0"))
+	
+	b, count, err := SedFile(path, []byte("1.2.0"), []byte("1.3.0"), false)
+	if err != nil { t.Fatalf("SedFile: %v", err) }
+	if count != 1 { t.Fatalf("expected 1, got %d", count) }
+	if b.PrevRef == "" { t.Fatal("PrevRef empty — journal broken") }
+	
+	rb, _ := Read(path)
+	if string(rb.Content) != "version: 1.3.0" { t.Fatalf("got %s", rb.Content) }
+	
+	// Rollback
+	Rollback(path)
+	rb2, _ := Read(path)
+	if string(rb2.Content) != "version: 1.2.0" { t.Fatalf("rollback failed: %s", rb2.Content) }
+	t.Log("SedFile OK: 1.2.0→1.3.0→rollback→1.2.0")
+}
+
+func TestSedConcurrent(t *testing.T) {
+	dir := t.TempDir()
+	var wg sync.WaitGroup
+	N := 16
+	paths := make([]string, N)
+	for i := 0; i < N; i++ {
+		paths[i] = filepath.Join(dir, fmt.Sprintf("sed-%d.txt", i))
+		Write(paths[i], []byte("foo bar foo"))
+	}
+	
+	errs := make(chan error, N)
+	for i := 0; i < N; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			content := []byte(fmt.Sprintf("foo bar foo %d", idx))
+			Write(paths[idx], content)
+			_, _, err := SedFile(paths[idx], []byte("foo"), []byte("sed"), true)
+			if err != nil { errs <- err }
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for range errs { t.Fatal("concurrent sed failed") }
+	t.Logf("SedConcurrent OK: %d workers", N)
+}
+
+// ── Sed benchmarks ─────────────────────────────────────────────────────
+
+func BenchmarkSedVsRegex(b *testing.B) {
+	sizes := []int{1024, 65536, 1048576}
+	for _, size := range sizes {
+		data := bytes.Repeat([]byte("hello world "), size/12)
+		
+		b.Run(fmt.Sprintf("Sed-%dKB", size/1024), func(b *testing.B) {
+			b.SetBytes(int64(len(data)))
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				SedAll(data, []byte("world"), []byte("sed"))
+			}
+		})
+	}
+}
+
+func BenchmarkSedFile(b *testing.B) {
+	dir := b.TempDir()
+	path := filepath.Join(dir, "bench-sed.txt")
+	content := bytes.Repeat([]byte("line with foo here\n"), 100)
+	Write(path, content)
+	
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		SedFile(path, []byte("foo"), []byte("bar"), true)
+	}
+}
+
+func BenchmarkSedBatch(b *testing.B) {
+	dir := b.TempDir()
+	paths := make([]string, 10)
+	for i := 0; i < 10; i++ {
+		paths[i] = filepath.Join(dir, fmt.Sprintf("bs-%d.txt", i))
+		Write(paths[i], bytes.Repeat([]byte("foo "), 100))
+	}
+	
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		SedBatch(paths, []byte("foo"), []byte("bar"), true)
+	}
 }
