@@ -631,6 +631,7 @@ func (m *model) sequenceCmds(cmds ...tea.Cmd) tea.Cmd {
 }
 
 var zenActive, shaderActive, sidebarActive bool
+var shellActive bool
 
 func (m *model) toggleZenMode() {
 	zenActive = !zenActive
@@ -646,7 +647,9 @@ func (m *model) toggleZenMode() {
 
 func (m *model) toggleShader() {
 	shaderActive = !shaderActive
+var shellActive bool
 	if shaderActive {
+var shellActive bool
 		m.setEphemeralInfo("shader on")
 	} else {
 		m.setEphemeralInfo("shader off")

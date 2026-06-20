@@ -62,3 +62,5 @@ func (b Base) Good() lipgloss.Color { return lipgloss.Color("#00e660") }
 
 // WarnColor returns a warning yellow color.
 func (b Base) WarnColor() lipgloss.Color { return lipgloss.Color("#ffaa00") }
+
+var ShellActive bool // set by model when a shell tool is running
