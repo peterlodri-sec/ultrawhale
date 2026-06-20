@@ -120,6 +120,9 @@ func (p *Plugin) autoWire() {
 	if p.config.AutoWireNATS {
 		p.wireNATS()
 	}
+
+	// Auto-discover workflows
+	go p.discoverWorkflows()
 	go p.startSupabase()
 }
 
@@ -416,4 +419,21 @@ func (p *Plugin) startSupabase() {
 	}
 
 	p.status.SupabaseRunning = true
+}
+
+
+func (p *Plugin) discoverWorkflows() {
+	workflowDir := ".whale/workflows"
+	entries, err := os.ReadDir(workflowDir)
+	if err != nil { return }
+	
+	count := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".js") {
+			count++
+		}
+	}
+	if count > 0 {
+		fmt.Fprintf(os.Stderr, "[superpowers] discovered %d workflows in %s\n", count, workflowDir)
+	}
 }

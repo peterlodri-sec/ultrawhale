@@ -24,6 +24,14 @@ docker pull ghcr.io/peterlodri-sec/ultrawhale:latest
 go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
 ```
 
+
+## Closing The Loop — v10.0.0
+
+See [docs/case-study-v10.md](docs/case-study-v10.md) for the full case study of
+ultrawhale building its own v10.0.0 release via subagent swarms.
+
+One prompt → swarm launch → real PRs → meta-report → v10.0.0 tagged.
+
 ## Quick Start
 
 ```sh
