@@ -18,6 +18,7 @@ import (
 	"github.com/usewhale/whale/internal/runtime/timeline"
 	"github.com/usewhale/whale/internal/tui/composer"
 	"github.com/usewhale/whale/internal/tui/statusline"
+	"github.com/usewhale/whale/internal/tui/agui"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
 
@@ -652,4 +653,13 @@ func (m *model) toggleSidebar() {
 	} else {
 		m.setEphemeralInfo("sidebar off")
 	}
+}
+
+// renderAguiBlock wraps content in an AG-UI styled block for the chat view.
+func renderAguiBlock(kind, title, content string, width int) string {
+	if width <= 0 {
+		width = 80
+	}
+	block := agui.NewChatBlock(kind, title, content, width)
+	return block.Render()
 }

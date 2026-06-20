@@ -193,3 +193,29 @@ func BenchmarkE2EBlockLifecycle(b *testing.B) {
 		}
 	}
 }
+
+func TestPOV(t *testing.T) {
+	pov := CurrentPOV()
+	if pov.Agent != "ultrawhale" {
+		t.Fatalf("expected ultrawhale, got %s", pov.Agent)
+	}
+	if pov.Arch == "" {
+		t.Fatal("arch is empty")
+	}
+	if pov.Machine == "" {
+		t.Fatal("machine is empty")
+	}
+	t.Logf("POV: %s", pov.String())
+}
+
+func TestPOVMetadata(t *testing.T) {
+	pov := CurrentPOV()
+	md := pov.Metadata()
+	required := []string{"agent", "version", "machine", "arch", "tier", "os"}
+	for _, k := range required {
+		if md[k] == "" {
+			t.Fatalf("metadata key %s is empty", k)
+		}
+	}
+	t.Logf("POV metadata: %d keys", len(md))
+}

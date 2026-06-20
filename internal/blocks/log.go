@@ -123,12 +123,15 @@ func NewToastSink(onEmit func(string)) *ToastSink {
 	return &ToastSink{onEmit: onEmit}
 }
 
+	// POV suffix: show machine·arch·tier in toast
+
 func (t *ToastSink) Emit(e LogEvent) {
 	if t.onEmit == nil || e.Level == LogDebug {
 		return
 	}
 	icon := map[LogLevel]string{LogInfo: "·", LogWarn: "⚠", LogError: "✗"}[e.Level]
-	msg := fmt.Sprintf("%s %s %s (%s)", icon, e.Operation, e.Path, e.Duration.Round(time.Millisecond))
+	pov := CurrentPOV()
+	msg := fmt.Sprintf("%s %s %s (%s) [%s]", icon, e.Operation, e.Path, e.Duration.Round(time.Millisecond), pov.String())
 	if e.Error != "" {
 		msg += " " + e.Error
 	}
