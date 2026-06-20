@@ -1,36 +1,20 @@
 package tui
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	tuirender "github.com/usewhale/whale/internal/tui/render"
-	tuitheme "github.com/usewhale/whale/internal/tui/theme"
-	"github.com/usewhale/whale/internal/tui/statusline"
-	"github.com/usewhale/whale/internal/blocks"
+
 	"github.com/usewhale/whale/internal/build"
+	tuitheme "github.com/usewhale/whale/internal/tui/theme"
 )
 
 func (m model) renderBody(mainWidth, bodyHeight int) string {
-	if bodyHeight <= 0 {
-		return ""
-	}
-	if m.mode == modeWorkflowPanel {
-		return lipgloss.NewStyle().
-			Width(mainWidth).
-			Height(bodyHeight).
-			Render(m.renderWorkflowPanel())
-	}
-	if m.page == pageDiff {
-		m.ensureViewportContentForSize(mainWidth, bodyHeight)
-		return lipgloss.NewStyle().
-			Width(mainWidth).
-			Height(bodyHeight).
-			Render(m.viewport.View())
-	}
 	if m.page != pageChat {
-		m.ensureViewportContentForSize(mainWidth, bodyHeight)
 		return lipgloss.NewStyle().
 			Width(mainWidth).
 			Height(bodyHeight).
@@ -38,267 +22,256 @@ func (m model) renderBody(mainWidth, bodyHeight int) string {
 			BorderForeground(tuitheme.Default.Border).
 			Render(m.viewport.View())
 	}
-	m.ensureViewportContentForSize(mainWidth, bodyHeight)
-	return lipgloss.NewStyle().Width(mainWidth).Render(m.chat.View())
+	return m.renderLiveArea(mainWidth, bodyHeight)
+}
+
+func (m model) renderLiveArea(width, bodyHeight int) string {
+	lines := m.renderChatLines(max(20, width-2))
+	if len(lines) == 0 {
+		return ""
+	}
+	maxLines := max(3, bodyHeight)
+	truncated := false
+	if len(lines) > maxLines {
+		truncated = true
+		lines = lines[len(lines)-maxLines:]
+	}
+	if truncated {
+		prefix := lipgloss.NewStyle().
+			Foreground(tuitheme.Default.Muted).
+			Render("... live output truncated; full turn will be added to scrollback when complete")
+		lines = append([]string{prefix}, lines...)
+	}
+	return lipgloss.NewStyle().
+		Width(width).
+		Render(strings.TrimRight(strings.Join(lines, "\n"), "\n"))
 }
 
 func (m model) View() string {
-	if view, ok := m.cachedViewDuringWindowsPaste(); ok {
-		return view
-	}
-	start := time.Now()
-	mainWidth, _ := m.layoutDims()
-	m.buildHUD(mainWidth)
-	bottom := m.hud.Render()
-	bottomHeight := countVisibleLines(bottom)
-	bodyHeight := m.height - bottomHeight
-	if m.height <= 0 {
-		bodyHeight = 0
-	}
-	bodyHeight = max(0, bodyHeight)
-	if m.page == pageChat && m.mode == modeChat {
-		messages := m.chatViewportMessages()
-		leadingGap := m.chatViewportLeadingGap(nil, messages)
-		bodyHeight = m.chatBodyHeightForView(mainWidth, bodyHeight, messages, leadingGap)
-	}
+	mainWidth, bodyHeight := m.layoutDims()
+	m.refreshViewportContent()
 	body := m.renderBody(mainWidth, bodyHeight)
-	if m.page != pageChat {
-		body = padVisibleLines(body, bodyHeight, mainWidth)
-	}
-	var out string
-	if body == "" {
-		out = m.renderChatBottomOnlyView(bottom)
-	} else {
-		separator := "\n"
-		if m.chatViewNeedsBottomGap(body, bottom) {
-			separator = "\n\n"
+	status := lipgloss.NewStyle().Foreground(tuitheme.Default.StatusIdle).Render(m.status)
+	if m.busy {
+		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		spin := frames[int(time.Now().UnixNano()/int64(120*time.Millisecond))%len(frames)]
+		label := "working"
+		if m.stopping {
+			label = "stopping"
 		}
-		if infra := m.renderInfraBar(); infra != "" {
-			out = infra + "\n" + out
-		}
-		body = m.renderSidebar(body)
-		if m.isZenMode() {
-			return body + separator + bottom
-		}
-		out = body + separator + bottom
+		status = lipgloss.NewStyle().Foreground(tuitheme.Default.Warn).Render(label + " " + spin)
 	}
-	// InfraBar at top
-	if m.infraBar != nil if m.infraBar != nil && m.infraBar.Visible {
-		m.infraBar.Width = m.width
-		if m.orchPanel != nil && m.orchPanel.Visible {
-			m.infraBar.Width -= 32
-		}
-		if infra := m.infraBar.View(); infra != "" {
-			out = infra + "\n" + out
-		}
+	footerText := "status: " + status + "  model: " + m.model + "  effort: " + m.effort + "  thinking: " + m.thinking
+	if m.chatMode == "plan" {
+		footerText += "  mode: plan (Shift+Tab to switch)"
 	}
-	recordFrame(start, out, m.page, m.width, m.height)recordFrame(start, out, m.page, m.width, m.height) m.infraBar.Visible {
-		m.infraBar.Width = m.width
-		if m.orchPanel != nil recordFrame(start, out, m.page, m.width, m.height)recordFrame(start, out, m.page, m.width, m.height) m.orchPanel.Visible {
-			m.infraBar.Width -= 32
-		}
-		if infra := m.infraBar.View(); infra != "" {
-			out = infra + "\n" + out
-		}
+	footerText += "  scroll/copy with terminal"
+	footer := lipgloss.JoinHorizontal(lipgloss.Left, footerText)
+	parts := make([]string, 0, 3)
+	if body != "" {
+		parts = append(parts, body)
+		parts = append(parts, "\n")
 	}
-
-	recordFrame(start, out, m.page, m.width, m.height)
-	m.rememberView(out)
-	return out
-}
-
-func (m model) renderChatBottomOnlyView(bottom string) string {
-	if !m.shouldRenderChatBottomOnlyGap() {
-		return bottom
-	}
-	if !m.chatViewNeedsBottomGap(" ", bottom) {
-		return bottom
-	}
-	mainWidth, _ := m.layoutDims()
-	return lipgloss.NewStyle().
-		Width(mainWidth).
-		MaxWidth(mainWidth).
-		Render("") + "\n" + bottom
-}
-
-func (m model) shouldRenderChatBottomOnlyGap() bool {
-	if m.page != pageChat || m.mode != modeChat || !m.shouldRenderComposer() {
-		return false
-	}
-	if m.busy || m.stopping {
-		return false
-	}
-	printed := min(max(m.nativeScrollbackPrinted, 0), len(m.transcript))
-	if printed == 0 || printed < len(m.transcript) {
-		return false
-	}
-	visible := m.focusMessages(m.transcript[:printed])
-	if len(visible) == 0 {
-		return false
-	}
-	last := visible[len(visible)-1]
-	return last.Role == "assistant" && last.Kind == tuirender.KindText
-}
-
-func (m model) renderBottom(mainWidth int) string {
-	footerText := footerModelEffort(m.model, m.effort) +
-		"  " + footerField("thinking:", m.thinking, thinkingFooterColor(m.thinking))
-	if m.autoAccept {
-		footerText += "  " + footerAutoAccept("auto-accept on")
-	}
-	if m.chatMode == "ask" || m.chatMode == "plan" {
-		footerText += "  " + footerField("mode:", m.chatMode, tuitheme.Default.Plan) +
-			" " + footerHint("(Shift+Tab to switch)")
-	}
-	viewIndicator := ""
-	if m.focusEnabled() {
-		viewIndicator = "focus"
-	}
-	viewReserve := footerViewIndicatorReserve(viewIndicator)
-	branchReserve := footerBranchReserveForWidth(footerText, m.gitBranch, mainWidth, viewReserve)
-	if m.cwd != "" {
-		footerText = appendFooterDir(footerText, m.cwd, mainWidth, branchReserve+viewReserve)
-	}
-	if m.gitBranch != "" {
-		footerText = appendFooterBranch(footerText, m.gitBranch, mainWidth, viewReserve)
-	}
-	if viewIndicator != "" {
-		footerText = appendFooterViewIndicator(footerText, viewIndicator, mainWidth)
-	}
-	footer := lipgloss.NewStyle().Width(mainWidth).MaxWidth(mainWidth).Render(lipgloss.JoinHorizontal(lipgloss.Left, footerText))
-	bottomParts := m.bottomPartsBeforeInput(mainWidth)
-	if m.shouldRenderComposer() {
-		bottomParts = append(bottomParts, m.renderComposerBlock(mainWidth))
-	}
-	bottomParts = append(bottomParts, footer)
-	return strings.Join(bottomParts, "\n")
-}
-
-func (m model) renderComposerBlock(mainWidth int) string {
-	return strings.Join([]string{
-		m.renderComposerBoundary(mainWidth),
-		m.input.View(),
-		m.renderComposerBoundary(mainWidth),
-	}, "\n")
-}
-
-func (m model) renderComposerBoundary(mainWidth int) string {
-	width := max(0, mainWidth)
-	return lipgloss.NewStyle().
-		Foreground(tuitheme.Default.Border).
-		Width(width).
-		MaxWidth(width).
-		Render(strings.Repeat("─", width))
-}
-
-func (m model) shouldRenderComposer() bool {
-	return m.mode == modeChat && m.page == pageChat
-}
-
-func (m model) bottomPartsBeforeInput(mainWidth int) []string {
-	bottomParts := make([]string, 0, 8)
-	if statusLine := m.renderBusyStatusLine(mainWidth); statusLine != "" {
-		bottomParts = append(bottomParts, statusLine)
-	}
-	if btw := m.renderBtwPanel(mainWidth); btw != "" {
-		bottomParts = append(bottomParts, btw)
-	}
-	if m.mode == modeChat && m.hasSlashPanel() {
-		bottomParts = append(bottomParts, m.renderSlashSuggestions())
-	}
-	if m.mode == modeChat && !m.hasSlashPanel() && m.hasFilePanel() {
-		bottomParts = append(bottomParts, m.renderFileSuggestions())
-	}
-	if m.mode == modeChat && !m.hasSlashPanel() && !m.hasFilePanel() && m.hasSkillSuggestions() {
-		bottomParts = append(bottomParts, m.renderSkillSuggestions())
+	parts = append(parts, m.input.View(), footer)
+	view := strings.Join(parts, "\n")
+	if m.mode == modeChat && m.hasSlashSuggestions() {
+		view += "\n" + m.renderSlashSuggestions()
 	}
 	if m.mode == modeApproval {
-		if len(bottomParts) > 0 {
-			bottomParts = append(bottomParts, "")
+		opts := []string{"Allow (a)", "Allow for Session (s)", "Deny (d)"}
+		for i := range opts {
+			if i == m.approval.selected {
+				opts[i] = "[" + opts[i] + "]"
+			}
 		}
-		bottomParts = append(bottomParts, m.renderApprovalPrompt())
+		view += "\n\n" + lipgloss.NewStyle().Foreground(tuitheme.Default.Error).Render(
+			fmt.Sprintf(
+				"approval: %s\nid: %s\n%s\n\n%s\n(←/→/tab select, enter confirm, esc deny)",
+				m.approval.toolName,
+				m.approval.toolCallID,
+				m.approval.reason,
+				strings.Join(opts, "   "),
+			),
+		)
 	}
 	if m.mode == modePlanImplementation {
-		bottomParts = append(bottomParts, m.renderPlanImplementationPicker())
-	}
-	if m.mode == modePermissionsMenu {
-		bottomParts = append(bottomParts, m.renderPermissionsMenu())
-	}
-	if m.mode == modeSkillsMenu {
-		bottomParts = append(bottomParts, m.renderSkillsMenu())
-	}
-	if m.mode == modeSkillsManager {
-		bottomParts = append(bottomParts, m.renderSkillsManager())
-	}
-	if m.mode == modePluginsManager {
-		bottomParts = append(bottomParts, m.renderPluginsManager())
-	}
-	if m.mode == modeConfigManager {
-		bottomParts = append(bottomParts, m.renderConfigManager())
-	}
-	if m.mode == modeHooksManager {
-		bottomParts = append(bottomParts, m.renderHooksManager())
-	}
-	if m.mode == modeHooksStartupReview {
-		bottomParts = append(bottomParts, m.renderHooksStartupReview())
-	}
-	if m.mode == modeReviewMenu {
-		bottomParts = append(bottomParts, m.renderReviewMenu())
-	}
-	if m.mode == modeReviewBranchPicker || m.mode == modeReviewCommitPicker || m.mode == modeReviewPRPicker {
-		bottomParts = append(bottomParts, m.renderReviewTargetPicker())
-	}
-	if m.mode == modeHelp {
-		bottomParts = append(bottomParts, m.renderHelp())
-	}
-	if m.mode == modeChat && m.page == pageDiff {
-		bottomParts = append(bottomParts, m.renderDiffPagerHints(mainWidth))
-	}
-	if m.mode == modeWorktreeExit {
-		bottomParts = append(bottomParts, m.renderWorktreeExit())
-	}
-	if m.mode == modeWorkflowLaunch {
-		bottomParts = append(bottomParts, m.renderWorkflowLaunch())
-	}
-	if m.mode == modeWorkflowRawScript {
-		bottomParts = append(bottomParts, m.renderWorkflowRawScript())
+		view += "\n\n" + m.renderPlanImplementationPicker()
 	}
 	if m.mode == modeSessionPicker {
-		bottomParts = append(bottomParts, m.renderSessionPicker())
+		rows := []string{"sessions (↑/↓ select, enter confirm, esc cancel):"}
+		for i, row := range m.sessionChoices {
+			if isSessionHeaderRow(row) {
+				rows = append(rows, row)
+				continue
+			}
+			prefix := "  "
+			if i == m.sessionIndex {
+				prefix = "> "
+			}
+			rows = append(rows, prefix+stripSessionOrdinal(row))
+		}
+		view += "\n\n" + lipgloss.NewStyle().Foreground(tuitheme.Default.Plan).Render(strings.Join(rows, "\n"))
 	}
 	if m.mode == modeUserInput {
 		if m.userInput.index < len(m.userInput.questions) {
-			bottomParts = append(bottomParts, m.renderUserInputPicker())
+			q := m.userInput.questions[m.userInput.index]
+			rows := make([]string, 0, len(q.Options)+3)
+			rows = append(rows, q.Question)
+			rows = append(rows, "")
+			for i, opt := range q.Options {
+				prefix := "  "
+				if i == m.userInput.selectedOption {
+					prefix = "> "
+				}
+				rows = append(rows, fmt.Sprintf("%s%s - %s", prefix, opt.Label, opt.Description))
+			}
+			rows = append(rows, "", "(up/down choose, enter confirm, esc cancel)")
+			view += "\n\n" + lipgloss.NewStyle().Foreground(tuitheme.Default.Info).Render(strings.Join(rows, "\n"))
 		}
 	}
 	if m.mode == modeModelPicker {
-		bottomParts = append(bottomParts, m.renderModelPicker())
+		view += "\n\n" + m.renderModelPicker()
 	}
-	if queued := m.renderQueuedPrompts(mainWidth); queued != "" {
-		bottomParts = append(bottomParts, queued)
+	if m.mode == modePermissionsPicker {
+		view += "\n\n" + m.renderPermissionsPicker()
 	}
-	return bottomParts
+	return view
 }
 
-func (m *model) buildHUD(width int) {
-	if m.hud == nil {
-		m.hud = statusline.DefaultHUD(width)
+func resolveVersion() string {
+	return build.CurrentVersion()
+}
+
+func buildHeaderBanner(modelName, effort, cwd, version string) string {
+	return fmt.Sprintf("▸ Whale %s   model: %s %s   dir: %s",
+		version, modelName, effort, cwd)
+}
+
+func resolveWorkingDirectory() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "."
 	}
-	h := m.hud
-	h.Width = width
-	h.Model = m.model
-	h.Version = build.CurrentVersion()
-	h.Mode = m.chatMode
-	h.Branch = m.gitBranch
-	h.CWD = m.cwd
-	h.Busy = m.busy
-	if m.busy {
-		h.Elapsed = time.Since(m.busySince)
+	home, hErr := os.UserHomeDir()
+	if hErr == nil {
+		if rel, rErr := filepath.Rel(home, wd); rErr == nil && rel != "" && rel != "." && !strings.HasPrefix(rel, "..") {
+			return "~/" + rel
+		}
+		if filepath.Clean(wd) == filepath.Clean(home) {
+			return "~"
+		}
 	}
-	h.TokenCount = m.busyTokenCount
-	h.Plugins = 5
-	h.Pov = blocks.CurrentPOV().String()
-	if m.viewMode != "" {
-		h.Theme = m.viewMode
+	return wd
+}
+
+func (m model) pageLabel() string {
+	if m.page == pageLogs {
+		return "logs"
 	}
+	if m.page == pageDiff {
+		return "diff"
+	}
+	return "chat"
+}
+
+func (m model) renderPalette() string {
+	rows := []string{"Command Palette (enter to run, esc to close)"}
+	for i, it := range m.palette.actions {
+		prefix := "  "
+		if i == m.palette.selected {
+			prefix = "> "
+		}
+		rows = append(rows, prefix+it.Label)
+	}
+	return lipgloss.NewStyle().Foreground(tuitheme.Default.Palette).Render(strings.Join(rows, "\n"))
+}
+
+func (m model) renderModelPicker() string {
+	rows := []string{"Select Model and Effort"}
+	rows = append(rows, "")
+	rows = append(rows, "Model:")
+	for i, item := range m.modelPicker.models {
+		prefix := "  "
+		if m.modelPicker.stage == 0 && i == m.modelPicker.modelIx {
+			prefix = "> "
+		}
+		rows = append(rows, prefix+item)
+	}
+	if m.modelPicker.stage >= 1 {
+		rows = append(rows, "")
+		rows = append(rows, "Effort:")
+		for i, item := range m.modelPicker.efforts {
+			prefix := "  "
+			if m.modelPicker.stage == 1 && i == m.modelPicker.effIx {
+				prefix = "> "
+			}
+			rows = append(rows, prefix+item)
+		}
+	}
+	if m.modelPicker.stage >= 2 {
+		rows = append(rows, "", "Thinking:")
+		for i, item := range m.modelPicker.thinkings {
+			prefix := "  "
+			if m.modelPicker.stage == 2 && i == m.modelPicker.thinkIx {
+				prefix = "> "
+			}
+			rows = append(rows, prefix+item)
+		}
+	}
+	rows = append(rows, "", "(up/down choose, enter next/confirm, esc back)")
+	return lipgloss.NewStyle().Foreground(tuitheme.Default.Info).Render(strings.Join(rows, "\n"))
+}
+
+func (m model) renderPermissionsPicker() string {
+	rows := []string{"Permissions", ""}
+	descriptions := map[string]string{
+		"Ask first":    "Ask before write, patch, or shell tools run.",
+		"Auto approve": "Never ask; auto-approve tool calls.",
+	}
+	for i, item := range m.permissionsPicker.choices {
+		prefix := "  "
+		if i == m.permissionsPicker.index {
+			prefix = "> "
+		}
+		if desc := descriptions[item]; desc != "" {
+			rows = append(rows, fmt.Sprintf("%s%s - %s", prefix, item, desc))
+		} else {
+			rows = append(rows, prefix+item)
+		}
+	}
+	rows = append(rows, "", "(up/down choose, enter confirm, esc cancel)")
+	return lipgloss.NewStyle().Foreground(tuitheme.Default.Info).Render(strings.Join(rows, "\n"))
+}
+
+func (m model) renderPlanImplementationPicker() string {
+	rows := []string{"Implement this plan?", ""}
+	items := []struct {
+		label string
+	}{
+		{"Yes, implement this plan"},
+		{"No, stay in Plan mode"},
+	}
+	for i, item := range items {
+		prefix := "  "
+		if i == m.planImplementation.index {
+			prefix = "> "
+		}
+		rows = append(rows, prefix+item.label)
+	}
+	rows = append(rows, "", "(up/down choose, enter confirm, esc cancel)")
+	return lipgloss.NewStyle().Foreground(tuitheme.Default.Info).Render(strings.Join(rows, "\n"))
+}
+
+func (m model) layoutDims() (mainWidth, bodyHeight int) {
+	bodyHeight = max(3, m.height-6)
+	mainWidth = m.width
+	if m.sidebar && m.width > 80 {
+		mainWidth = int(float64(m.width) * 0.72)
+	}
+	return mainWidth, bodyHeight
+}
+
+func (m model) chatRenderWidth() int {
+	mainWidth, _ := m.layoutDims()
+	return max(20, max(10, mainWidth-2))
 }

@@ -312,3 +312,29 @@ func handleToolCacheCommand(line string) string {
 func handleToolsCommand() string {
 	return blocks.ToolStatus()
 }
+
+func handleRalphCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/ralph"))
+	if len(parts) == 0 {
+		return "/ralph status | /ralph reset | /ralph rollback <version>"
+	}
+
+	ralph := blocks.GetRalph()
+	switch parts[0] {
+	case "status":
+		return ralph.RalphStatus()
+	case "reset":
+		blocks.InitRalph("default")
+		return "ralph: reset to initial state (v1, 0 patterns)"
+	case "rollback":
+		if len(parts) < 2 { return "usage: /ralph rollback <version>" }
+		var v int
+		fmt.Sscanf(parts[1], "%d", &v)
+		if ralph.Rollback(v) {
+			return fmt.Sprintf("ralph: rolled back to v%d", v)
+		}
+		return fmt.Sprintf("ralph: version %d not found (current: v%d)", v, ralph.Version)
+	default:
+		return "/ralph status | /ralph reset | /ralph rollback <version>"
+	}
+}

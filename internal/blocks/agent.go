@@ -74,6 +74,13 @@ func CompleteAgent(id string, status string, tools int, tokens int64, dur time.D
 
 	if a, ok := agentsStore.agents[id]; ok {
 		a.Status = status
+
+	// Ralph: observe agent completion
+	ralph := GetRalph()
+	ralph.Observe(fmt.Sprintf("agent:%s", a.Role),
+		fmt.Sprintf("completed:%s", status),
+		status,
+		dur, tokens)
 		a.ToolCalls = tools
 		a.TokensUsed = tokens
 		a.Duration = dur
