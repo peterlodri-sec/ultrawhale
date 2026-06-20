@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -157,5 +158,6 @@ func SedAllWithPreHook(content, find, replace []byte) ([]byte, int, error) {
 	if err := PreSedPattern(content, find, replace); err != nil {
 		return content, 0, err
 	}
-	return SedAll(content, find, replace)
+	result, count := SedAll(content, find, replace)
+	return result, count, nil
 }
