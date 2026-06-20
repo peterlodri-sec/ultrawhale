@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/usewhale/whale/internal/blocks"
 )
 
 // UltracodeMode implements the 7-phase agent loop.
@@ -91,6 +92,17 @@ func (u *UltracodeMode) StartPhase(name string) (int, error) {
 			u.phases[i].StartedAt = time.Now()
 			u.current = i
 			u.emitUpdate()
+
+	// Ralph: observe ultracode phase outcome
+	if ralph := blocks.GetRalph(); ralph != nil {
+		ralph.Observe(
+			fmt.Sprintf("ultracode:%s", name),
+			fmt.Sprintf("phase:%s", name),
+			"success",
+			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
+			0,
+		)
+	}
 			return i, nil
 		}
 	}
@@ -105,6 +117,18 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 	for i := range u.phases {
 		if u.phases[i].Name == name {
 			u.phases[i].EndedAt = time.Now()
+			// Ralph: observe ultracode phase outcome
+			if ralph := blocks.GetRalph(); ralph != nil {
+				outcome := "success"
+				if !passed { outcome = "failed" }
+				ralph.Observe(
+					fmt.Sprintf("ultracode:%s", name),
+					fmt.Sprintf("phase:%s", name),
+					outcome,
+					time.Since(u.phases[i].StartedAt),
+					0,
+				)
+			}
 			if passed {
 				u.phases[i].Status = PhasePassed
 			} else {
@@ -118,13 +142,13 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase
+	// Ralph: observe ultracode phase outcome
 	if ralph := blocks.GetRalph(); ralph != nil {
-		_ = ralph // Ralph observe pending EndPhase refactor(
+		ralph.Observe(
 			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("ultracode-%s", name),
-			status,
-			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
+			fmt.Sprintf("phase:%s", name),
+			"success",
+			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
 			0,
 		)
 	}
@@ -143,13 +167,13 @@ func (u *UltracodeMode) RollbackPhase(name string) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase
+	// Ralph: observe ultracode phase outcome
 	if ralph := blocks.GetRalph(); ralph != nil {
-		_ = ralph // Ralph observe pending EndPhase refactor(
+		ralph.Observe(
 			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("ultracode-%s", name),
-			status,
-			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
+			fmt.Sprintf("phase:%s", name),
+			"success",
+			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
 			0,
 		)
 	}
@@ -168,13 +192,13 @@ func (u *UltracodeMode) SkipPhase(name string) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase
+	// Ralph: observe ultracode phase outcome
 	if ralph := blocks.GetRalph(); ralph != nil {
-		_ = ralph // Ralph observe pending EndPhase refactor(
+		ralph.Observe(
 			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("ultracode-%s", name),
-			status,
-			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
+			fmt.Sprintf("phase:%s", name),
+			"success",
+			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
 			0,
 		)
 	}
@@ -191,11 +215,33 @@ func (u *UltracodeMode) AutoAdvance() (string, bool) {
 			u.phases[i].StartedAt = time.Now()
 			u.current = i
 			u.emitUpdate()
+
+	// Ralph: observe ultracode phase outcome
+	if ralph := blocks.GetRalph(); ralph != nil {
+		ralph.Observe(
+			fmt.Sprintf("ultracode:%s", name),
+			fmt.Sprintf("phase:%s", name),
+			"success",
+			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
+			0,
+		)
+	}
 			return u.phases[i].Name, true
 		}
 	}
 	u.status.Verdict = "pass"
 	u.emitUpdate()
+
+	// Ralph: observe ultracode phase outcome
+	if ralph := blocks.GetRalph(); ralph != nil {
+		ralph.Observe(
+			fmt.Sprintf("ultracode:%s", name),
+			fmt.Sprintf("phase:%s", name),
+			"success",
+			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
+			0,
+		)
+	}
 	return "", false
 }
 
