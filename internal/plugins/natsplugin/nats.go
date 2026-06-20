@@ -1,7 +1,9 @@
 // Package natsplugin publishes ultrawhale lifecycle events to NATS JetStream.
+
 // Events: turn.start, turn.stop, tool.call, tool.result.
 // Async fire-and-forget — never blocks the TUI loop.
 package natsplugin
+
 
 import (
 	"context"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/plugintypes"
 	"github.com/usewhale/whale/internal/blocks"
 )
 
@@ -147,3 +150,9 @@ func envOrDefault(key, def string) string {
 	if v := os.Getenv(key); v != "" { return v }
 	return def
 }
+
+func (p *Plugin) Manifest() plugintypes.Manifest {
+	return plugintypes.Manifest{ID: p.ID(), Name: p.Name(), Version: p.Version(), Description: p.Description()}
+}
+
+

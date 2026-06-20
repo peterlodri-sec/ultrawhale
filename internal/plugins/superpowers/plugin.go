@@ -1,8 +1,10 @@
 // Package superpowers auto-discovers and wires vaked infrastructure:
+
 // bao (secrets), Langfuse (telemetry), NATS (events), vastai (GPU compute).
 // All sub-features are opt-in via [superpowers] config section.
 // Zero dependencies beyond Go stdlib — pure HTTP calls.
 package superpowers
+
 
 import (
 	"context"
@@ -16,6 +18,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/plugintypes"
 )
 
 const PluginID = "superpowers"
@@ -339,4 +342,10 @@ func (p *Plugin) onError(payload agent.HookPayload) agent.HookResult {
 	}
 	return agent.HookResult{Decision: agent.HookDecisionPass}
 }
+
+
+func (p *Plugin) Manifest() plugintypes.Manifest {
+	return plugintypes.Manifest{ID: p.ID(), Name: p.Name(), Version: p.Version(), Description: p.Description()}
+}
+
 

@@ -1,7 +1,9 @@
 // Package agentfield provides Supabase-backed AgentField control plane.
+
 // Minimal: DID identity, REST API via PostgREST, workflow CRUD.
 // Runs local Supabase (Postgres+PostgREST+GoTrue) on localhost:8585.
 package agentfield
+
 
 import (
 	"crypto/ed25519"
@@ -18,6 +20,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/plugintypes"
 	"github.com/usewhale/whale/internal/blocks"
 )
 
@@ -289,3 +292,9 @@ func (p *Plugin) stop() {
 func pemFormat(pub ed25519.PublicKey) string {
 	return hex.EncodeToString(pub) // stored as hex for now; PEM encode on export
 }
+
+func (p *Plugin) Manifest() plugintypes.Manifest {
+	return plugintypes.Manifest{ID: p.ID(), Name: p.Name(), Version: p.Version(), Description: p.Description()}
+}
+
+

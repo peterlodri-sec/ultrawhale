@@ -1,7 +1,9 @@
 // Package langfuseplugin sends hierarchical LLM traces to Langfuse.
+
 // Trace: ultrawhale-{version}-session-{id} → Span: tool:{name} → Event: error
 // Batch ingestion every 2s or 64 events, flush on session stop.
 package langfuseplugin
+
 
 import (
 	"bytes"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/plugintypes"
 	"github.com/usewhale/whale/internal/blocks"
 	"github.com/usewhale/whale/internal/build"
 )
@@ -168,3 +171,9 @@ func envOrDefaultLang(key, def string) string {
 	if v := os.Getenv(key); v != "" { return v }
 	return def
 }
+
+func (p *Plugin) Manifest() plugintypes.Manifest {
+	return plugintypes.Manifest{ID: p.ID(), Name: p.Name(), Version: p.Version(), Description: p.Description()}
+}
+
+

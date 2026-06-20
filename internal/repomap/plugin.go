@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/plugintypes"
 )
 
 const PluginID = "repomap"
@@ -228,4 +229,10 @@ func (p *Plugin) onPrePromptSubmit(payload agent.HookPayload) agent.HookResult {
 
 func (p *Plugin) graphSummary() string {
 	return fmt.Sprintf("[REPO_MAP: %d files, %d symbols]", len(p.graph.Files), len(p.graph.Symbols))
+}
+
+
+
+func (p *Plugin) Manifest() plugintypes.Manifest {
+	return plugintypes.Manifest{ID: PluginID, Name: "Repo Map", Version: "0.1.0", Description: "SIMD repo map"}
 }

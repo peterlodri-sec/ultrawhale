@@ -17,6 +17,7 @@ import (
 	"github.com/usewhale/whale/internal/plugins/agentfield"
 	"github.com/usewhale/whale/internal/plugins/natsplugin"
 	"github.com/usewhale/whale/internal/plugins/langfuseplugin"
+	"github.com/usewhale/whale/internal/plugintypes"
 	"github.com/usewhale/whale/internal/repomap"
 	"github.com/usewhale/whale/internal/skills"
 )
@@ -938,14 +939,25 @@ func cloneStringMap(in map[string]string) map[string]string {
 	return out
 }
 
+// adapter wraps a plugin with PluginManifest() to satisfy Plugin interface.
+type manifestProvider interface {
+	Manifest() plugintypes.Manifest
+}
+
+type adapter struct{ p manifestProvider }
+func (a adapter) Manifest() Manifest {
+	m := a.p.Manifest()
+	return Manifest{ID: m.ID, Name: m.Name, Version: m.Version, Description: m.Description}
+}
+
 func builtins() []Plugin {
 	return []Plugin{
 		memoryPlugin{},
-		&superpowersPlugin{inner: superpowers.NewPlugin()},
-		&agentfieldPlugin{inner: agentfield.NewPlugin()},
-		&natsPlugin{inner: natsplugin.NewPlugin()},
-		&langfusePlugin{inner: langfuseplugin.NewPlugin()},
-		&repomapPlugin{inner: repomap.NewPlugin("")},
+		adapter{superpowers.NewPlugin()},
+		adapter{agentfield.NewPlugin()},
+		adapter{natsplugin.NewPlugin()},
+		adapter{langfuseplugin.NewPlugin()},
+		adapter{repomap.NewPlugin("")},
 	}
 }
 
