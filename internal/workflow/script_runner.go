@@ -542,6 +542,7 @@ func agentSpecFromJS(prompt, currentPhase string, args []*qjs.Value) (AgentTaskS
 		}
 		spec.Agent.DisallowedTools = disallowed
 	}
+	spec.MaxToolIters = 64
 	if hasDefinedProperty(opts, "max_tool_iters") {
 		maxToolIters, err := intProperty(opts, "max_tool_iters")
 		if err != nil {
@@ -549,6 +550,7 @@ func agentSpecFromJS(prompt, currentPhase string, args []*qjs.Value) (AgentTaskS
 		}
 		spec.MaxToolIters = maxToolIters
 	}
+	spec.MaxToolCalls = 128
 	if hasDefinedProperty(opts, "max_tool_calls") {
 		maxToolCalls, err := intProperty(opts, "max_tool_calls")
 		if err != nil {

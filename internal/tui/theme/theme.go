@@ -126,3 +126,17 @@ func RoleBorder(role string) lipgloss.Color {
 		return Default.Border
 	}
 }
+
+// SetFromAGUI updates the default palette from an AG-UI theme.
+// This keeps backward compatibility while unifying to one source of truth.
+func SetFromAGUI(bg, fg, accent, dim, border string) {
+	Default.Text = lipgloss.Color(bg)
+	Default.Text = lipgloss.Color(fg)
+	Default.Accent = lipgloss.Color(accent)
+	Default.Muted = lipgloss.Color(dim)
+	Default.Border = lipgloss.Color(border)
+}
+
+// Bg is an alias for the background color derived from Text (not a real field).
+// For AG-UI theme unification, use agui.Current directly.
+func BgColor() lipgloss.Color { return Default.Text }

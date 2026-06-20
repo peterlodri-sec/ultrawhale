@@ -4,12 +4,12 @@
 package agentfield
 
 import (
-	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"context"
 	"net/http"
 	"strings"
 	"os"
@@ -143,6 +143,10 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	// Execute agent command
 	mux.HandleFunc("/api/v1/execute/ultrawhale.", func(w http.ResponseWriter, r *http.Request) {
 		cmd := r.URL.Path[strings.LastIndex(r.URL.Path, ".")+1:]
+		if !allowedCommands[cmd] {
+			w.WriteHeader(403)
+			return
+		}
 		pov := blocks.CurrentPOV()
 		json.NewEncoder(w).Encode(map[string]any{
 			"agent":   pov.Agent,
@@ -165,6 +169,10 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 				json.NewEncoder(w).Encode(data)
 			}
 		case "POST":
+			if err := validateWorkflowInput(r); err != nil {
+				http.Error(w, err.Error(), 400)
+				return
+			}
 			// Create workflow via PostgREST
 			http.Post(p.config.SupabaseURL+"/workflows", "application/json", r.Body)
 			w.WriteHeader(201)
@@ -185,7 +193,7 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	})
 }
 
-func (p *Plugin) stop() {
+func (p *Plugin) stopOld() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.server != nil { p.server.Close(); p.server = nil }
@@ -202,7 +210,7 @@ func loadOrCreateIdentity(dir string) Identity {
 		if json.Unmarshal(data, &id) == nil { return id }
 	}
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
-	pubHex := hex.EncodeToString(pub)
+	pubHex := pemFormat(pub)
 	id := Identity{
 		DID:       fmt.Sprintf("did:key:z%s", pubHex[:40]),
 		PublicKey: pubHex,
@@ -219,4 +227,38 @@ func (p *Plugin) Doctor() string {
 	if !p.running { return "agentfield: not running" }
 	return fmt.Sprintf("agentfield: localhost:%d, supabase=%s, DID=%s",
 		p.config.Port, p.config.SupabaseURL, p.identity.DID[:45])
+}
+
+var allowedCommands = map[string]bool{
+	"status": true, "doctor": true, "health": true, "version": true,
+}
+
+func validateWorkflowInput(r *http.Request) error {
+	if r.ContentLength > 1_000_000 { // 1MB cap
+		return fmt.Errorf("script too large (max 1MB)")
+	}
+	return nil
+}
+
+// gracefulShutdown drains in-flight requests before closing.
+func (p *Plugin) gracefulShutdown() {
+	p.mu.Lock()
+	srv := p.server
+	p.mu.Unlock()
+	if srv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		srv.Shutdown(ctx)
+	}
+}
+
+func (p *Plugin) stop() {
+	p.gracefulShutdown()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.running = false
+}
+
+func pemFormat(pub ed25519.PublicKey) string {
+	return hex.EncodeToString(pub) // stored as hex for now; PEM encode on export
 }

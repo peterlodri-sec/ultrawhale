@@ -13,6 +13,8 @@ import (
 )
 
 func renderToolEvent(m UIMessage, block string, width int) []string {
+	// Optional: batch-collapse sequential tool calls
+	// See chat_tool_batch.go
 	contentWidth := width - 6
 	if contentWidth < 16 {
 		contentWidth = 16
@@ -208,10 +210,14 @@ func renderExplorationGroupEvent(m UIMessage, header string, rawLines []string, 
 }
 
 func renderToolEventHeader(m UIMessage, header string, width int) []string {
+	// Optional: batch-collapse sequential tool calls
+	// See chat_tool_batch.go
 	return renderToolEventHeaderWithStatus(m, header, "", width)
 }
 
 func renderToolEventHeaderWithStatus(m UIMessage, header, status string, width int) []string {
+	// Optional: batch-collapse sequential tool calls
+	// See chat_tool_batch.go
 	contentWidth := width - 2
 	if contentWidth < 16 {
 		contentWidth = 16
@@ -232,6 +238,8 @@ func renderToolEventHeaderWithStatus(m UIMessage, header, status string, width i
 }
 
 func renderToolEventChild(line string, width int) []string {
+	// Optional: batch-collapse sequential tool calls
+	// See chat_tool_batch.go
 	line = strings.TrimRight(line, "\r\n")
 	if strings.TrimSpace(xansi.Strip(line)) == "" {
 		return nil

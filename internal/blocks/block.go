@@ -81,7 +81,7 @@ func Write(path string, content []byte) (*Block, error) {
 	b := NewBlock(path, content, KindFile)
 	b.PrevRef = prevRef
 
-	// Journal the previous state BEFORE writing
+	// Journal the previous state BEFORE writing (atomic: push first, then write)
 	journal.Push(path, prev)
 
 	// Atomic write: tmp file → rename

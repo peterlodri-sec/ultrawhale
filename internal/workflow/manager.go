@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const DefaultMaxConcurrency = 3
+const DefaultMaxConcurrency = 8
 
 type RunManager struct {
 	Store     RunEventStore

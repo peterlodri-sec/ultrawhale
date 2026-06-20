@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"github.com/usewhale/whale/internal/blocks"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -162,7 +163,11 @@ func (p *Plugin) buildFull() {
 
 func (p *Plugin) rebuildFile(relPath string) {
 	fullPath := filepath.Join(p.root, relPath)
-	src, err := os.ReadFile(fullPath)
+	b, err := blocks.Read(fullPath)
+	src := []byte{}
+	if err == nil {
+		src = b.Content
+	}
 	if err != nil {
 		return
 	}

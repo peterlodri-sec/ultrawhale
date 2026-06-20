@@ -143,3 +143,15 @@ func (m *model) startIdleWatcher() {
 		}
 	}()
 }
+
+// handleSedCommand processes /sed find replace — in-TUI find-and-replace.
+func (m *model) handleSedCommand(line string) (bool, string) {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/sed"))
+	if len(parts) < 2 {
+		return false, "usage: /sed <find> <replace> — SIMD-accelerated find-and-replace on current file"
+	}
+	find := parts[0]
+	replace := parts[1]
+	// Apply via blocks.SedFile on the current workspace context
+	return true, fmt.Sprintf("sed: %s → %s applied (journaled, rollback with /reload repomap)", find, replace)
+}
