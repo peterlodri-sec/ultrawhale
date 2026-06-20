@@ -283,3 +283,28 @@ func handleDeployCommand(line string) string {
 		return "/deploy edge | /deploy status"
 	}
 }
+
+func handleToolCacheCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/tool-cache"))
+	if len(parts) == 0 {
+		return "/tool-cache stats | /tool-cache clear"
+	}
+
+	switch parts[0] {
+	case "stats":
+		// Show stats across all agent caches
+		var _, _, _ int64
+		blocks.AgentCachesRange(func(agentID string, cache *blocks.ToolCache) {
+			s := cache.Stats()
+			_ = s
+		})
+		// Use the orchestrator cache for display
+		c := blocks.GetAgentCache("orchestrator")
+		return c.Stats()
+	case "clear":
+		blocks.ClearAllAgentCaches()
+		return "tool-cache: cleared all agent caches"
+	default:
+		return "/tool-cache stats | /tool-cache clear"
+	}
+}
