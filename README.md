@@ -61,9 +61,15 @@ GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ul
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
 
 # With version injection
-go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v3.1.0" ./cmd/whale
+go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v3.3.0" ./cmd/whale
 ```
 
+
+## Swarm Mode
+
+Persistent workers with own AgentField and DID. Auto-detected for complex
+tasks (build, refactor, migrate). Subagents are disposable; swarms live
+between tasks and are reused when idle.
 
 ## YOLO Mode
 

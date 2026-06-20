@@ -109,6 +109,27 @@ Default: full_access for subagents, YOLO mode enabled.
 
 CurrentPOV() wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self, Orchestrator, Agent.
 
+
+## Swarm (v3.2.0)
+
+Persistent workers with own AgentField, DID, and self-scoped memos.
+One level deep. Reused across tasks.
+
+
+
+Complex tasks (score >=40) auto-delegate to swarms. Idle swarms reused.
+Swarms CANNOT spawn sub-swarms (one level depth limit).
+Proportional budget: 256-768 calls based on complexity.
+
+## POV Wiring (10/10 complete)
+
+CurrentPOV() wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self,
+Orchestrator, Agent, Swarm, Brain-memo.
+
+## Subagent-Swarm Wire Map
+
+
+
 ## Contributing
 
 ### Adding a new block primitive

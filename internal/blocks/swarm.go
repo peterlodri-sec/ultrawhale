@@ -26,6 +26,7 @@ type Swarm struct {
 	DID      string    // did:key:swarm:{pubkey}
 	Name     string    // descriptive name from first task
 	Parent   string    // orchestrator universe ID
+	POV      POV       // orchestrator POV + swarm:true
 
 	// AgentField (nested)
 	AFPorthttp int           // auto-assigned port (8686+)
@@ -92,6 +93,7 @@ func SpawnSwarm(name, parent string, complexity int) *Swarm {
 	os.MkdirAll(memoDir, 0o700)
 
 	s := &Swarm{
+		POV:      CurrentPOV(),
 		ID:         fmt.Sprintf("swarm-%d", port),
 		DID:        fmt.Sprintf("did:key:swarm:%s", pubHex[:40]),
 		Name:       name,

@@ -169,10 +169,11 @@ func (o *Orchestrator) OrchestratorStatus() string {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	return fmt.Sprintf("orch: %s | %d turns | %d agents | brain: %d memos",
+	return fmt.Sprintf("orch: %s | %d turns | %d agents | %d swarms | brain: %d memos",
 		o.DID[:20],
 		o.TotalTurns,
 		AgentCount(),
+		SwarmCount(),
 		o.Brain.memos.Count(),
 	)
 }
