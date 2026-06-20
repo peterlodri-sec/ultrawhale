@@ -97,6 +97,15 @@ func (m model) View() string {
 		if m.orchPanel != nil recordFrame(start, out, m.page, m.width, m.height)recordFrame(start, out, m.page, m.width, m.height) m.orchPanel.Visible {
 			m.infraBar.Width -= 32
 		}
+		if infra := m.infraBar.View(); infra != "" {
+			out = infra + "\n" + out
+		}
+	}
+
+	recordFrame(start, out, m.page, m.width, m.height)
+	m.rememberView(out)
+	return out
+}
 
 func (m model) renderChatBottomOnlyView(bottom string) string {
 	if !m.shouldRenderChatBottomOnlyGap() {
