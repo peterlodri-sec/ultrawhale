@@ -24,3 +24,4 @@ func ViewModeToggleMessage(mode string) string {
 func OpenCommandSuccessText(path string) string {
 	return "Opened " + path
 }
+const ViewModeZen = "zen"

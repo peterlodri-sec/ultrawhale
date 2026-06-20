@@ -181,6 +181,19 @@ func addToolSelectors(parent *core.ToolRegistry, selectors []string, caps, tools
 		if selector == "*" {
 			return fmt.Errorf("agent %s selector %q is only supported by fork/trusted child agents", field, selector)
 		}
+		// Shorthand aliases for common tool selectors
+		switch selector {
+		case "Read", "read":
+			selector = CapabilityWorkspaceRead
+		case "Bash", "bash", "shell":
+			selector = CapabilityShellRun
+		case "Write", "write", "edit":
+			selector = CapabilityWorkspaceWrite
+		case "WebSearch", "web", "search":
+			selector = CapabilityWebSearch
+		case "WebFetch", "fetch":
+			selector = CapabilityWebFetch
+		}
 		if knownSubagentCapabilities[selector] {
 			caps[selector] = true
 			continue

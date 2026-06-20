@@ -30,6 +30,16 @@ func (m *model) submitPrompt(value string) tea.Cmd {
 }
 
 func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBinding) tea.Cmd {
+	// /reload commands are handled locally, never sent to LLM
+	if strings.HasPrefix(strings.TrimSpace(value), "/reload") {
+		handled, msg := m.handleReloadCommand(value)
+		if handled {
+			m.setEphemeralInfo(msg)
+			m.input.SetValue("")
+			m.refreshViewportContent()
+			return nil
+		}
+	}
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return nil
@@ -42,6 +52,16 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 }
 
 func (m *model) submitPromptWithBindingAndAttachments(value string, binding *protocol.SkillBinding, attachments []protocol.AttachmentInput) tea.Cmd {
+	// /reload commands are handled locally, never sent to LLM
+	if strings.HasPrefix(strings.TrimSpace(value), "/reload") {
+		handled, msg := m.handleReloadCommand(value)
+		if handled {
+			m.setEphemeralInfo(msg)
+			m.input.SetValue("")
+			m.refreshViewportContent()
+			return nil
+		}
+	}
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return nil

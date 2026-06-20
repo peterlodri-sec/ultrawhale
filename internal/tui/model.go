@@ -17,6 +17,7 @@ import (
 	"github.com/usewhale/whale/internal/runtime/protocol"
 	"github.com/usewhale/whale/internal/runtime/timeline"
 	"github.com/usewhale/whale/internal/tui/composer"
+	"github.com/usewhale/whale/internal/tui/statusline"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
 
@@ -235,6 +236,7 @@ type model struct {
 	pendingMouseCSIFragment          bool
 	windowsPaste                     windowsPasteFallbackState
 	viewCache                        *modelViewCache
+	hud                             *statusline.HUD
 }
 
 type modelViewCache struct {
@@ -354,6 +356,7 @@ func newModel(rt Runtime, modelName, effort, thinking string) model {
 		cwdPath:           resolveWorkingDirectoryPath(),
 		historyIndex:      -1,
 		viewCache:         &modelViewCache{},
+		hud:                statusline.DefaultHUD(80),
 	}
 	if rt != nil {
 		m.dispatch = rt.Dispatch
@@ -617,4 +620,36 @@ func (m *model) sequenceCmds(cmds ...tea.Cmd) tea.Cmd {
 		}
 	}
 	return tea.Sequence(out...)
+}
+
+var zenActive, shaderActive, sidebarActive bool
+
+func (m *model) toggleZenMode() {
+	zenActive = !zenActive
+	if zenActive {
+		m.viewMode = "zen"
+		m.setEphemeralInfo("zen mode — no distractions")
+	} else {
+		m.viewMode = "default"
+		m.setEphemeralInfo("zen off")
+	}
+	m.refreshLiveViewportContent()
+}
+
+func (m *model) toggleShader() {
+	shaderActive = !shaderActive
+	if shaderActive {
+		m.setEphemeralInfo("shader on")
+	} else {
+		m.setEphemeralInfo("shader off")
+	}
+}
+
+func (m *model) toggleSidebar() {
+	sidebarActive = !sidebarActive
+	if sidebarActive {
+		m.setEphemeralInfo("sidebar: repomap")
+	} else {
+		m.setEphemeralInfo("sidebar off")
+	}
 }

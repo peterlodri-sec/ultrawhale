@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/usewhale/whale/internal/runtime/protocol"
 	"time"
+	"github.com/usewhale/whale/internal/tui/agui"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -44,6 +45,25 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool, bool) {
 		m.markWindowsPastedInput()
 		m.resetHistoryNavigation()
 		return m.updateSlashMatches(), false, true
+	}
+	// Ctrl+Shift keybindings for AG-UI features
+	if m.mode == modeChat {
+		switch msg.String() {
+		case "ctrl+shift+t":
+			agui.CycleTheme()
+			m.setEphemeralInfo("theme: " + string(agui.Current.Name))
+			m.refreshLiveViewportContent()
+			return nil, false, true
+		case "ctrl+shift+z":
+			m.toggleZenMode()
+			return nil, false, true
+		case "ctrl+shift+b":
+			m.toggleShader()
+			return nil, false, true
+		case "ctrl+shift+s":
+			m.toggleSidebar()
+			return nil, false, true
+		}
 	}
 	if m.btwPanel.visible {
 		if handled := m.handleBtwPanelKey(msg); handled {

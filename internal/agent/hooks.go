@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"io"
 	"net/http"
 	"net/url"
@@ -37,11 +38,16 @@ const (
 	HookEventSubagentStart     HookEvent = "SubagentStart"
 	HookEventSubagentStop      HookEvent = "SubagentStop"
 	HookEventStop              HookEvent = "Stop"
+	HookEventPrePromptSubmit HookEvent = "PrePromptSubmit"
+	HookEventPostResponse   HookEvent = "PostResponse"
+	HookEventError          HookEvent = "Error"
+	HookEventIdle          HookEvent = "Idle"
+	HookEventModeSwitch      HookEvent = "ModeSwitch"
 )
 
 const (
 	DefaultHookOutputCapBytes = 256 * 1024
-	DefaultHookTimeout        = 600 * time.Second
+	DefaultHookTimeout        = 30 * time.Second
 	MinimumHookTimeout        = time.Second
 )
 
@@ -61,6 +67,11 @@ func HookEvents() []HookLifecycleEventInfo {
 		{Event: HookEventUserPromptSubmit, Description: "When the user submits a prompt"},
 		{Event: HookEventSubagentStart, Description: "When a subagent is created"},
 		{Event: HookEventSubagentStop, Description: "Right before a subagent ends its turn"},
+		{Event: HookEventPrePromptSubmit, Description: "Before user prompt is submitted to the LLM"},
+		{Event: HookEventPostResponse, Description: "After LLM responds, before TUI rendering"},
+		{Event: HookEventError, Description: "When any error occurs (tool, API, timeout)"},
+		{Event: HookEventIdle, Description: "When user is idle for N seconds (configurable)"},
+		{Event: HookEventModeSwitch, Description: "When agent mode switches (agent/ask/plan)"},
 		{Event: HookEventStop, Description: "Right before Whale ends its turn"},
 	}
 }
@@ -104,6 +115,7 @@ type HookListEntry struct {
 	Model          string            `json:"model,omitempty"`
 	Description    string            `json:"description,omitempty"`
 	TimeoutSec     int               `json:"timeout_sec,omitempty"`
+	Priority       int    `json:"priority,omitempty" toml:"priority,omitempty"`
 	CWD            string            `json:"cwd,omitempty"`
 	Shell          string            `json:"shell,omitempty"`
 	Once           bool              `json:"once,omitempty"`
@@ -129,6 +141,7 @@ type HookConfig struct {
 	Model          string            `json:"model,omitempty" toml:"model,omitempty"`
 	Description    string            `json:"description,omitempty" toml:"description,omitempty"`
 	TimeoutSec     int               `json:"timeout,omitempty" toml:"timeout,omitempty"`
+	Priority       int    `json:"priority,omitempty" toml:"priority,omitempty"`
 	CWD            string            `json:"cwd,omitempty" toml:"cwd,omitempty"`
 	Shell          string            `json:"shell,omitempty" toml:"shell,omitempty"`
 	Once           bool              `json:"once,omitempty" toml:"once,omitempty"`
@@ -319,6 +332,7 @@ type HookHandler struct {
 	Source      string
 	Description string
 	TimeoutSec  int
+	Priority    int // 0-100, higher = runs first
 	Run         func(context.Context, HookPayload) HookResult
 }
 
@@ -441,6 +455,8 @@ func (r *HookRunner) RunHook(ctx context.Context, payload HookPayload) HookRepor
 }
 
 func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayload, observer HookRunObserver) HookReport {
+	// Sort hooks by priority (highest first) before execution
+	sort.SliceStable(r.hooks, func(i, j int) bool { return r.hooks[i].Priority > r.hooks[j].Priority })
 	out := HookReport{Event: payload.Event, Metadata: map[string]any{}}
 	if r.Empty() {
 		return out
@@ -540,12 +556,31 @@ func (r *HookRunner) RunHookWithObserver(ctx context.Context, payload HookPayloa
 			}
 			start := time.Now()
 			timeout := resolveHookTimeout(h.TimeoutSec)
+			// Async fire-and-forget for PostToolUse and Stop hooks.
+			// These never block the main loop — plugins run in background.
+			if payload.Event == HookEventPostToolUse || payload.Event == HookEventStop {
+				hCopy := h
+				payloadCopy := payload
+				go func() {
+					runCtx := context.Background()
+					var cancel func()
+					if timeout > 0 {
+						runCtx, cancel = context.WithTimeout(runCtx, timeout)
+						defer cancel()
+					}
+					res := runHookHandlerWithTimeout(runCtx, hCopy, payloadCopy, timeout)
+					HookMetrics.Record(hCopy.Name, payloadCopy.Event, time.Since(start), res.Decision == HookDecisionError)
+					_ = res // fire-and-forget: result is discarded for non-blocking hooks
+				}()
+				continue
+			}
 			runCtx := ctx
 			cancel := func() {}
 			if timeout > 0 {
 				runCtx, cancel = context.WithTimeout(ctx, timeout)
 			}
 			res := runHookHandlerWithTimeout(runCtx, h, payload, timeout)
+			HookMetrics.Record(h.Name, payload.Event, time.Since(start), res.Decision == HookDecisionError)
 			cancel()
 			oc := HookOutcome{
 				ID:                runID,
@@ -1205,6 +1240,7 @@ func hookOnceBodyHash(h ResolvedHook) string {
 		Model          string
 		Description    string
 		TimeoutSec     int
+	Priority       int    `json:"priority,omitempty" toml:"priority,omitempty"`
 		CWD            string
 		Shell          string
 		Async          bool
@@ -1537,4 +1573,50 @@ func resolveHookShell(shellName, command string) (shell.Spec, error) {
 	default:
 		return shell.Spec{}, fmt.Errorf("unsupported hook shell %q", strings.TrimSpace(shellName))
 	}
+}
+
+// ── Hook Metrics ──────────────────────────────────────────────────────
+// Lightweight counters for hook observability. Accessible via /reload hooks.
+
+var HookMetrics = &hookMetrics{counters: make(map[string]*hookCounter)}
+
+type hookMetrics struct {
+	mu       sync.RWMutex
+	counters map[string]*hookCounter
+}
+
+type hookCounter struct {
+	Name     string
+	Event    HookEvent
+	Calls    int64
+	Errors   int64
+	LastRun  time.Time
+	LastDur  time.Duration
+}
+
+func (hm *hookMetrics) Record(name string, event HookEvent, dur time.Duration, err bool) {
+	hm.mu.Lock()
+	defer hm.mu.Unlock()
+	key := name + ":" + string(event)
+	c, ok := hm.counters[key]
+	if !ok {
+		c = &hookCounter{Name: name, Event: event}
+		hm.counters[key] = c
+	}
+	c.Calls++
+	c.LastRun = time.Now()
+	c.LastDur = dur
+	if err {
+		c.Errors++
+	}
+}
+
+func (hm *hookMetrics) All() []hookCounter {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+	var out []hookCounter
+	for _, c := range hm.counters {
+		out = append(out, *c)
+	}
+	return out
 }

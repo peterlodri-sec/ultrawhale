@@ -273,6 +273,12 @@ func (r *Runner) SpawnSubagentWithProgress(ctx context.Context, req SpawnSubagen
 	}
 	if memoryBlock := agentMemorySystemBlock(workspace.WorkspaceRoot, role, cfg.Memory); memoryBlock != "" {
 		extraBlocks = append(extraBlocks, memoryBlock)
+	if r.repomapContext == "" {
+		r.repomapContext = GlobalRepomapContext
+	}
+	if repomapBlock := agentRepomapBlock(workspace.WorkspaceRoot, r.repomapContext); repomapBlock != "" {
+		extraBlocks = append(extraBlocks, repomapBlock)
+	}
 	}
 	prompt := task
 	if cfg.InitialPrompt != "" {
@@ -809,4 +815,14 @@ func (r *Runner) unregisterBackgroundSubagent(sessionID string) {
 	r.backgroundMu.Lock()
 	defer r.backgroundMu.Unlock()
 	delete(r.backgroundCancels, strings.TrimSpace(sessionID))
+}
+
+func agentRepomapBlock(workspaceRoot string, ctx string) string {
+	if ctx == "" {
+		return ""
+	}
+	if len(ctx) > 8000 {
+		ctx = ctx[:8000] + "\n... (truncated for subagent)"
+	}
+	return ctx
 }

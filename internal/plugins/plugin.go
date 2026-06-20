@@ -13,6 +13,10 @@ import (
 	"github.com/usewhale/whale/internal/core"
 	whalemcp "github.com/usewhale/whale/internal/mcp"
 	"github.com/usewhale/whale/internal/plugins/memoryplugin"
+	"github.com/usewhale/whale/internal/plugins/superpowers"
+	"github.com/usewhale/whale/internal/plugins/natsplugin"
+	"github.com/usewhale/whale/internal/plugins/langfuseplugin"
+	"github.com/usewhale/whale/internal/repomap"
 	"github.com/usewhale/whale/internal/skills"
 )
 
@@ -936,6 +940,10 @@ func cloneStringMap(in map[string]string) map[string]string {
 func builtins() []Plugin {
 	return []Plugin{
 		memoryPlugin{},
+		&superpowersPlugin{inner: superpowers.NewPlugin()},
+		&natsPlugin{inner: natsplugin.NewPlugin()},
+		&langfusePlugin{inner: langfuseplugin.NewPlugin()},
+		&repomapPlugin{inner: repomap.NewPlugin("")},
 	}
 }
 

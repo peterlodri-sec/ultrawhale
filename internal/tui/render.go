@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 	tuitheme "github.com/usewhale/whale/internal/tui/theme"
+	"github.com/usewhale/whale/internal/tui/statusline"
+	"github.com/usewhale/whale/internal/build"
 )
 
 func (m model) renderBody(mainWidth, bodyHeight int) string {
@@ -45,7 +47,8 @@ func (m model) View() string {
 	}
 	start := time.Now()
 	mainWidth, _ := m.layoutDims()
-	bottom := m.renderBottom(mainWidth)
+	m.buildHUD(mainWidth)
+	bottom := m.hud.Render()
 	bottomHeight := countVisibleLines(bottom)
 	bodyHeight := m.height - bottomHeight
 	if m.height <= 0 {
@@ -247,4 +250,26 @@ func (m model) bottomPartsBeforeInput(mainWidth int) []string {
 		bottomParts = append(bottomParts, queued)
 	}
 	return bottomParts
+}
+
+func (m *model) buildHUD(width int) {
+	if m.hud == nil {
+		m.hud = statusline.DefaultHUD(width)
+	}
+	h := m.hud
+	h.Width = width
+	h.Model = m.model
+	h.Version = build.CurrentVersion()
+	h.Mode = m.chatMode
+	h.Branch = m.gitBranch
+	h.CWD = m.cwd
+	h.Busy = m.busy
+	if m.busy {
+		h.Elapsed = time.Since(m.busySince)
+	}
+	h.TokenCount = m.busyTokenCount
+	h.Plugins = 5
+	if m.viewMode != "" {
+		h.Theme = m.viewMode
+	}
 }

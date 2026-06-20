@@ -71,6 +71,7 @@ type RunnerConfig struct {
 }
 
 type Runner struct {
+	repomapContext string // injected into subagents for repo awareness
 	providerFactory            ProviderFactory
 	providerFactoryWithOptions ProviderFactoryWithOptions
 	parentTools                *core.ToolRegistry
@@ -168,4 +169,9 @@ func defaultWorkspaceTools(workspace ToolWorkspace) (*core.ToolRegistry, error) 
 	}
 	toolset.SetWorktreeContext(workspace.WorktreeRoot, workspace.OriginalWorkspace)
 	return core.NewToolRegistryChecked(toolset.Tools())
+}
+
+// SetRepomapContext stores the repo map for injection into subagent prompts.
+func (r *Runner) SetRepomapContext(ctx string) {
+	r.repomapContext = ctx
 }
