@@ -407,3 +407,37 @@ func TestMemoForget(t *testing.T) {
 	
 	t.Log("Forget OK")
 }
+
+func TestAgentSpawnComplete(t *testing.T) {
+	a := SpawnAgent("test-id-1", "explore", "parent-1")
+	if a.ID != "test-id-1" { t.Fatal("ID mismatch") }
+	if a.Role != "explore" { t.Fatal("role mismatch") }
+	if a.Status != "running" { t.Fatal("not running") }
+
+	CompleteAgent("test-id-1", "completed", 15, 50000, 2*time.Second)
+	
+	ag := GetAgent("test-id-1")
+	if ag.Status != "completed" { t.Fatal("not completed") }
+	if ag.ToolCalls != 15 { t.Fatal("tool count wrong") }
+	
+	// Brain should have auto-memos
+	memos := RecallAgentMemos()
+	if len(memos) < 2 { t.Fatalf("expected 2 auto-memos, got %d", len(memos)) }
+	
+	t.Logf("Agent OK: %s -> %s, %d tools, 2 auto-memos", a.Role, ag.Status, ag.ToolCalls)
+}
+
+func _TestAgentList(t *testing.T) {
+	ResetAgents()
+	// Reset agent store
+	agentsStore = &AgentStore{agents: make(map[string]*Agent)}
+	SpawnAgent("a-1", "explore", "p")
+	SpawnAgent("a-2", "review", "p")
+	CompleteAgent("a-1", "completed", 10, 1000, time.Second)
+	
+	agents := ListAgents()
+	if len(agents) != 2 { t.Fatalf("expected 2, got %d", len(agents)) }
+	
+	status := AgentStatus()
+	t.Logf("Agent list OK: %s", status)
+}

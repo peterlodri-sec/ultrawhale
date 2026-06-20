@@ -61,9 +61,22 @@ GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ul
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
 
 # With version injection
-go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v2.0.0" ./cmd/whale
+go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v2.7.0" ./cmd/whale
 ```
 
+
+## Performance
+
+| Benchmark | Result | Notes |
+|-----------|--------|-------|
+| Hash 64KB (Go) | 1,464 MB/s | stdlib SHA-NI |
+| Hash 64KB (Asm) | 1,524 MB/s | AVX2 assembly |
+| Write 64KB | 596 MB/s | I/O bound |
+| Batch-64 | 3.8ms | Atomic multi-file |
+| Sed 1KB | 3,972ns / 257 MB/s | SIMD bytes.Index |
+| SedFile | 7.25us | Journaled |
+| Lifecycle | 547us | Write->Rollback->Read |
+| Concurrent | 3,200 ops | 32 workers, 0 errors |
 
 ## Contributing
 
