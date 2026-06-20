@@ -2,6 +2,7 @@ package agentfield
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 	"testing"
 )
@@ -74,13 +75,13 @@ func TestPrivateKeyStorage(t *testing.T) {
 	id := loadOrCreateIdentity(dir)
 	
 	// Private key file should exist
-	_, err := os.Stat(dir + "/private.key")
+	_, err := os.Stat(filepath.Join(dir, "private.key"))
 	if err != nil {
 		t.Fatalf("private.key missing: %v", err)
 	}
 	
 	// DID file should exist
-	_, err = os.Stat(dir + "/did.json")
+	_, err = os.Stat(filepath.Join(dir, "did.json"))
 	if err != nil {
 		t.Fatalf("did.json missing: %v", err)
 	}

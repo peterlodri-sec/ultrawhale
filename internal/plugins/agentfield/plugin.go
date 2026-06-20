@@ -219,7 +219,7 @@ func loadOrCreateIdentity(dir string) Identity {
 		var id Identity
 		if json.Unmarshal(data, &id) == nil { return id }
 	}
-	pub, _, _ := ed25519.GenerateKey(rand.Reader)
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	pubHex := pemFormat(pub)
 	id := Identity{
 		DID:       fmt.Sprintf("did:key:z%s", pubHex[:40]),
@@ -228,6 +228,8 @@ func loadOrCreateIdentity(dir string) Identity {
 	}
 	raw, _ := json.MarshalIndent(id, "", "  ")
 	os.WriteFile(path, raw, 0o600)
+	privPath := filepath.Join(dir, "private.key")
+	os.WriteFile(privPath, []byte(hex.EncodeToString(priv)), 0o600)
 	return id
 }
 
