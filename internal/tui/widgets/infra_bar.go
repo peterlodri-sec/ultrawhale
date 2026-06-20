@@ -147,8 +147,6 @@ func (i *InfraBarWidget) renderBar() string {
 
 	// Left: ultrawhale branding	
 	// Shell nesting indicator
-	if ShellActive {
-		lipgloss.NewStyle().Foreground(t.Accent).Bold(true).Render("▸ultrawhale") + " " + + lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Render("[sh]")
 	}
 
 	// Center: service indicators
