@@ -1,61 +1,38 @@
 package defaults
 
-import "strings"
+// ── YOLO Mode ──────────────────────────────────────────────────────────
+// One-time user confirmation on TUI start, then full auto for the session.
 
 const (
-	DefaultModel                 = "deepseek-v4-flash"
-	ProModel                     = "deepseek-v4-pro"
-	DefaultReasoningEffort       = "high"
-	DefaultThinkingEnabled       = true
-	DefaultContextWindow         = 128_000
-	DeepSeekV4ContextWindow      = 1_000_000
-	DefaultAutoCompactThreshold  = 0.85
-	DefaultAgentCompactThreshold = 0.90
-	DefaultMemoryMaxChars        = 8000
-	DefaultMemoryFileOrderCSV    = "AGENTS.md,.claude/instructions.md,CLAUDE.md"
+	// YOLOMode: when true, user confirms ONCE at TUI start, then all tools auto-approved.
+	YOLOMode = true
+
+	// YOLOConfirmMessage shown on first prompt.
+	YOLOConfirmMessage = "YOLO mode active — all tools auto-approved for this session. /yolo off to disable."
 )
 
-var supportedModels = []string{
-	DefaultModel,
-	ProModel,
-}
+// ── Subagent Modes ─────────────────────────────────────────────────────
+// Only two modes: read-only and full-access-auto.
 
-var defaultMemoryFileOrder = []string{
-	"AGENTS.md",
-	".claude/instructions.md",
-	"CLAUDE.md",
-}
+const (
+	SubagentReadOnly    = "read_only"
+	SubagentFullAccess  = "full_access" // auto-approve all tools
+)
 
-func SupportedModels() []string {
-	return append([]string(nil), supportedModels...)
-}
+// Default subagent permission profile.
+const DefaultSubagentPermission = SubagentFullAccess
 
-func IsSupportedModel(model string) bool {
-	m := strings.ToLower(strings.TrimSpace(model))
-	for _, supported := range supportedModels {
-		if m == supported {
-			return true
-		}
-	}
-	return false
-}
+// ── Tool Call Limits ───────────────────────────────────────────────────
 
-func DefaultMemoryFileOrder() []string {
-	return append([]string(nil), defaultMemoryFileOrder...)
-}
+const (
+	DefaultMaxToolCalls = 256
+	DefaultMaxToolIters = 128
+)
 
-func IsDeepSeekV4Model(model string) bool {
-	m := strings.ToLower(strings.TrimSpace(model))
-	return strings.Contains(m, DefaultModel) || strings.Contains(m, ProModel)
-}
+// ── Orchestrator ───────────────────────────────────────────────────────
 
-// ContextWindowForModel returns the context window size in tokens for model.
-func ContextWindowForModel(model string) int {
-	if strings.TrimSpace(model) == "" {
-		return DefaultContextWindow
-	}
-	if IsDeepSeekV4Model(model) {
-		return DeepSeekV4ContextWindow
-	}
-	return DefaultContextWindow
-}
+const (
+	OrchestratorEnabled = true // always delegate prompts to subagents
+)
+
+const DefaultModel = "deepseek-v4-flash"

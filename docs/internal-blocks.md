@@ -86,6 +86,29 @@ CurrentPOV() wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self, Current.
 
 /memo command, AgentField GET/POST /api/v1/memos, Langfuse trace metadata, NATS turn.start.
 
+
+
+## Orchestrator (v3.0.0)
+
+The orchestrator is the single TUI universe controller. One per session.
+NEVER calls LLM directly — delegates every prompt to subagents.
+
+
+
+Identity: own DID/Ed25519 keypair (did:key:orch:...), separate from AgentField.
+Delegation: auto on first prompt. Classification: keyword-based.
+Sidepanel: right-side dashboard showing active agents, brain, orchestrator DID.
+
+## YOLO Mode (v3.1.0)
+
+One-time user confirmation on TUI start, then full auto for the entire session.
+Subagent modes: read_only (safe exploration) or full_access (auto-approve tools).
+Default: full_access for subagents, YOLO mode enabled.
+
+## POV Wiring (8/8 complete)
+
+CurrentPOV() wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self, Orchestrator, Agent.
+
 ## Contributing
 
 ### Adding a new block primitive
