@@ -92,17 +92,6 @@ func (u *UltracodeMode) StartPhase(name string) (int, error) {
 			u.phases[i].StartedAt = time.Now()
 			u.current = i
 			u.emitUpdate()
-
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 			return i, nil
 		}
 	}
@@ -130,13 +119,13 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
+	// Ralph: observe ultracode phase
 	if ralph := blocks.GetRalph(); ralph != nil {
 		ralph.Observe(
 			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
+			fmt.Sprintf("ultracode-%s", name),
+			status,
+			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
 			0,
 		)
 	}
@@ -155,13 +144,13 @@ func (u *UltracodeMode) RollbackPhase(name string) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
+	// Ralph: observe ultracode phase
 	if ralph := blocks.GetRalph(); ralph != nil {
 		ralph.Observe(
 			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
+			fmt.Sprintf("ultracode-%s", name),
+			status,
+			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
 			0,
 		)
 	}
@@ -180,13 +169,13 @@ func (u *UltracodeMode) SkipPhase(name string) {
 	}
 	u.emitUpdate()
 
-	// Ralph: observe ultracode phase outcome
+	// Ralph: observe ultracode phase
 	if ralph := blocks.GetRalph(); ralph != nil {
 		ralph.Observe(
 			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
+			fmt.Sprintf("ultracode-%s", name),
+			status,
+			u.phases[u.current].EndedAt.Sub(u.phases[u.current].StartedAt),
 			0,
 		)
 	}
@@ -203,33 +192,11 @@ func (u *UltracodeMode) AutoAdvance() (string, bool) {
 			u.phases[i].StartedAt = time.Now()
 			u.current = i
 			u.emitUpdate()
-
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 			return u.phases[i].Name, true
 		}
 	}
 	u.status.Verdict = "pass"
 	u.emitUpdate()
-
-	// Ralph: observe ultracode phase outcome
-	if ralph := blocks.GetRalph(); ralph != nil {
-		ralph.Observe(
-			fmt.Sprintf("ultracode:%s", name),
-			fmt.Sprintf("phase:%s", name),
-			"success",
-			u.phases[i].EndedAt.Sub(u.phases[i].StartedAt),
-			0,
-		)
-	}
 	return "", false
 }
 
