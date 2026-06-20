@@ -22,7 +22,7 @@ func NewOrchestratorPanel() *OrchestratorPanelWidget {
 	return &OrchestratorPanelWidget{
 		Base:    NewBase(30, 20),
 		Visible: true,
-		Width:   30,
+		Width:   30, // default, adjusted on WindowSizeMsg
 	}
 }
 
@@ -39,7 +39,12 @@ func (o *OrchestratorPanelWidget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case orchTickMsg:
 		return o, tea.Tick(3*time.Second, func(t time.Time) tea.Msg { return orchTickMsg(t) })
 	case tea.WindowSizeMsg:
-		if msg.Width < 100 { o.Visible = false } else { o.Visible = true }
+		if msg.Width < 80 { o.Visible = false } else {
+			o.Visible = true
+			o.Width = msg.Width / 5 // ~20% of terminal width
+			if o.Width < 25 { o.Width = 25 }
+			if o.Width > 40 { o.Width = 40 }
+		}
 	}
 	return o, nil
 }

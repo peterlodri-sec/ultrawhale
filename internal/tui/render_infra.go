@@ -6,7 +6,7 @@ func (m *model) renderInfraBar() string {
 	}
 	m.infraBar.Width = m.width
 	if m.orchPanel != nil && m.orchPanel.Visible {
-		m.infraBar.Width -= 32
+		m.infraBar.Width -= m.orchPanel.Width + 4 // sidepanel width + padding
 	}
 	return m.infraBar.View()
 }

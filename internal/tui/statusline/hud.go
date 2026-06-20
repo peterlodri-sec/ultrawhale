@@ -147,3 +147,12 @@ func formatDuration(d time.Duration) string {
 	if d < time.Minute { return fmt.Sprintf("%.1fs", d.Seconds()) }
 	return fmt.Sprintf("%d:%02d", int(d.Minutes()), int(d.Seconds())%60)
 }
+
+var spinnerFrames = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+var spinnerIdx int
+
+func spinnerTick() string {
+	f := spinnerFrames[spinnerIdx%len(spinnerFrames)]
+	spinnerIdx++
+	return f
+}
