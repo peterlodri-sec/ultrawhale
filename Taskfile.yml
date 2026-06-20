@@ -70,3 +70,32 @@ tasks:
     desc: Remove build artifacts
     cmds:
       - rm -rf {{.BIN_DIR}} coverage.txt .golangci-lint-cache.stamp
+
+  dev-deploy:
+    desc: Build + deploy site to CF Pages
+    cmds:
+      - rm -rf deploy-out
+      - mkdir -p deploy-out/ultrawhale/docs deploy-out/ultrawhale/book
+      - cp site/index.html deploy-out/ultrawhale/
+      - cp docs/index.html deploy-out/ultrawhale/docs/
+      - cp -r docs-book/book/* deploy-out/ultrawhale/book/ 2>/dev/null; true
+      - wrangler pages deploy deploy-out --project-name=vaked-dev --branch=main --commit-dirty=true
+      - rm -rf deploy-out
+
+  dev-ship:
+    desc: Build + test + commit + push
+    cmds:
+      - go test -count=1 ./internal/blocks/
+      - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o bin/ultrawhale ./cmd/whale
+      - cp bin/ultrawhale ~/.local/bin/ultrawhale
+
+  dev-bench:
+    desc: Full benchmark suite
+    cmds:
+      - go test -bench=. -benchmem -benchtime=500ms ./internal/blocks/
+      - bin/ultrawhale-bench-tui
+
+  dev-clean:
+    desc: Reset to pristine
+    cmds:
+      - rm -rf bin/ deploy-out/ coverage.txt .golangci-lint-cache.stamp
