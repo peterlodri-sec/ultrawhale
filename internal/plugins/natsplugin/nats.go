@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/blocks"
 )
 
 const PluginID = "nats-eventbus"
@@ -54,6 +55,11 @@ func (p *Plugin) Hooks() []agent.HookHandler {
 					"session_id": payload.SessionID,
 					"cwd":        payload.CWD,
 					"timestamp":  time.Now().UTC().Format(time.RFC3339),
+					"pov":     blocks.CurrentPOV().String(),
+					"machine": blocks.CurrentPOV().Machine,
+					"arch":    blocks.CurrentPOV().Arch,
+					"tier":    blocks.CurrentPOV().Tier,
+					"brain":   blocks.BrainStatus(),
 				})
 				return agent.HookResult{Decision: agent.HookDecisionPass}
 			}},

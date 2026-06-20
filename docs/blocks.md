@@ -84,3 +84,33 @@ SedBatch(paths, find, replace, global) → error         // concurrent
 ## POV Wiring
 
 
+
+
+## Codewhale — Brain + Memo
+
+| Component | Purpose | Storage |
+|-----------|---------|---------|
+| Brain | Short-term (32 turns) + long-term (jsonl) | Memory + ~/.whale/brain/ |
+| Memo | Scoped notes (internal/self/agents) | ~/.whale/memos/ |
+| MemoStore | CRUD with disk persistence | In-memory + json reload |
+
+Commands: /memo "text", /memo recall, /memo recall agents, /memo brain, /memo forget
+
+## POV Wiring — Complete (7/7)
+
+blocks.CurrentPOV():
+  LogSink toast: [dev-cx53.amd64]
+  Langfuse trace: machine, arch, tier, brain metadata
+  AgentField API: /health, /api/v1/memos, /api/v1/agents
+  NATS events: turn.start carries pov + brain
+  HUD statusline: right section POV string
+  Self identity: includes POV context
+  Current state: linked to POV
+
+## Brain-Memo Wiring
+
+/memo command: TUI prompt interceptor
+AgentField: GET/POST /api/v1/memos
+Langfuse: trace metadata includes brain status
+NATS: turn.start includes brain dump
+Subagents: inherit brain context on spawn

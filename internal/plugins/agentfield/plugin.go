@@ -124,6 +124,7 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 			"agent":     "ultrawhale",
 			"supabase":  p.config.SupabaseURL,
 			"did":       p.identity.DID,
+			"brain":     blocks.BrainStatus(),
 		})
 	})
 
@@ -146,6 +147,20 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	})
 
 	// Execute agent command
+	mux.HandleFunc("/api/v1/memos", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			memos := blocks.RecallSessionMemos()
+			json.NewEncoder(w).Encode(memos)
+		case "POST":
+			var req struct { Content string }
+			json.NewDecoder(r.Body).Decode(&req)
+			m := blocks.RememberSessionMemo(req.Content)
+			json.NewEncoder(w).Encode(m)
+		default:
+			w.WriteHeader(405)
+		}
+	})
 	mux.HandleFunc("/api/v1/execute/ultrawhale.", func(w http.ResponseWriter, r *http.Request) {
 		cmd := r.URL.Path[strings.LastIndex(r.URL.Path, ".")+1:]
 		if !allowedCommands[cmd] {

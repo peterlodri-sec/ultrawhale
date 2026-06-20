@@ -83,6 +83,7 @@ func (p *Plugin) Hooks() []agent.HookHandler {
 						"machine":    pov.Machine,
 						"arch":       pov.Arch,
 						"tier":       pov.Tier,
+						"brain":     blocks.BrainStatus(),
 					},
 				})
 				return agent.HookResult{Decision: agent.HookDecisionPass}

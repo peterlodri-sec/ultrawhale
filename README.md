@@ -45,6 +45,12 @@ Fixed-position ASCII dashboard in TUI. AgentField status, phase summary, uptime.
 - [AG-UI](docs/agui.md) — Themes, ChatBlock, shader, keybindings
 - [Agent Loop](docs/agent-loop.md) — ultracode, POV, HUD, plugins
 
+## Codewhale
+
+Brain + Memo system. /memo "fix the auth bug" stores scoped notes.
+/memo recall shows internal memos. Brain tracks 32-turn short-term
++ jsonl long-term memory.
+
 ## Build
 
 ```sh
