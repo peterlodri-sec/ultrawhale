@@ -38,3 +38,5 @@ const (
 const DefaultModel = "deepseek-v4-flash"
 
 const DefaultThinkingEnabled = true
+
+const DefaultReasoningEffort = "high"
