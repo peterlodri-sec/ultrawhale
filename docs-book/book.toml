@@ -19,3 +19,10 @@ enable = true
 
 [rust]
 edition = "2021"
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.playground]
+editable = true

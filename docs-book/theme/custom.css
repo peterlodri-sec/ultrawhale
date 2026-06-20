@@ -1,0 +1,40 @@
+/* ultrawhale mdBook theme — AG-UI inspired */
+:root {
+  --bg: #0a0a14;
+  --fg: #e0e8f5;
+  --accent: #00d4ff;
+  --green: #00e660;
+  --dim: #6878a0;
+  --sidebar-bg: #0d0d1a;
+  --sidebar-fg: #a0a8c0;
+  --code-bg: #141420;
+}
+
+/* Dark mode is default */
+html {
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .sidebar { width: 100% !important; }
+  .page-wrapper { padding: 1rem; }
+  pre { font-size: 0.85rem; }
+}
+
+/* Code blocks */
+pre, code {
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+
+/* Links */
+a { color: var(--accent); }
+a:hover { color: var(--green); }
+
+/* Sidebar */
+.sidebar {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+}
