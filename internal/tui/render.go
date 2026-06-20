@@ -85,6 +85,16 @@ func (m model) View() string {
 			out = infra + "\n" + out
 		}
 	}
+	// InfraBar at top — width adjusts for sidepanel
+	if m.infraBar != nil && m.infraBar.Visible {
+		m.infraBar.Width = m.width
+		if m.orchPanel != nil && m.orchPanel.Visible {
+			m.infraBar.Width -= 32
+		}
+		if infra := m.infraBar.View(); infra != "" {
+			out = infra + "\n" + out
+		}
+	}
 	recordFrame(start, out, m.page, m.width, m.height)recordFrame(start, out, m.page, m.width, m.height) m.infraBar.Visible {
 		m.infraBar.Width = m.width
 		if m.orchPanel != nil recordFrame(start, out, m.page, m.width, m.height)recordFrame(start, out, m.page, m.width, m.height) m.orchPanel.Visible {
@@ -95,6 +105,16 @@ func (m model) View() string {
 		}
 	}
 
+	// InfraBar at top — width adjusts for sidepanel
+	if m.infraBar != nil && m.infraBar.Visible {
+		m.infraBar.Width = m.width
+		if m.orchPanel != nil && m.orchPanel.Visible {
+			m.infraBar.Width -= 32
+		}
+		if infra := m.infraBar.View(); infra != "" {
+			out = infra + "\n" + out
+		}
+	}
 	recordFrame(start, out, m.page, m.width, m.height)
 	m.rememberView(out)
 	return out

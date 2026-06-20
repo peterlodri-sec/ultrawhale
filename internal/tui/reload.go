@@ -308,3 +308,7 @@ func handleToolCacheCommand(line string) string {
 		return "/tool-cache stats | /tool-cache clear"
 	}
 }
+
+func handleToolsCommand() string {
+	return blocks.ToolStatus()
+}
