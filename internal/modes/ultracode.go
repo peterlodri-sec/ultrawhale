@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/usewhale/whale/internal/blocks"
 )
 
 // UltracodeMode implements the 7-phase agent loop.
