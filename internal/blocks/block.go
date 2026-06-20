@@ -185,3 +185,5 @@ func Batch(ops []BatchOp) error {
 	Log(LogInfo, "blocks.Batch", "", "", "", time.Since(start), nil)
 	return nil
 }
+
+func (k BlockKind) String() string { return string(k) }
