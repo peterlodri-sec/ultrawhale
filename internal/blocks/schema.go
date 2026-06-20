@@ -37,7 +37,7 @@ func RegisterSchema(s *BlockSchema) {
 
 // ValidateBlock validates a block against its registered schema.
 func ValidateBlock(b *Block) []string {
-	schema, ok := schemaRegistry[b.Kind.String()]
+	schema, ok := schemaRegistry[string(b.Kind)]
 	if !ok {
 		return nil // no schema registered — pass
 	}
@@ -107,12 +107,12 @@ func init() {
 		Fields: []SchemaField{
 			{Name: "Content", Type: "[]byte", Required: true},
 			{Name: "Kind", Type: "BlockKind", Required: true},
-			Validate: func(b *Block) []string {
-				if b.Kind != "compress" {
-					return []string{"Compress: Kind must be 'compress'"}
-				}
-				return nil
-			},
+		},
+		Validate: func(b *Block) []string {
+			if b.Kind != "compress" {
+				return []string{"Compress: Kind must be 'compress'"}
+			}
+			return nil
 		},
 	})
 }
