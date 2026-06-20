@@ -201,3 +201,7 @@ func handleSelfCommand() string {
 	return fmt.Sprintf("identity: %s %s | %s/%s | %s·%s | %d plugins | uptime: %s",
 		s.Name, s.Version, s.POV.Machine, s.POV.Arch, s.Tier, s.Theme, s.Plugins, s.UptimeString())
 }
+
+func handleCurrentCommand() string {
+	return blocks.GetCurrent().Status()
+}

@@ -130,12 +130,17 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	// Agent status
 	mux.HandleFunc("/api/v1/agents", func(w http.ResponseWriter, r *http.Request) {
 		pov := blocks.CurrentPOV()
+			cur := blocks.GetCurrent()
 		json.NewEncoder(w).Encode([]map[string]any{{
 			"agent":   pov.Agent,
 			"version": pov.Version,
 			"machine": pov.Machine,
 			"arch":    pov.Arch,
 			"tier":    pov.Tier,
+				"turn_count": cur.TurnCount,
+				"total_tokens": cur.TotalTokens,
+				"memory_mb": cur.MemoryMB,
+				"cost_usd": cur.CostUSD,
 			"did":     p.identity.DID,
 		}})
 	})
@@ -148,11 +153,16 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 			return
 		}
 		pov := blocks.CurrentPOV()
+			cur := blocks.GetCurrent()
 		json.NewEncoder(w).Encode(map[string]any{
 			"agent":   pov.Agent,
 			"command": cmd,
 			"status":  "executed",
 			"tier":    pov.Tier,
+				"turn_count": cur.TurnCount,
+				"total_tokens": cur.TotalTokens,
+				"memory_mb": cur.MemoryMB,
+				"cost_usd": cur.CostUSD,
 		})
 	})
 

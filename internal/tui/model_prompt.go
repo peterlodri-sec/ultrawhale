@@ -33,6 +33,12 @@ func (m *model) submitPrompt(value string) tea.Cmd {
 func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBinding) tea.Cmd {
 	// /reload commands are handled locally, never sent to LLM
 	if strings.HasPrefix(strings.TrimSpace(value), "/self") {
+	if strings.HasPrefix(strings.TrimSpace(value), "/current") {
+		m.setEphemeralInfo(handleCurrentCommand())
+		m.input.SetValue("")
+		m.refreshViewportContent()
+		return nil
+	}
 		m.setEphemeralInfo(handleSelfCommand())
 		m.input.SetValue("")
 		m.refreshViewportContent()
@@ -48,6 +54,12 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		}
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/self") {
+	if strings.HasPrefix(strings.TrimSpace(value), "/current") {
+		m.setEphemeralInfo(handleCurrentCommand())
+		m.input.SetValue("")
+		m.refreshViewportContent()
+		return nil
+	}
 		m.setEphemeralInfo(handleSelfCommand())
 		m.input.SetValue("")
 		m.refreshViewportContent()
@@ -85,6 +97,12 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 func (m *model) submitPromptWithBindingAndAttachments(value string, binding *protocol.SkillBinding, attachments []protocol.AttachmentInput) tea.Cmd {
 	// /reload commands are handled locally, never sent to LLM
 	if strings.HasPrefix(strings.TrimSpace(value), "/self") {
+	if strings.HasPrefix(strings.TrimSpace(value), "/current") {
+		m.setEphemeralInfo(handleCurrentCommand())
+		m.input.SetValue("")
+		m.refreshViewportContent()
+		return nil
+	}
 		m.setEphemeralInfo(handleSelfCommand())
 		m.input.SetValue("")
 		m.refreshViewportContent()
