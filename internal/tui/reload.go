@@ -205,3 +205,45 @@ func handleSelfCommand() string {
 func handleCurrentCommand() string {
 	return blocks.GetCurrent().Status()
 }
+
+func handleMemoCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/memo"))
+	if len(parts) == 0 {
+		return "usage: /memo <text> | /memo recall [internal|agents] | /memo forget <ref> | /memo brain"
+	}
+	switch parts[0] {
+	case "recall":
+		scope := "internal"
+		if len(parts) > 1 { scope = parts[1] }
+		var memos []blocks.Memo
+		switch scope {
+		case "agents":
+			memos = blocks.RecallAgentMemos()
+		default:
+			memos = blocks.RecallSessionMemos()
+		}
+		if len(memos) == 0 { return "no " + scope + " memos" }
+		var lines []string
+		for _, m := range memos {
+			lines = append(lines, fmt.Sprintf("[%s] %s", m.Ref[:8], m.Content))
+		}
+		return strings.Join(lines, "\n")
+	case "forget":
+		if len(parts) < 2 { return "usage: /memo forget <ref>" }
+		ref := parts[1]
+		// iterate memos to find by prefix
+		for _, m := range blocks.RecallSessionMemos() {
+			if strings.HasPrefix(m.Ref, ref) {
+				blocks.GetBrain().ForgetMemo(m.Ref)
+				return "forgotten: " + m.Content
+			}
+		}
+		return "memo not found: " + ref
+	case "brain":
+		return blocks.BrainStatus()
+	default:
+		content := strings.Join(parts, " ")
+		m := blocks.RememberSessionMemo(content)
+		return fmt.Sprintf("memo: [%s] %s", m.Ref[:8], content)
+	}
+}

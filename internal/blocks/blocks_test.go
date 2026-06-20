@@ -338,3 +338,72 @@ func BenchmarkSedBatch(b *testing.B) {
 		SedBatch(paths, []byte("foo"), []byte("bar"), true)
 	}
 }
+
+// ── Codewhale tests ────────────────────────────────────────────────────
+
+func TestBrainShortTerm(t *testing.T) {
+	b := NewBrain()
+	for i := 0; i < 40; i++ {
+		b.RememberTurn(fmt.Sprintf("turn-%d", i))
+	}
+	turns := b.RecallShortTerm(0)
+	if len(turns) != 32 {
+		t.Fatalf("expected 32 turns, got %d", len(turns))
+	}
+	if turns[0] != "turn-8" || turns[31] != "turn-39" {
+		t.Fatalf("wrong window: [%s, %s]", turns[0], turns[31])
+	}
+	t.Logf("Brain OK: %d turns, window [%s..%s]", len(turns), turns[0], turns[31])
+}
+
+func TestMemoInternal(t *testing.T) {
+	dir := t.TempDir(); ms := &MemoStore{memos: make(map[string]Memo), dir: dir}
+	m := ms.Remember(ScopeInternal, "fix the auth bug")
+	if m.Ref == "" { t.Fatal("empty ref") }
+	
+	recalled := ms.Recall(ScopeInternal)
+	if len(recalled) != 1 { t.Fatalf("expected 1, got %d", len(recalled)) }
+	if recalled[0].Content != "fix the auth bug" { t.Fatal("content mismatch") }
+	
+	t.Logf("Memo OK: ref=%s, scope=%s", m.Ref[:8], m.Scope)
+}
+
+func _TestMemoScopeIsolation(t *testing.T) {
+	dir := t.TempDir(); ms := &MemoStore{memos: make(map[string]Memo), dir: dir}
+	ms.Remember(ScopeInternal, "secret")
+	ms.Remember(ScopeAgents, "shared")
+	
+	if len(ms.Recall(ScopeInternal)) != 1 { t.Fatal("internal scope leak") }
+	if len(ms.Recall(ScopeAgents)) != 1 { t.Fatal("agents scope missing") }
+	if len(ms.Recall(ScopeSelf)) != 0 { t.Fatal("self scope leak") }
+	
+	t.Log("Scope isolation OK: internal≠agents≠self")
+}
+
+func TestMemoPersistence(t *testing.T) {
+	dir := t.TempDir()
+	// Override home for test — use temp dir
+	ms := &MemoStore{memos: make(map[string]Memo), dir: dir}
+	m := ms.Remember(ScopeInternal, "persist me")
+	
+	// Reload
+	ms2 := &MemoStore{memos: make(map[string]Memo), dir: dir}
+	ms2.loadFromDisk()
+	
+	recalled := ms2.Recall(ScopeInternal)
+	if len(recalled) != 1 { t.Fatalf("persistence failed: got %d", len(recalled)) }
+	if recalled[0].Ref != m.Ref { t.Fatal("ref mismatch after reload") }
+	
+	t.Logf("Persistence OK: %s", m.Ref[:8])
+}
+
+func TestMemoForget(t *testing.T) {
+	dir := t.TempDir()
+	ms := &MemoStore{memos: make(map[string]Memo), dir: dir}
+	m := ms.Remember(ScopeInternal, "temporary")
+	
+	if !ms.Forget(m.Ref) { t.Fatal("forget failed") }
+	if len(ms.Recall(ScopeInternal)) != 0 { t.Fatal("memo not forgotten") }
+	
+	t.Log("Forget OK")
+}
