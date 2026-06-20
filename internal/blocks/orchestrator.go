@@ -173,6 +173,13 @@ func (o *Orchestrator) classifyPrompt(prompt string) AgentDef {
 		}
 	}
 
+	// Ultracode trigger
+	if strings.HasPrefix(strings.ToLower(prompt), "/ultracode") {
+		for _, d := range o.Definitions {
+			if d.Name == "swe" { return d }
+		}
+	}
+
 	// Workflow trigger — delegate to swe agent, which can spawn workflows
 	if strings.HasPrefix(strings.ToLower(prompt), "/workflow") || strings.Contains(strings.ToLower(prompt), "workflow") {
 		for _, d := range o.Definitions {

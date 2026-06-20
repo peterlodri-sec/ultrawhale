@@ -80,8 +80,9 @@ func (p *Plugin) Hooks() []agent.HookHandler {
 				go p.start()
 				return agent.HookResult{Decision: agent.HookDecisionPass}
 			}},
-		{Event: agent.HookEventStop, Name: "af.stop", Source: "plugin:agentfield",
+		{Event: agent.HookEventStop, Name: "af.stop", Source: "plugin:agentfield", Priority: 50,
 			Run: func(ctx context.Context, payload agent.HookPayload) agent.HookResult {
+				p.persistSession("stopped")
 				p.stop()
 				return agent.HookResult{Decision: agent.HookDecisionPass}
 			}},
