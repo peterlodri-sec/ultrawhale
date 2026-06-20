@@ -42,7 +42,10 @@ const (
 // ── Memory ─────────────────────────────────────────────────────────────
 const (
 	DefaultMemoryMaxChars  = 100000
-	DefaultMemoryFileOrder = "relevance"
+	DefaultMemoryFileOrderStr = "relevance"
+
+func DefaultMemoryFileOrder() string { return DefaultMemoryFileOrderStr }
+const DefaultMemoryFileOrderStr
 	DefaultMemoryFileOrderCSV = "relevance"
 )
 
@@ -67,3 +70,8 @@ func IsSupportedModel(model string) bool {
 }
 
 func Model() string { return DefaultModel }
+
+func DefaultMemoryFileOrderFunc() string { return "relevance" }
+
+
+func DefaultMemoryFileOrder() string { return "relevance" }
