@@ -247,3 +247,54 @@ func handleMemoCommand(line string) string {
 		return fmt.Sprintf("memo: [%s] %s", m.Ref[:8], content)
 	}
 }
+
+func handleDeployCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/deploy"))
+	if len(parts) == 0 {
+		return "/deploy edge [agent-id] | /deploy swarm [swarm-id] | /deploy status"
+	}
+	
+	switch parts[0] {
+	case "edge":
+		// Deploy current orchestrator agents to edge
+		agents := blocks.ListAgents()
+		if len(agents) == 0 {
+			return "no agents to deploy — start a task first"
+		}
+		var deployed []string
+		for _, a := range agents {
+			if a.IsEdgeDeployed() { continue }
+			edge, err := a.DeployToEdge()
+			if err != nil {
+				return fmt.Sprintf("deploy failed: %v", err)
+			}
+			deployed = append(deployed, fmt.Sprintf("%s → %s", a.Role, edge.ID[:12]))
+		}
+		if len(deployed) == 0 {
+			return "all agents already edge-deployed"
+		}
+		return fmt.Sprintf("deployed %d agents: %s", len(deployed), strings.Join(deployed, ", "))
+		
+	case "swarm":
+		swarms := blocks.ListSwarms()
+		if len(swarms) == 0 {
+			return "no swarms to deploy"
+		}
+		var deployed []string
+		for _, s := range swarms {
+			if s.Edge != nil { continue }
+			edge, err := s.DeploySwarmToEdge()
+			if err != nil {
+				return fmt.Sprintf("swarm deploy failed: %v", err)
+			}
+			deployed = append(deployed, fmt.Sprintf("%s → %s", s.ID, edge.ID[:12]))
+		}
+		return fmt.Sprintf("deployed %d swarms: %s", len(deployed), strings.Join(deployed, ", "))
+		
+	case "status":
+		return blocks.EdgeStatus()
+		
+	default:
+		return "/deploy edge | /deploy swarm | /deploy status"
+	}
+}

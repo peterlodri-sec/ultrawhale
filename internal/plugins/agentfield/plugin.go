@@ -150,6 +150,28 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 	})
 
 	// Execute agent command
+	mux.HandleFunc("/api/v1/edge/status", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]string{"status": blocks.EdgeStatus()})
+	})
+	mux.HandleFunc("/api/v1/edge/deploy", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" { w.WriteHeader(405); return }
+		var req struct { Type string; ID string }
+		json.NewDecoder(r.Body).Decode(&req)
+		var result string
+		if req.Type == "agent" {
+			agents := blocks.ListAgents()
+			for _, a := range agents {
+				if a.ID == req.ID || req.ID == "" {
+					if _, err := a.DeployToEdge(); err != nil {
+						result = err.Error()
+					} else {
+						result = fmt.Sprintf("deployed %s", a.ID[:12])
+					}
+				}
+			}
+		}
+		json.NewEncoder(w).Encode(map[string]string{"result": result})
+	})
 	mux.HandleFunc("/api/v1/memos", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":

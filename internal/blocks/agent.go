@@ -5,6 +5,7 @@ package blocks
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -28,6 +29,7 @@ type Agent struct {
 	Duration    time.Duration
 	MaxCalls   int
 	MaxIters   int
+	Edge       *EdgeAgent // nil if not edge-deployed
 
 	mu sync.Mutex
 }
@@ -125,4 +127,35 @@ func ResetAgents() {
 	agentsStore.mu.Lock()
 	defer agentsStore.mu.Unlock()
 	agentsStore.agents = make(map[string]*Agent)
+}
+
+// DeployToEdge deploys this agent to Cloudflare edge.
+// Requires CF_API_TOKEN. Returns the deployed EdgeAgent.
+func (a *Agent) DeployToEdge() (*EdgeAgent, error) {
+	cfg := DetectCF()
+	if cfg == nil {
+		return nil, fmt.Errorf("no CF credentials — run 'ultrawhale setup' or set CF_API_TOKEN")
+	}
+	
+	edge := NewEdgeAgent(a.ID, a.Role)
+	edge.Fiber.AppendLedger("prompt", fmt.Sprintf("agent spawned: %s (%s)", a.ID, a.Role))
+	
+	if err := edge.DeployEdgeAgent(cfg); err != nil {
+		return nil, err
+	}
+	
+	a.Edge = edge
+	a.Status = "edge-active"
+	return edge, nil
+}
+
+// IsEdgeDeployed returns true if this agent is running at the edge.
+func (a *Agent) IsEdgeDeployed() bool {
+	return a.Edge != nil && a.Edge.Status == "active"
+}
+
+// EdgeURL returns the edge deployment URL.
+func (a *Agent) EdgeURL() string {
+	if a.Edge == nil { return "" }
+	return fmt.Sprintf("https://%s.%s.workers.dev", a.Edge.ID, os.Getenv("CF_ACCOUNT_ID"))
 }
