@@ -71,6 +71,10 @@ var journal = NewJournal()
 // Write writes content to a file atomically. Journaled for rollback.
 // Returns the new Block with ref. The previous ref is stored in PrevRef.
 func Write(path string, content []byte) (*Block, error) {
+	// Pre-write validation
+	if err := RunPreHooks("write", content, path); err != nil {
+		return nil, err
+	}
 	start := time.Now()
 	prev, _ := Read(path) // best-effort previous state
 	prevRef := ""

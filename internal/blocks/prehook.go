@@ -126,6 +126,10 @@ func RunPreHooks(op string, data []byte, path string) error {
 	case "sed":
 		// PreSed is called via PreSedPattern directly
 		return nil
+	case "git":
+		hooks = append(hooks, &PreGit{})
+	case "deploy":
+		hooks = append(hooks, &PreDeploy{})
 	case "grep":
 		hooks = append(hooks, &PreGrep{})
 	}
@@ -160,4 +164,42 @@ func SedAllWithPreHook(content, find, replace []byte) ([]byte, int, error) {
 	}
 	result, count := SedAll(content, find, replace)
 	return result, count, nil
+}
+
+// PreGit runs before git operations.
+type PreGit struct{}
+
+func (p *PreGit) Name() string { return "pre-git" }
+func (p *PreGit) Validate(data []byte, path string) error {
+	// Check working tree is clean
+	cmd := exec.Command("git", "status", "--porcelain")
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("pre-git: git status failed: %w", err)
+	}
+	dirty := 0
+	for _, line := range strings.Split(string(out), "\n") {
+		if line != "" { dirty++ }
+	}
+	if dirty > 0 {
+		Log(LogInfo, "pre-git", fmt.Sprintf("%d dirty files", dirty), "", "", 0, nil)
+	}
+	return nil
+}
+
+// PreDeploy runs before deploy operations.
+type PreDeploy struct{}
+
+func (p *PreDeploy) Name() string { return "pre-deploy" }
+func (p *PreDeploy) Validate(data []byte, path string) error {
+	// Verify binary exists
+	if _, err := os.Stat("bin/ultrawhale"); os.IsNotExist(err) {
+		return fmt.Errorf("pre-deploy: binary not found — run 'task build' first")
+	}
+	// Check doctor
+	cmd := exec.Command("bin/ultrawhale", "--dangerously-skip-permissions", "doctor")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("pre-deploy: doctor failed: %s", string(out))
+	}
+	return nil
 }
