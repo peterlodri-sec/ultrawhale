@@ -1,10 +1,14 @@
 package blocks
 
 import (
+	"encoding/json"
+	"strconv"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -343,4 +347,39 @@ func GetRalph() *RalphLoop {
 func InitRalph(sessionID string) *RalphLoop {
 	sessionRalph = NewRalphLoop(sessionID)
 	return sessionRalph
+}
+
+
+// LoadFromBrain loads previously persisted patterns from brain long-term memory.
+func (r *RalphLoop) LoadFromBrain() int {
+	brain := GetBrain()
+	if brain == nil || brain.longTerm == nil {
+		return 0
+	}
+
+	// Read long-term.jsonl — each line is a JSON fact
+	home, _ := os.UserHomeDir()
+	path := filepath.Join(home, ".whale", "brain", "long-term.jsonl")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0
+	}
+
+	loaded := 0
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if line == "" { continue }
+		var fact map[string]string
+		if json.Unmarshal([]byte(line), &fact) == nil {
+			if fact["ralph_key"] != "" {
+				conf, _ := strconv.ParseFloat(fact["confidence"], 64)
+				if conf == 0 { conf = 0.5 }
+				r.Patterns[fact["ralph_key"]] = conf
+				r.Apply(fact["ralph_key"], fact["ralph_value"], conf)
+				loaded++
+			}
+		}
+	}
+
+	return loaded
 }

@@ -87,6 +87,13 @@ func InitOrchestrator(sessionID string) *Orchestrator {
 
 	orchestrator = o
 
+	// Load previously learned Ralph patterns from brain
+	ralph := GetRalph()
+	loaded := ralph.LoadFromBrain()
+	if loaded > 0 {
+		ralph.snapshot(fmt.Sprintf("loaded %d patterns from brain", loaded))
+	}
+
 	// Auto-memo: orchestrator started
 	o.Brain.memos.Remember(ScopeInternal,
 		fmt.Sprintf("orchestrator started: universe=%s, did=%s", sessionID, o.DID[:45]))
