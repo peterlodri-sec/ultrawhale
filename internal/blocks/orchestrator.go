@@ -122,6 +122,17 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	return agent.ID, def.Name
 }
 
+// DelegateSwarm spawns a swarm for complex tasks.
+func (o *Orchestrator) DelegateSwarm(prompt string) *Swarm {
+	score := ComplexityScore(prompt)
+	if score >= 40 {
+		return SpawnSwarm(prompt[:min(40, len(prompt))], o.Universe, score)
+	}
+	return nil
+}
+
+func min(a, b int) int { if a < b { return a }; return b }
+
 // classifyPrompt picks the best agent definition for a prompt.
 func (o *Orchestrator) classifyPrompt(prompt string) AgentDef {
 	lower := strings.ToLower(prompt)

@@ -441,3 +441,45 @@ func _TestAgentList(t *testing.T) {
 	status := AgentStatus()
 	t.Logf("Agent list OK: %s", status)
 }
+
+func TestSwarmSpawnDrainKill(t *testing.T) {
+	s := SpawnSwarm("test-swarm", "universe-1", 60)
+	if s.ID == "" { t.Fatal("empty ID") }
+	if s.DID == "" { t.Fatal("empty DID") }
+	if s.Status != "active" { t.Fatal("not active") }
+	if s.AFPorthttp < 8686 { t.Fatalf("port too low: %d", s.AFPorthttp) }
+
+	// Budget should be proportional (60 -> 2x = 512)
+	if s.MaxCalls != 512 { t.Fatalf("expected 512 calls, got %d", s.MaxCalls) }
+
+	s.DrainSwarm()
+	if s.Status != "idle" { t.Fatal("not idle after drain") }
+
+	// Spawn another — should reuse the idle one
+	s2 := SpawnSwarm("reused", "universe-1", 30)
+	if s2.ID != s.ID { t.Fatalf("expected reuse of %s, got %s", s.ID, s2.ID) }
+
+	s.KillSwarm()
+	if GetSwarm(s.ID) != nil { t.Fatal("swarm not killed") }
+
+	t.Logf("Swarm OK: %s:%d, budget=%d", s.ID, s.AFPorthttp, s.MaxCalls)
+}
+
+func TestComplexityScore(t *testing.T) {
+	tests := []struct{
+		prompt string
+		min    int
+	}{
+		{"find the auth bug", 10},
+		{"refactor the entire auth module with full test coverage", 50},
+		{"build a new payment system from scratch", 40},
+		{"fix typo in readme", 10},
+	}
+	for _, tc := range tests {
+		score := ComplexityScore(tc.prompt)
+		if score < tc.min {
+			t.Errorf("%q: expected >=%d, got %d", tc.prompt, tc.min, score)
+		}
+	}
+	t.Log("Complexity scores OK")
+}

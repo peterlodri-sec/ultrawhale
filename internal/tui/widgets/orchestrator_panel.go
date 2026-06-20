@@ -73,6 +73,19 @@ func (o *OrchestratorPanelWidget) View() string {
 	memos := brain.BrainDump()
 	lines = append(lines, fmt.Sprintf("│ %s", memos))
 
+		// Swarms
+	swarms := blocks.ListSwarms()
+	if len(swarms) > 0 {
+		lines = append(lines, fmt.Sprintf("│ swarms: %d", len(swarms)))
+		for _, sw := range swarms {
+			icon := "●"
+			color := t.Accent
+			if sw.Status != "active" { icon = "◌"; color = t.Dim }
+			lines = append(lines, lipgloss.NewStyle().Foreground(color).Render(
+				fmt.Sprintf("│ %s %s: %s (port:%d, %d tasks)", icon, sw.ID, sw.Status, sw.AFPorthttp, sw.TotalTasks)))
+		}
+	}
+
 	// Footer
 	lines = append(lines, lipgloss.NewStyle().Foreground(t.Dim).Render("└────────────────┘"))
 
