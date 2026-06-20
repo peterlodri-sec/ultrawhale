@@ -520,3 +520,21 @@ func BenchmarkMMapVsRead(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkBlake3VsSHA256(b *testing.B) {
+	data := make([]byte, 65536) // 64KB
+	b.Run("SHA256", func(b *testing.B) {
+		b.SetBytes(int64(len(data)))
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			sha256Ref(data)
+		}
+	})
+	b.Run("BLAKE3", func(b *testing.B) {
+		b.SetBytes(int64(len(data)))
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			Blake3Ref(data)
+		}
+	})
+}
