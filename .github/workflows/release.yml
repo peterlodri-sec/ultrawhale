@@ -28,7 +28,16 @@ jobs:
       - name: Run tests
         run: go test -v -race ./internal/blocks/ ./internal/modes/
 
-      - name: Create Release
+      - name: Generate checksums
+      run: cd bin && sha256sum * > SHA256SUMS
+
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        format: cyclonedx-json
+        output-file: bin/sbom.json
+
+    - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |

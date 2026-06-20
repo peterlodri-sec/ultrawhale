@@ -28,7 +28,7 @@
 <p class="tagline">DeepSeek-native coding agent. Blocks engine (Go+Asm+GPU). 15 primitives, 6 plugins, AG-UI themes. macOS + Linux.</p>
 
 <div>
-<span class="badge">v8.1.0</span>
+<span class="badge">v9.0.0</span>
 <span class="badge">38MB macOS</span>
 <span class="badge">30MB Linux</span>
 <span class="badge">6 plugins</span>
@@ -60,6 +60,22 @@ bin/ultrawhale --model deepseek-v4-flash -w</code></pre>
 <h3>Native macOS</h3>
 <p>28MB Mach-O arm64. ARMv8 NEON SIMD. Metal GPU stub. Ghostty-optimized TUI. bench-tui load tested.</p>
 </div>
+</div>
+
+<div class="section">
+<h2>Install</h2>
+<pre><code># Homebrew (macOS/Linux)
+brew install peterlodri-sec/ultrawhale/ultrawhale
+
+# Docker
+docker pull ghcr.io/peterlodri-sec/ultrawhale:latest
+
+# Go install
+go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
+
+# From source
+git clone https://github.com/peterlodri-sec/ultrawhale.git
+cd ultrawhale && go build -o bin/ultrawhale ./cmd/whale</code></pre>
 </div>
 
 <div class="section">

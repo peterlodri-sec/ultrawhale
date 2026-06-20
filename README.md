@@ -11,6 +11,19 @@
 > Fork maintained at [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/peterlodri-sec/vaked-base) monorepo.
 
 
+## Install
+
+```sh
+# Homebrew
+brew install peterlodri-sec/ultrawhale/ultrawhale
+
+# Docker
+docker pull ghcr.io/peterlodri-sec/ultrawhale:latest
+
+# Go install
+go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
+```
+
 ## Quick Start
 
 ```sh
@@ -68,7 +81,7 @@ GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ul
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
 
 # With version injection
-go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v8.1.0" ./cmd/whale
+go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v9.0.0" ./cmd/whale
 ```
 
 
