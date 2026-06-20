@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/tui/agui"
+	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/build"
 	"github.com/usewhale/whale/internal/agent"
 )
@@ -154,4 +155,41 @@ func (m *model) handleSedCommand(line string) (bool, string) {
 	replace := parts[1]
 	// Apply via blocks.SedFile on the current workspace context
 	return true, fmt.Sprintf("sed: %s → %s applied (journaled, rollback with /reload repomap)", find, replace)
+}
+
+// ── Ultracode mode ─────────────────────────────────────────────────────
+
+func (m *model) handleUltracodeCommand(line string) (bool, string) {
+	sub := strings.TrimPrefix(strings.TrimSpace(line), "/ultracode")
+	sub = strings.TrimSpace(sub)
+	
+	switch {
+	case sub == "" || sub == "start":
+		m.ultracode = modes.NewUltracode(m.sessionID)
+		name, _ := m.ultracode.AutoAdvance()
+		return true, fmt.Sprintf("ultracode: %s started (7 phases: plan→implement→test→review→fix→verify→commit)", name)
+	case sub == "status":
+		if m.ultracode == nil {
+			return true, "ultracode: not started. Use /ultracode start"
+		}
+		return true, m.ultracode.PhaseSummary()
+	case sub == "next":
+		if m.ultracode == nil { return true, "ultracode: not started" }
+		name, ok := m.ultracode.AutoAdvance()
+		if !ok { return true, "ultracode: all phases complete! ✅" }
+		return true, fmt.Sprintf("ultracode: advancing to %s", name)
+	case sub == "fail":
+		if m.ultracode == nil { return true, "ultracode: not started" }
+		// Find current running phase and fail it
+		snap := m.ultracode.StatusSnapshot()
+		for _, p := range snap.Phases {
+			if p.Status == modes.PhaseRunning {
+				m.ultracode.EndPhase(p.Name, false, nil)
+				return true, fmt.Sprintf("ultracode: %s failed", p.Name)
+			}
+		}
+		return true, "ultracode: no running phase"
+	default:
+		return true, "/ultracode [start|status|next|fail]"
+	}
 }

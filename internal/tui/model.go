@@ -18,6 +18,7 @@ import (
 	"github.com/usewhale/whale/internal/runtime/timeline"
 	"github.com/usewhale/whale/internal/tui/composer"
 	"github.com/usewhale/whale/internal/tui/statusline"
+	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/tui/agui"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
 )
@@ -238,6 +239,7 @@ type model struct {
 	windowsPaste                     windowsPasteFallbackState
 	viewCache                        *modelViewCache
 	hud                             *statusline.HUD
+	ultracode *modes.UltracodeMode
 }
 
 type modelViewCache struct {
