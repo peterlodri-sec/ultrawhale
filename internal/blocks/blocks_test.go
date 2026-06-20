@@ -119,3 +119,77 @@ func BenchmarkHashTierGo(b *testing.B) {
 	b.SetBytes(int64(len(c))); b.ReportAllocs()
 	for i := 0; i < b.N; i++ { hashGo(c) }
 }
+
+// ── E2E Benchmark: 3-tier comparison ───────────────────────────────────
+
+func BenchmarkE2ETierComparison(b *testing.B) {
+	sizes := []int{1024, 65536, 1048576} // 1KB, 64KB, 1MB
+	tiers := []HashTier{TierGo, TierAssembly, TierGPU}
+
+	for _, size := range sizes {
+		data := make([]byte, size)
+		for _, tier := range tiers {
+			SetTier(tier)
+			label := fmt.Sprintf("%s-%dKB", []string{"Go", "Asm", "GPU"}[tier], size/1024)
+			b.Run(label, func(b *testing.B) {
+				b.SetBytes(int64(size))
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					hashContent(data)
+				}
+			})
+			b.Run(label+"-Write", func(b *testing.B) {
+				dir := b.TempDir()
+				b.SetBytes(int64(size))
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					Write(filepath.Join(dir, fmt.Sprintf("e2e-%d.txt", i)), data)
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkE2EBatchScaling(b *testing.B) {
+	batchSizes := []int{1, 8, 64, 256}
+	data := make([]byte, 4096)
+	for _, n := range batchSizes {
+		b.Run(fmt.Sprintf("Batch-%d", n), func(b *testing.B) {
+			dir := b.TempDir()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				ops := make([]BatchOp, n)
+				for j := 0; j < n; j++ {
+					ops[j] = BatchOp{
+						Path:    filepath.Join(dir, fmt.Sprintf("bs-%d-%d.txt", i, j)),
+						Content: data,
+					}
+				}
+				Batch(ops)
+			}
+		})
+	}
+}
+
+func BenchmarkE2EBlockLifecycle(b *testing.B) {
+	// Simulate a real write→read→rollback→reread cycle
+	dir := b.TempDir()
+	data := make([]byte, 8192)
+	path := filepath.Join(dir, "lifecycle.txt")
+	
+	b.ReportAllocs()
+	b.SetBytes(int64(len(data)))
+	
+	for i := 0; i < b.N; i++ {
+		b1, _ := Write(path, data)
+		b2, _ := Write(path, data)
+		if b2.PrevRef != b1.Ref {
+			b.Fatal("PrevRef broken")
+		}
+		Rollback(path)
+		rb, _ := Read(path)
+		if rb.Ref != b1.Ref {
+			b.Fatal("rollback ref mismatch")
+		}
+	}
+}
