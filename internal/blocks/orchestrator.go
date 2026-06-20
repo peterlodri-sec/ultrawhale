@@ -1,0 +1,191 @@
+// Package blocks — Orchestrator is the single TUI universe controller.
+// There is exactly ONE orchestrator per TUI session.
+// It never calls the LLM directly — every prompt is delegated to a subagent.
+// Identity: own DID/Ed25519 keypair, separate from AgentField.
+package blocks
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+)
+
+// Orchestrator is the TUI universe controller.
+type Orchestrator struct {
+	mu sync.Mutex
+
+	// Identity
+	ID       string    // "ultrawhale-orchestrator"
+	Universe string    // session ID — one per TUI session
+	DID      string    // own Ed25519 DID (separate from AgentField)
+	PubKey   string    // hex public key
+	POV      POV       // orchestrator POV
+
+	// Fleet
+	Agents    *AgentStore
+	Brain     *Brain
+	agentsMD  string    // loaded from AGENTS.md
+
+	// Session
+	StartedAt  time.Time
+	TotalTurns int
+	TotalTools int
+
+	// Agent definitions parsed from AGENTS.md
+	Definitions []AgentDef
+}
+
+// AgentDef is a parsed agent definition from AGENTS.md.
+type AgentDef struct {
+	Name       string   // "swe", "explore", "review"
+	Role       string   // "Software engineer"
+	Model      string   // "deepseek-v4-flash"
+	Tools      []string // ["shell.run", "workspace.read"]
+	MaxCalls   int      // 256, 128, 64
+	MaxIters   int      // 128, 64, 32
+}
+
+var orchestrator *Orchestrator
+
+// InitOrchestrator creates the single TUI universe orchestrator.
+func InitOrchestrator(sessionID string) *Orchestrator {
+	if orchestrator != nil {
+		return orchestrator
+	}
+
+	// Generate orchestrator DID (separate from AgentField)
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
+	pubHex := hex.EncodeToString(pub)
+
+	home, _ := os.UserHomeDir()
+	keyDir := filepath.Join(home, ".whale", "orchestrator")
+	os.MkdirAll(keyDir, 0o700)
+
+	o := &Orchestrator{
+		ID:       "ultrawhale-orchestrator",
+		Universe: sessionID,
+		DID:      fmt.Sprintf("did:key:orch:%s", pubHex[:40]),
+		PubKey:   pubHex,
+		POV:      CurrentPOV(),
+		Agents:   agentsStore,
+		Brain:    GetBrain(),
+		StartedAt: time.Now(),
+		Definitions: DefaultAgentDefs(),
+	}
+
+	// Load AGENTS.md if exists
+	if data, err := os.ReadFile("AGENTS.md"); err == nil {
+		o.agentsMD = string(data)
+		o.Definitions = parseAgentsMD(o.agentsMD)
+	}
+
+	orchestrator = o
+
+	// Auto-memo: orchestrator started
+	o.Brain.memos.Remember(ScopeInternal,
+		fmt.Sprintf("orchestrator started: universe=%s, did=%s", sessionID, o.DID[:45]))
+
+	return o
+}
+
+// GetOrchestrator returns the singleton orchestrator.
+func GetOrchestrator() *Orchestrator {
+	if orchestrator == nil {
+		return InitOrchestrator("default")
+	}
+	return orchestrator
+}
+
+// DelegatePrompt spawns a subagent for the given prompt.
+// The orchestrator NEVER calls the LLM directly — always delegates.
+func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
+	// Classify the prompt to pick the right agent
+	def := o.classifyPrompt(prompt)
+
+	// Spawn subagent
+	agent := SpawnAgent(
+		fmt.Sprintf("%s-%d", def.Name, o.TotalTurns),
+		def.Name,
+		o.Universe,
+	)
+	agent.MaxCalls = def.MaxCalls
+	agent.MaxIters = def.MaxIters
+
+	o.TotalTurns++
+
+	return agent.ID, def.Name
+}
+
+// classifyPrompt picks the best agent definition for a prompt.
+func (o *Orchestrator) classifyPrompt(prompt string) AgentDef {
+	lower := strings.ToLower(prompt)
+
+	// Review triggers
+	if strings.Contains(lower, "review") || strings.Contains(lower, "pr #") ||
+		strings.Contains(lower, "audit") || strings.Contains(lower, "check") {
+		for _, d := range o.Definitions {
+			if d.Name == "review" { return d }
+		}
+	}
+
+	// Exploration triggers
+	if strings.Contains(lower, "find") || strings.Contains(lower, "search") ||
+		strings.Contains(lower, "explore") || strings.Contains(lower, "what") ||
+		strings.Contains(lower, "where") || strings.Contains(lower, "show") ||
+		strings.Contains(lower, "how") {
+		for _, d := range o.Definitions {
+			if d.Name == "explore" { return d }
+		}
+	}
+
+	// Default: swe
+	for _, d := range o.Definitions {
+		if d.Name == "swe" { return d }
+	}
+
+	// Fallback
+	return AgentDef{Name: "explore", Model: "deepseek-v4-flash", MaxCalls: 128, MaxIters: 64}
+}
+
+// OrchestratorStatus returns a compact status for HUD/sidepanel.
+func (o *Orchestrator) OrchestratorStatus() string {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	return fmt.Sprintf("orch: %s | %d turns | %d agents | brain: %d memos",
+		o.DID[:20],
+		o.TotalTurns,
+		AgentCount(),
+		o.Brain.memos.Count(),
+	)
+}
+
+// DefaultAgentDefs returns the built-in agent definitions.
+func DefaultAgentDefs() []AgentDef {
+	return []AgentDef{
+		{Name: "swe", Role: "Software engineer", Model: "deepseek-v4-flash",
+			Tools: []string{"shell.run", "workspace.read", "workspace.write"},
+			MaxCalls: 256, MaxIters: 128},
+		{Name: "explore", Role: "Codebase explorer", Model: "deepseek-v4-flash",
+			Tools: []string{"shell.run", "workspace.read"},
+			MaxCalls: 128, MaxIters: 64},
+		{Name: "review", Role: "Code reviewer", Model: "deepseek-v4-flash",
+			Tools: []string{"shell.run", "workspace.read"},
+			MaxCalls: 64, MaxIters: 32},
+	}
+}
+
+// parseAgentsMD parses AGENTS.md into AgentDefs.
+func parseAgentsMD(content string) []AgentDef {
+	// Simple parser: ## name sections
+	defs := DefaultAgentDefs()
+	// AGENTS.md overrides defaults — for now, use defaults
+	_ = content
+	return defs
+}

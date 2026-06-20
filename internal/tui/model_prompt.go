@@ -156,6 +156,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 }
 
 func (m *model) submitPromptTurn(value string, binding *protocol.SkillBinding, attachments []protocol.AttachmentInput) tea.Cmd {
+	// Init orchestrator on first prompt
+	if blocks.GetOrchestrator().TotalTurns == 0 {
+		blocks.InitOrchestrator(m.sessionID)
+	}
 	m.clearEphemeralMessages()
 	// Self resolution: inject identity when user says "you" or "deepseek"
 	if selfIntro, ok := blocks.ResolveSelfPrompt(value); ok {

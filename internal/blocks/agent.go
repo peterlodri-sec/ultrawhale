@@ -26,6 +26,8 @@ type Agent struct {
 	ToolCalls   int
 	TokensUsed  int64
 	Duration    time.Duration
+	MaxCalls   int
+	MaxIters   int
 
 	mu sync.Mutex
 }
