@@ -64,6 +64,8 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/a2c/stream", A2CSSEHandler)
+
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{

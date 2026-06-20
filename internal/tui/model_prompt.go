@@ -43,6 +43,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleA2CCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/mesh") {
+		m.setEphemeralInfo(handleMeshCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/caps") {
 		m.setEphemeralInfo(handleCapsCommand())
 		return nil
@@ -142,6 +146,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/a2c") {
 		m.setEphemeralInfo(handleA2CCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/mesh") {
+		m.setEphemeralInfo(handleMeshCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/caps") {
@@ -265,6 +273,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/a2c") {
 		m.setEphemeralInfo(handleA2CCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/mesh") {
+		m.setEphemeralInfo(handleMeshCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/caps") {

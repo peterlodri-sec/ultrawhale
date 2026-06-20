@@ -507,3 +507,7 @@ func handleA2ACommand(line string) string {
 
 func handleA2CCommand() string { return blocks.A2CStatus() }
 func handleCapsCommand() string { return blocks.CapStatus() }
+
+func handleMeshCommand() string {
+	return blocks.MeshAgentStatus()
+}

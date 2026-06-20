@@ -60,6 +60,10 @@ func SpawnAgent(id, role, parent string) *Agent {
 	}
 	agentsStore.agents[id] = a
 
+	// Start A2C stream for this agent
+	StartA2CStream(id)
+	AnnounceAgent(a)
+
 	// Auto-memo: record subagent spawn
 	GetBrain().memos.Remember(ScopeAgents,
 		fmt.Sprintf("spawned %s subagent: %s", role, id[:8]))
@@ -74,6 +78,11 @@ func CompleteAgent(id string, status string, tools int, tokens int64, dur time.D
 
 	if a, ok := agentsStore.agents[id]; ok {
 		a.Status = status
+
+	// A2C: emit completion event
+	if stream, ok := a2cStreams[id]; ok {
+		stream.Emit(A2CEvent{AgentID: id, Type: "done", Content: status, Seq: a.ToolCalls})
+	}
 
 	// Ralph: observe agent completion
 	// Report to supervisor
