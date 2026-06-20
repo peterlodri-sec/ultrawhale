@@ -1,6 +1,12 @@
 # ultrawhale
 
-**vaked-base fork of DeepSeek Code Whale.** DeepSeek-native coding agent with content-addressed blocks engine (Go+Asm+GPU), 6 plugins, AG-UI themes, floating widgets, and 7-phase native agent loop.
+**vaked-base fork of DeepSeek Code Whale.**
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![Go](https://img.shields.io/badge/go-1.24%2B-00ADD8)](go.mod)
+[![macOS](https://img.shields.io/badge/macOS-arm64-black)](https://github.com/peterlodri-sec/ultrawhale)
+[![Linux](https://img.shields.io/badge/Linux-amd64-orange)](https://github.com/peterlodri-sec/ultrawhale)
+
+ DeepSeek-native coding agent with content-addressed blocks engine (Go+Asm+GPU), 6 plugins, AG-UI themes, floating widgets, and 7-phase native agent loop.
 
 > Fork maintained at [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/peterlodri-sec/vaked-base) monorepo.
 
