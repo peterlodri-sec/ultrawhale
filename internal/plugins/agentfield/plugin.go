@@ -159,16 +159,19 @@ func (p *Plugin) registerRoutes(mux *http.ServeMux) {
 		json.NewDecoder(r.Body).Decode(&req)
 		var result string
 		if req.Type == "agent" {
+			// Only pure subagents (read_only/write) are edge-deployable.
+			// Swarms have their own AgentField + HTTP ports — not deployable to CF Worker.
 			agents := blocks.ListAgents()
 			for _, a := range agents {
 				if a.ID == req.ID || req.ID == "" {
 					if _, err := a.DeployToEdge(); err != nil {
 						result = err.Error()
 					} else {
-						result = fmt.Sprintf("deployed %s", a.ID[:12])
+						result = fmt.Sprintf("deployed %s to edge", a.ID[:12])
 					}
 				}
 			}
+			if result == "" { result = "no matching agents found" }
 		}
 		json.NewEncoder(w).Encode(map[string]string{"result": result})
 	})

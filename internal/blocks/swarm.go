@@ -50,7 +50,6 @@ type Swarm struct {
 	MaxIters int
 
 	active atomic.Bool
-	Edge    *EdgeAgent // nil if not edge-deployed
 }
 
 // SwarmStore tracks all active swarms.
@@ -252,21 +251,5 @@ func (as *AgentStore) List() []*Agent {
 	}
 	return result
 }
-
-// DeploySwarmToEdge deploys this entire swarm to Cloudflare edge.
-func (s *Swarm) DeploySwarmToEdge() (*EdgeAgent, error) {
-	cfg := DetectCF()
-	if cfg == nil {
-		return nil, fmt.Errorf("no CF credentials")
-	}
-	
-	edge := NewEdgeAgent(s.ID, "swarm")
-	edge.Fiber.AppendLedger("prompt", fmt.Sprintf("swarm deployed: %s (%d agents)", s.ID, len(s.Agents.agents)))
-	
-	if err := edge.DeployEdgeAgent(cfg); err != nil {
-		return nil, err
-	}
-	
-	s.Edge = edge
-	return edge, nil
-}
+// Swarms CANNOT be edge-deployed (they have their own AgentField + ports).
+// Only pure subagents (read_only/write) are edge-deployable.

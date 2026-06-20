@@ -251,12 +251,11 @@ func handleMemoCommand(line string) string {
 func handleDeployCommand(line string) string {
 	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/deploy"))
 	if len(parts) == 0 {
-		return "/deploy edge [agent-id] | /deploy swarm [swarm-id] | /deploy status"
+		return "/deploy edge — deploy all subagents to Cloudflare | /deploy status"
 	}
 	
 	switch parts[0] {
 	case "edge":
-		// Deploy current orchestrator agents to edge
 		agents := blocks.ListAgents()
 		if len(agents) == 0 {
 			return "no agents to deploy — start a task first"
@@ -264,6 +263,8 @@ func handleDeployCommand(line string) string {
 		var deployed []string
 		for _, a := range agents {
 			if a.IsEdgeDeployed() { continue }
+			// Only pure subagents (read_only/write) are edge-deployable
+			// Swarms have their own AgentField — not deployable to CF Worker
 			edge, err := a.DeployToEdge()
 			if err != nil {
 				return fmt.Sprintf("deploy failed: %v", err)
@@ -275,26 +276,10 @@ func handleDeployCommand(line string) string {
 		}
 		return fmt.Sprintf("deployed %d agents: %s", len(deployed), strings.Join(deployed, ", "))
 		
-	case "swarm":
-		swarms := blocks.ListSwarms()
-		if len(swarms) == 0 {
-			return "no swarms to deploy"
-		}
-		var deployed []string
-		for _, s := range swarms {
-			if s.Edge != nil { continue }
-			edge, err := s.DeploySwarmToEdge()
-			if err != nil {
-				return fmt.Sprintf("swarm deploy failed: %v", err)
-			}
-			deployed = append(deployed, fmt.Sprintf("%s → %s", s.ID, edge.ID[:12]))
-		}
-		return fmt.Sprintf("deployed %d swarms: %s", len(deployed), strings.Join(deployed, ", "))
-		
 	case "status":
 		return blocks.EdgeStatus()
 		
 	default:
-		return "/deploy edge | /deploy swarm | /deploy status"
+		return "/deploy edge | /deploy status"
 	}
 }
