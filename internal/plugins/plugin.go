@@ -14,6 +14,7 @@ import (
 	whalemcp "github.com/usewhale/whale/internal/mcp"
 	"github.com/usewhale/whale/internal/plugins/memoryplugin"
 	"github.com/usewhale/whale/internal/plugins/superpowers"
+	"github.com/usewhale/whale/internal/plugins/vaked"
 	"github.com/usewhale/whale/internal/plugins/agentfield"
 	"github.com/usewhale/whale/internal/plugins/natsplugin"
 	"github.com/usewhale/whale/internal/plugins/langfuseplugin"
@@ -955,6 +956,7 @@ func builtins() []Plugin {
 		memoryPlugin{},
 		adapter{superpowers.NewPlugin()},
 		adapter{agentfield.NewPlugin()},
+		adapter{vaked.NewPlugin()},
 		adapter{natsplugin.NewPlugin()},
 		adapter{langfuseplugin.NewPlugin()},
 		adapter{repomap.NewPlugin("")},

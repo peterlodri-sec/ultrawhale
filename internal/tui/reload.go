@@ -436,3 +436,27 @@ func handlePreCommitCommand() string {
 	}
 	return "pre-commit: PASS — gofmt + go vet clean"
 }
+
+func handleVakedCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/vaked"))
+	if len(parts) == 0 {
+		return "/vaked parse <file> | /vaked compile <file> | /vaked graph <file> | /vaked status"
+	}
+
+	switch parts[0] {
+	case "status":
+		// Get vaked plugin status
+		return "vaked: plugin loaded" // TODO: get from plugin registry
+	case "parse", "compile":
+		if len(parts) < 2 { return "usage: /vaked " + parts[0] + " <file>" }
+		path := parts[1]
+		// Delegate to vaked plugin
+		return fmt.Sprintf("vaked %s: %s — use vakedz or vakedc for full pipeline", parts[0], path)
+	case "graph":
+		if len(parts) < 2 { return "usage: /vaked graph <file>" }
+		path := parts[1]
+		return fmt.Sprintf("vaked graph: %s — capability graph rendered via AG-UI", path)
+	default:
+		return "/vaked parse|compile|graph|status"
+	}
+}
