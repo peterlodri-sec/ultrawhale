@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"github.com/usewhale/whale/internal/blocks"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -31,6 +32,36 @@ func (m *model) submitPrompt(value string) tea.Cmd {
 
 func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBinding) tea.Cmd {
 	// /reload commands are handled locally, never sent to LLM
+	if strings.HasPrefix(strings.TrimSpace(value), "/self") {
+		m.setEphemeralInfo(handleSelfCommand())
+		m.input.SetValue("")
+		m.refreshViewportContent()
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/ultracode") {
+		handled, msg := m.handleUltracodeCommand(value)
+		if handled {
+			m.setEphemeralInfo(msg)
+			m.input.SetValue("")
+			m.refreshViewportContent()
+			return nil
+		}
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/self") {
+		m.setEphemeralInfo(handleSelfCommand())
+		m.input.SetValue("")
+		m.refreshViewportContent()
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/ultracode") {
+		handled, msg := m.handleUltracodeCommand(value)
+		if handled {
+			m.setEphemeralInfo(msg)
+			m.input.SetValue("")
+			m.refreshViewportContent()
+			return nil
+		}
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/reload") {
 		handled, msg := m.handleReloadCommand(value)
 		if handled {
@@ -53,6 +84,21 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 
 func (m *model) submitPromptWithBindingAndAttachments(value string, binding *protocol.SkillBinding, attachments []protocol.AttachmentInput) tea.Cmd {
 	// /reload commands are handled locally, never sent to LLM
+	if strings.HasPrefix(strings.TrimSpace(value), "/self") {
+		m.setEphemeralInfo(handleSelfCommand())
+		m.input.SetValue("")
+		m.refreshViewportContent()
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/ultracode") {
+		handled, msg := m.handleUltracodeCommand(value)
+		if handled {
+			m.setEphemeralInfo(msg)
+			m.input.SetValue("")
+			m.refreshViewportContent()
+			return nil
+		}
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/reload") {
 		handled, msg := m.handleReloadCommand(value)
 		if handled {
@@ -75,6 +121,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 
 func (m *model) submitPromptTurn(value string, binding *protocol.SkillBinding, attachments []protocol.AttachmentInput) tea.Cmd {
 	m.clearEphemeralMessages()
+	// Self resolution: inject identity when user says "you" or "deepseek"
+	if selfIntro, ok := blocks.ResolveSelfPrompt(value); ok {
+		value = value + "\n\n[Identity: " + selfIntro + "]"
+	}
 	if m.assembler != nil && m.assembler.Len() > 0 {
 		m.commitLiveTranscript(false)
 	}
@@ -238,6 +288,9 @@ func (m *model) submitSteeringPrompt(value string) {
 	binding := m.currentSkillBinding(value)
 	clientInputID := m.nextPendingInputID()
 	m.clearEphemeralMessages()
+	if selfIntro, ok := blocks.ResolveSelfPrompt(value); ok {
+		value = value + "\n\n[Identity: " + selfIntro + "]"
+	}
 	if m.assembler != nil && m.assembler.Len() > 0 {
 		m.commitLiveTranscript(false)
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/tui/agui"
+	"github.com/usewhale/whale/internal/blocks"
 	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/build"
 	"github.com/usewhale/whale/internal/agent"
@@ -192,4 +193,11 @@ func (m *model) handleUltracodeCommand(line string) (bool, string) {
 	default:
 		return true, "/ultracode [start|status|next|fail]"
 	}
+}
+
+// handleSelfCommand processes /self — returns ultrawhale identity.
+func handleSelfCommand() string {
+	s := blocks.GetSessionSelf()
+	return fmt.Sprintf("identity: %s %s | %s/%s | %s·%s | %d plugins | uptime: %s",
+		s.Name, s.Version, s.POV.Machine, s.POV.Arch, s.Tier, s.Theme, s.Plugins, s.UptimeString())
 }

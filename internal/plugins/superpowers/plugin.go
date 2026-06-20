@@ -339,3 +339,4 @@ func (p *Plugin) onError(payload agent.HookPayload) agent.HookResult {
 	}
 	return agent.HookResult{Decision: agent.HookDecisionPass}
 }
+
