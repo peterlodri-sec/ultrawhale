@@ -76,3 +76,12 @@ docker/supabase-data/
 .whale/agentfield/
 *.wasm
 *.wat
+
+# --- Dev artifacts (.dev/) ---
+.dev/benches/
+.dev/logs/
+.dev/profiles/
+.dev/tmp/
+*.prof
+*.pprof
+*.test

@@ -1,45 +1,35 @@
 # Changelog
 
-## v5.0.0 (2026-06-20) — First Complete Architecture Release
-- P0: Workflow ↔ Orchestrator complete wire. classifyPrompt matches 'workflow' globally.
-- P1: Ralph patterns persist to brain long-term memory (survive reboots).
-- P3 foundation: Auto-rollback on 3 consecutive failures.
-- 21 blocks primitives, 6 plugins, 5 widgets, 5 CLIs.
-- Tailscale first-class primitive. SSH bulletproofing (6 fixes).
-- BLAKE3 + xxHash + diff + pool primitives.
-- Kernel optimizations: lock-free log, sharded journal, tmp cleanup.
-- ultrawhale-shell remote daemon (5MB static, macOS+Linux).
-- Documentation site at vaked.dev/ultrawhale.
+## v6.0.0 (2026-06-20) — Major Release: Pre-Hook Layer + Production Hardening
+
+- **Pre-hook layer**: 7 pre-hooks (commit, write, sed, grep, git, deploy, commit)
+- **ADR 001**: Architecture Decision Record — Pre-Hook Layer
+- **CI hardened**: go vet clean, golangci-lint v2 config, errcheck suppression
+- **26 blocks primitives**, 6 plugins, 5 widgets, 5 CLIs
+- **All 6 tracked issues CLOSED**
+- mmap primitive (zero-copy reads, 164x less memory)
+- compress primitive (zlib, built-in, no deps)
+- fuzz + chaos tests
+- orchestartor tools (20 built-in, journaled)
+
+## v5.x (2026-06-20)
+- Ralph Loop persistence, NATS mesh, Supabase auto-start
+- SSH + Tailscale primitives, ultrawhale-shell daemon
+- BLAKE3, xxHash, diff, pool primitives
+- Kernel optimizations: lock-free log, sharded journal
+- OSS publish: tags, releases, wiki, docs site
 
 ## v4.x (2026-06-20)
-- SSH primitive (Tool-level, bao+local key mgmt, PID lifecycle)
+- Tool primitive v2 (typed, scoped, 14 tools)
 - Kernel optimizations (lock-free log, sharded journal)
-- Ralph Loop (self-improving agent cycle, versioned, rollback)
-- Tool primitive v2 (typed, scoped, asm-accelerated, 14 tools)
-- Floating ControlPanel widget, InfraBar, Sidepanel
-- AG-UI ChatBlock + Shader hooks, render.go refactor
-- bench-tui v2 (load simulation + screenshot + JSON/MD reports)
+- Floating widgets, AG-UI ChatBlock, bench-tui
 
 ## v3.x (2026-06-20)
-- Swarm mode (persistent workers + nested AgentField)
-- Edge agent primitive (CF Workers + fiber journal)
-- Orchestrator agent loop wire
-- Tool cache (KV, 5-min TTL, per-agent)
-- Plugin refactor (zero boilerplate, skillsimprover deleted)
-- POV 10/10 wiring complete
+- Swarm mode, Edge agents, Orchestrator agent loop
+- Plugin refactor (zero boilerplate)
 
 ## v2.x (2026-06-20)
-- Blocks engine (14 primitives, 3-tier hash)
-- Floating widgets (5 total)
-- Ultracode 7-phase loop
-- macOS Apple Silicon support (28MB Mach-O arm64)
-- YOLO mode defaults, subagent delegation
+- Blocks engine foundation, floating widgets, ultracode loop, macOS support
 
 ## v1.x (2026-06-20)
-- Semver versioning, HUD statusline
-- /reload command, deep hooks (10 events, 9 async)
-- Superpowers plugin (bao, langfuse, NATS)
-- Repomap SIMD (2,361 MB/s)
-- AG-UI themes (dense, cyberpunk, graveyard)
-- Native Go tools (gh, grep, git)
-- macOS cross-compile, native M1 binary
+- Semver, /reload, HUD, deep hooks, superpowers, repomap SIMD
