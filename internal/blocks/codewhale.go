@@ -17,6 +17,7 @@ import (
 
 // Brain holds ultrawhale session cognitive state.
 type Brain struct {
+	POV POV
 	mu        sync.Mutex
 	shortTerm []string   // last 32 turns
 	longTerm  *os.File   // jsonl append file
@@ -31,6 +32,7 @@ func init() {
 
 func NewBrain() *Brain {
 	b := &Brain{
+		POV: CurrentPOV(),
 		shortTerm: make([]string, 0, 32),
 		memos:     NewMemoStore(),
 	}

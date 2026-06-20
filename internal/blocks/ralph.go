@@ -17,6 +17,7 @@ import (
 type RalphLoop struct {
 	mu        sync.RWMutex
 	SessionID string   // orchestrator session this ralph belongs to
+	POV       POV     // current execution context
 
 	// Versioned state
 	Version   int               // monotonic — incremented on each adjustment
@@ -73,6 +74,7 @@ type RalphSnapshot struct {
 // NewRalphLoop creates a ralph loop for a session.
 func NewRalphLoop(sessionID string) *RalphLoop {
 	r := &RalphLoop{
+		POV:       CurrentPOV(),
 		SessionID:   sessionID,
 		Version:     1,
 		Cycles:      make([]RalphCycle, 0, 64),

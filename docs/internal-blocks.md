@@ -153,6 +153,23 @@ v3.4: Plugin refactor | v3.5: Orchestrator→Agent loop
 v3.6: Edge agent + setup CLI | v3.7: Edge subclass
 v3.8: Tool cache | v3.9: Final review
 
+
+## Ralph Loop (v4.4.0)
+
+Self-improving agent cycle. Versioned, rollback-able. Per-session scoped.
+Orchestrator Ralph improves delegation strategy. Agent Ralph improves tool selection.
+/ralph status | /ralph reset | /ralph rollback <v>
+
+## Features since v4.0.0
+
+v4.1: bench-tui v2 (load + screenshot) | v4.2: tool primitive v2 (typed+scope)
+v4.3: render.go refactor (4 files) | v4.4: Ralph Loop | v4.5: final review
+
+## POV Wiring (12/12 complete)
+
+CurrentPOV wired to: LogSink, Langfuse, AgentField, NATS, HUD, Self,
+Orchestrator, Agent, Swarm, Edge, Tool, Ralph, Codewhale.
+
 ## Contributing
 
 ### Adding a new block primitive

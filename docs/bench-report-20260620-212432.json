@@ -1,0 +1,28 @@
+{
+  "tool": "ultrawhale-bench-tui",
+  "version": "v4.1.0",
+  "timestamp": "2026-06-20T21:24:09.371611+02:00",
+  "platform": "Darwin arm64",
+  "startup": {
+    "doctor": 530335708,
+    "help": 23312042,
+    "version": 33603208,
+    "setup": 19250459
+  },
+  "load": {
+    "workers": 8,
+    "iterations": 50,
+    "total_time": 19964177791,
+    "avg_latency": 394445602,
+    "errors": 0,
+    "throughput_ops_sec": 20.03588648565948
+  },
+  "screenshot": {
+    "attempted": true,
+    "method": "screencapture",
+    "result": "TCC blocked — grant permission in System Settings → Privacy → Screen Recording"
+  },
+  "passed": 5,
+  "failed": 1,
+  "total": 6
+}
