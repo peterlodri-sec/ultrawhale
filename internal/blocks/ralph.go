@@ -32,6 +32,7 @@ type RalphLoop struct {
 	TotalObservations int64
 	TotalAdjustments  int64
 	Rollbacks         int64
+	ConsecutiveFailures int
 }
 
 // RalphCycle is one observe→learn→adjust cycle.
@@ -105,14 +106,23 @@ func (r *RalphLoop) Observe(prompt, decision, outcome string, latency time.Durat
 
 	// Learn from outcome
 	if outcome == "failed" || outcome == "timeout" {
+		r.ConsecutiveFailures++
 		cycle.Pattern = extractPattern(prompt, decision)
 		cycle.Confidence = r.bumpPattern(cycle.Pattern, -0.1)
+
+		// Auto-rollback on 3 consecutive failures
+		if r.ConsecutiveFailures >= 3 {
+			r.Rollback(r.Version - 1)
+			cycle.Adjustment = fmt.Sprintf("auto-rollback to v%d after %d failures", r.Version, r.ConsecutiveFailures)
+			r.ConsecutiveFailures = 0
+		}
 
 		// Suggest adjustment
 		if cycle.Confidence < 0.3 {
 			cycle.Adjustment = r.suggestAdjustment(cycle.Pattern, decision)
 		}
 	} else {
+		r.ConsecutiveFailures = 0
 		cycle.Pattern = extractPattern(prompt, decision)
 		cycle.Confidence = r.bumpPattern(cycle.Pattern, +0.05)
 	}
@@ -136,6 +146,17 @@ func (r *RalphLoop) Apply(key, value string, confidence float64) {
 		Key: key, Value: value, Confidence: confidence, AppliedAt: time.Now(),
 	}
 	r.TotalAdjustments++
+
+	// Persist to brain long-term memory
+	brain := GetBrain()
+	if brain != nil {
+		brain.RememberLongTerm(map[string]string{
+			"ralph_key":   key,
+			"ralph_value": value,
+			"confidence":  fmt.Sprintf("%.2f", confidence),
+		})
+	}
+
 	r.snapshot(fmt.Sprintf("applied %s=%s", key, value))
 }
 
