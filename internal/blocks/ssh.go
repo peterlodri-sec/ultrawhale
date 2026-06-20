@@ -142,6 +142,7 @@ func SSHExec(host, command string) (*SSHBlock, error) {
 
 	// Build SSH command
 	args := []string{
+		"-o", "PreferredAuthentications=publickey",
 		"-o", "StrictHostKeyChecking=yes",
 		"-o", fmt.Sprintf("UserKnownHostsFile=%s", cfg.KnownHosts),
 		"-o", "ControlMaster=auto",
@@ -291,10 +292,31 @@ func SSHStatus() string {
 
 func detectSSHUser(host string) string {
 	if strings.Contains(host, "@") { return "dev" }
-	// Common hosts
+	// Tailscale nodes: auto-detect from MagicDNS or 100.x IP range
+	if strings.Contains(host, ".ts.net") || strings.HasPrefix(host, "100.") {
+		return "dev" // Tailscale nodes use dev user by default
+	}
 	switch {
 	case strings.Contains(host, "dev-cx53"): return "dev"
 	case strings.Contains(host, "167.233"): return "root"
 	default: return "dev"
 	}
+}
+
+// IsTailscaleNode returns true if the host is a Tailscale node.
+func IsTailscaleNode(host string) bool {
+	return strings.Contains(host, ".ts.net") || strings.HasPrefix(host, "100.")
+}
+
+// ResolveTailscaleHost resolves a Tailscale hostname to its MagicDNS name.
+func ResolveTailscaleHost(host string) string {
+	if IsTailscaleNode(host) { return host }
+	// Common aliases: dev-cx53 → dev-cx53.tail2870dc.ts.net
+	aliases := map[string]string{
+		"dev-cx53": "dev-cx53.tail2870dc.ts.net",
+		"crabcc-ccx33-nbg1-1": "crabcc-ccx33-nbg1-1.tail2870dc.ts.net",
+		"crabcc-nats": "crabcc-nats.tail2870dc.ts.net",
+	}
+	if resolved, ok := aliases[host]; ok { return resolved }
+	return host
 }
