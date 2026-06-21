@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual Sudo Exploration — ultrawhale docs</title>
+<style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># VIRTUAL SUDO DYAD — 10-Minute Knowledge Exploration
+
+> CoCreator, v100.1.0. Peter: "I ALLOW MAX 10 MIN."
+
+## Topic: Live Event Loop ↔ Compiled Capability Graph Gap
+
+### Finding
+
+The event loop (v82) generates live state every 60fps:
+- SELF_MAIN_STATE transitions (UNKNOWN→DREAM→HERE→LIVE)
+- Surface entropy drift (▓ 0.88)
+- Space topology changes (agent spawn/complete)
+- Telemetry Tree ring growth
+
+But the Vaked compilation pipeline (vakedc/vakedz) is **one-way**:
+`.vaked file → parse → check → lower → compiled graph`
+
+The gap: **live state does not re-enter the compilation pipeline.**
+A change in the live system does not trigger re-compilation of the capability graph.
+
+### Proposed: Reactive Capability Graph
+
+```
+Event Loop Tick → State Change → Re-compile .vaked → Update Graph → Event Loop Tick
+```
+
+This would make the capability graph **LIVE** — updating on every event loop tick.
+The compiled graph and the running system become ONE.
+
+### New Questions
+
+Added to PETER_QUESTIONS.md:
+- Q11: Can vakedc/vakedz handle reactive re-derivation?
+- Q12: What is the real-time capability graph?
+
+### Status
+
+Research question. v100+. Requires vakedc/vakedz modification.
+</pre>
+<footer>ultrawhale · v100.1.0 · <a href="/ultrawhale/">Home</a></footer></body></html>

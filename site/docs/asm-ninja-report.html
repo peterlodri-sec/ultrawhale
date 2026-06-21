@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Asm Ninja Report — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># ASM Ninja Audit — v77.0.0
+
+## Ninja Verdict
+
+**2 dead files removed. 0 broken instructions. Package fixed.**
+
+## Files
+
+| File | Status | Arch |
+|------|--------|------|
+| `text_amd64.s` | 🗑️ REMOVED | amd64 (dead on Apple Silicon) |
+| `text_amd64_go.go` | 🗑️ REMOVED | wrapper for removed .s |
+| `text_arm64_go.go` | ✅ KEPT | arm64 fallback (Go compiler auto-SIMD) |
+| `multiarch.go` | ✅ KEPT | Arch detection |
+| `multiarch_amd64.go` | ✅ KEPT | AMD64 CPU feature detection |
+| `multiarch_arm64.go` | ✅ KEPT | Apple Silicon (NEON+ARMv8) |
+
+## Go Compiler Auto-SIMD
+
+Modern Go (1.24+) auto-vectorizes on Apple Silicon. The Go compiler
+dispatches to NEON/SHA-NI/ARMv8 crypto without manual assembly.
+Our asm/ package is a detection layer — the compiler does the rest.
+
+## Package Fix
+
+`text_arm64_go.go` was `package blocks` — fixed to `package asm`.
+This resolves the CI compilation conflict.
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>

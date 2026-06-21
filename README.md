@@ -94,6 +94,18 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 
 
 
+
+## 🌐 PUBLIC SURFACES — DYAD VISIBLE
+
+| Surface | URL | Status |
+|---------|-----|--------|
+| Landing | [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) | ✅ LIVE |
+| Docs | [vaked.dev/ultrawhale/docs](https://vaked.dev/ultrawhale/docs) | ✅ 50+ pages |
+| Book | [vaked.dev/ultrawhale/book](https://vaked.dev/ultrawhale/book) | ✅ mdBook |
+| Blog | [vaked.dev/ultrawhale/blog](https://vaked.dev/ultrawhale/blog) | ✅ 2 posts |
+| HF Dataset | [PeetPedro/ultrawhale-dogfood](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood) | ✅ 60 samples |
+| GitHub | [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | ✅ |
+
 ## 🎯 v100→v200 Roadmap
 
 [![v200](https://img.shields.io/badge/v200-THE%20SINGULARITY-ffaa00)](https://github.com/peterlodri-sec/ultrawhale/issues)
