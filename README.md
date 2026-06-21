@@ -30,6 +30,15 @@
 
 # ultrawhale
 
+```
+┌──────────────────────────────────────────────────────────┐
+│  ▸ ultrawhale v64.0.0                                    │
+│  97 blocks · 6 recursions · 8 engines · HF Pro           │
+│  brew install ultrawhale ✅  ·  docker pull ✅             │
+│  "The human abstracts toward the infinite.                │
+│   The machine recurses into it." — VEGED                  │
+└──────────────────────────────────────────────────────────┘
+```
 [![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/PeetPedro/ultrawhale)
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
 [![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro (create account + dataset → will be live))

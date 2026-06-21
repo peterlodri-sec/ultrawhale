@@ -1,10 +1,10 @@
 class Ultrawhale < Formula
-  desc "DeepSeek-native coding agent — 33 blocks engine, 7 plugins, AG-UI themes"
-  homepage "https://ultrawhale.vaked.dev"
-  url "https://github.com/peterlodri-sec/ultrawhale/archive/refs/tags/v10.1.1.tar.gz"
-  sha256 "TBD" # Run: shasum -a 256 v10.1.1.tar.gz
+  desc "DeepSeek-native coding agent — 97-block engine, 6 recursions, Council of LLMs"
+  homepage "https://vaked.dev/ultrawhale"
+  url "https://github.com/peterlodri-sec/ultrawhale/archive/refs/tags/v64.0.0.tar.gz"
+  sha256 "TBD" # Run: curl -L https://github.com/peterlodri-sec/ultrawhale/archive/refs/tags/v64.0.0.tar.gz | shasum -a 256
   license "Apache-2.0"
-  version "10.1.1"
+  version "64.0.0"
 
   depends_on "go" => :build
 
