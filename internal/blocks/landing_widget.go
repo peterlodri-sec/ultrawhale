@@ -76,7 +76,7 @@ func LandingHowToStart() string {
 // LandingWhoAmI returns the "who am I" section.
 func LandingWhoAmI() string {
 	pov := CurrentPOV()
-	return STR(`╔══ WHO AM I ═══════╗
+	return S(`╔══ WHO AM I ═══════╗
 ║                    ║
 ║  {version}           ║
 ║  {blocks} blocks        ║
