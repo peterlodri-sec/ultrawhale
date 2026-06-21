@@ -117,6 +117,19 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/a2c/ws", WSA2CHandler)
+
+	mux.HandleFunc("/api/v1/protocols", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"a2a":  map[string]string{"transport": "nats", "handlers": fmt.Sprintf("%d", len(a2aRouter.handlers))},
+			"a2c":  map[string]string{"transport": "sse+ws", "streams": fmt.Sprintf("%d", len(a2cStreams))},
+			"a2ui": map[string]string{"transport": "internal", "handlers": fmt.Sprintf("%d", len(a2uiRouter.handlers))},
+			"mcp":  map[string]string{"transport": "http", "tools": fmt.Sprintf("%d", len(MCPListTools()))},
+			"http": map[string]string{"version": "1.1/2.0", "upgrade": "websocket"},
+		})
+	})
+
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
