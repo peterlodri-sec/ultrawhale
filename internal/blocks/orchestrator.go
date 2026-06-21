@@ -147,11 +147,6 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 		dyad.Ping()
 	}
 
-	// Fold: virtualize subagent into parent if depth < 3
-	if depth := FoldDepth(agent.ID); depth >= 0 && depth < 3 {
-		Fold(agent.ID, o.Universe, def.Name, depth+1)
-	}
-
 	// Ralph: observe this delegation
 	ralph.Observe(prompt, def.Name, "delegated", 0, 0)
 

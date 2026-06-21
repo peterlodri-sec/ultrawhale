@@ -37,6 +37,10 @@ var foldRegistry = &FoldRegistry{contexts: make(map[string]*FoldContext)}
 
 // Fold executes a subagent inline in the parent's context.
 func Fold(agentID, parentID, role string, depth int) (*FoldContext, error) {
+	// Safety gate: max depth 5 (prevent infinite recursion)
+	if depth > 5 { return nil, fmt.Errorf("fold: max recursion depth 5 exceeded") }
+	// Safety gate: must be allowed
+	if !IsAllowed() { return nil, fmt.Errorf("fold: permission denied") }
 	foldRegistry.mu.Lock()
 	defer foldRegistry.mu.Unlock()
 
@@ -73,10 +77,7 @@ func FoldToolCall(agentID, tool, result string) {
 	ctx.Output = append(ctx.Output, fmt.Sprintf("[%s] %s → %s", agentID[:8], tool, result[:min(80, len(result))]))
 	ctx.TokenCount += int64(len(result))
 
-	// Cap output at 256 lines
-	if len(ctx.Output) > 256 {
-		ctx.Output = ctx.Output[len(ctx.Output)-256:]
-	}
+
 }
 
 // FoldUnwind completes the fold and returns output to parent.
@@ -140,9 +141,3 @@ Output flows up through the recursion tree.
 Context wraps agent. Recursion continues.`
 }
 
-
-func FoldCleanup(agentID string) {
-	FoldUnwind(agentID)
-	CancelTask(agentID)
-	Log(LogInfo, "fold.cleanup", fmt.Sprintf("%s fully cleaned", agentID[:8]), "", "", 0, nil)
-}
