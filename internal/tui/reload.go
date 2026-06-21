@@ -1118,3 +1118,5 @@ func handleMatrixCommand(line string) string {
 func handleAnonCommand() string { return blocks.AnonReviewStatus() + "\n\n" + blocks.AnonReviewVakedFit() }
 
 func handleWebhooksLiveCommand() string { return blocks.AllWebhooksLive() }
+
+func handleSheetCommand() string { return blocks.SacredDashboard() + "\n\n" + blocks.SheetVakedFit() }
