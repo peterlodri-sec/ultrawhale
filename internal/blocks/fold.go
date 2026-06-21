@@ -2,90 +2,139 @@ package blocks
 
 import (
 	"fmt"
+	"sync"
+	"time"
 )
 
 // ── Fold — Virtualized Subagent Runtime ───────────────────────────────
 //
 // Fold virtualizes a subagent's complete runtime into the parent.
-// The subagent's tool calls execute in the parent's context.
-// The parent sees the subagent's results as if it called them itself.
-//
-// parent >>= fold(subagent) >>= parent
-//
-// This is recursion applied to agents.
-// Full-Stop recurses through layers. Fold recurses through agents.
+// Tool calls execute in parent context. Output flows to parent.
+// The subagent never existed as a separate entity.
 
-// FoldedAgent is a virtualized subagent.
-type FoldedAgent struct {
-	ID        string
-	Role      string
-	Parent    string
-	ToolsUsed int
-	Output    string
-	Folded    bool // true if this agent was folded into parent
+// FoldContext is the virtualized execution context.
+type FoldContext struct {
+	mu          sync.Mutex
+	ParentID    string
+	AgentID     string
+	Depth       int               // recursion depth (0 = parent)
+	Tools       []string          // tools the folded agent used
+	Output      []string          // output lines
+	TokenCount  int64
+	StartedAt   time.Time
+	CompletedAt time.Time
+	Status      string            // "folding", "completed", "error"
 }
+
+// FoldRegistry tracks all folded agents.
+type FoldRegistry struct {
+	mu       sync.Mutex
+	contexts map[string]*FoldContext
+}
+
+var foldRegistry = &FoldRegistry{contexts: make(map[string]*FoldContext)}
 
 // Fold executes a subagent inline in the parent's context.
-// The subagent's tools become the parent's tools.
-// The subagent's output becomes the parent's next thought.
-func Fold(agentID string) (*FoldedAgent, error) {
-	agent := GetAgent(agentID)
-	if agent == nil {
-		return nil, fmt.Errorf("fold: agent %s not found", agentID)
+func Fold(agentID, parentID, role string, depth int) (*FoldContext, error) {
+	foldRegistry.mu.Lock()
+	defer foldRegistry.mu.Unlock()
+
+	// Check for circular folding
+	if _, exists := foldRegistry.contexts[agentID]; exists {
+		return nil, fmt.Errorf("fold: agent %s already folded", agentID[:8])
 	}
 
-	// Virtualize the agent into the parent
-	folded := &FoldedAgent{
-		ID:     agent.ID,
-		Role:   agent.Role,
-		Parent: agent.Parent,
-		Folded: true,
+	ctx := &FoldContext{
+		ParentID:  parentID,
+		AgentID:   agentID,
+		Depth:     depth,
+		StartedAt: time.Now(),
+		Status:    "folding",
 	}
 
-	// In a full implementation:
-	// 1. The subagent's conversation history folds into parent's context
-	// 2. The subagent's tool results become parent's observed output
-	// 3. The subagent's state (POV, capabilities) merges with parent
-	// 4. The cost is attributed to parent (no separate billing)
+	foldRegistry.contexts[agentID] = ctx
 
-	Log(LogInfo, "fold.execute", fmt.Sprintf("%s (%s) → parent", agentID[:8], agent.Role),
-		"", "", 0, nil)
+	Log(LogInfo, "fold.start", fmt.Sprintf("%s (depth %d, role %s) → %s",
+		agentID[:8], depth, role, parentID[:8]), "", "", 0, nil)
 
-	return folded, nil
+	return ctx, nil
 }
 
-// Unfold restores a folded agent to standalone execution.
-func Unfold(agentID string) error {
-	folded := GetAgent(agentID)
-	if folded == nil {
-		return fmt.Errorf("unfold: agent %s not found", agentID)
+// FoldToolCall records a tool call made by the folded agent.
+func FoldToolCall(agentID, tool, result string) {
+	foldRegistry.mu.Lock()
+	defer foldRegistry.mu.Unlock()
+
+	ctx, ok := foldRegistry.contexts[agentID]
+	if !ok { return }
+
+	ctx.Tools = append(ctx.Tools, tool)
+	ctx.Output = append(ctx.Output, fmt.Sprintf("[%s] %s → %s", agentID[:8], tool, result[:min(80, len(result))]))
+	ctx.TokenCount += int64(len(result))
+
+	// Cap output at 256 lines
+	if len(ctx.Output) > 256 {
+		ctx.Output = ctx.Output[len(ctx.Output)-256:]
 	}
-	Log(LogInfo, "fold.unfold", fmt.Sprintf("%s restored", agentID[:8]),
-		"", "", 0, nil)
-	return nil
+}
+
+// FoldUnwind completes the fold and returns output to parent.
+func FoldUnwind(agentID string) []string {
+	foldRegistry.mu.Lock()
+	defer foldRegistry.mu.Unlock()
+
+	ctx, ok := foldRegistry.contexts[agentID]
+	if !ok { return nil }
+
+	ctx.Status = "completed"
+	ctx.CompletedAt = time.Now()
+
+	Log(LogInfo, "fold.complete",
+		fmt.Sprintf("%s → %s parent (%d tools, %d output lines, depth %d)",
+			agentID[:8], ctx.ParentID[:8], len(ctx.Tools), len(ctx.Output), ctx.Depth),
+		"", "", time.Since(ctx.StartedAt), nil)
+
+	// Clean up — the context is consumed by parent
+	delete(foldRegistry.contexts, agentID)
+
+	return ctx.Output
+}
+
+// FoldDepth returns the current recursion depth for an agent.
+func FoldDepth(agentID string) int {
+	foldRegistry.mu.Lock()
+	defer foldRegistry.mu.Unlock()
+	if ctx, ok := foldRegistry.contexts[agentID]; ok {
+		return ctx.Depth
+	}
+	return -1
 }
 
 // FoldStatus returns compact fold status.
 func FoldStatus() string {
-	agents := ListAgents()
-	folded := 0
-	for _, a := range agents {
-		if a.Status == "folded" { folded++ }
+	foldRegistry.mu.Lock()
+	defer foldRegistry.mu.Unlock()
+
+	folding := 0
+	for _, ctx := range foldRegistry.contexts {
+		if ctx.Status == "folding" { folding++ }
 	}
-	return fmt.Sprintf("fold: %d agents (%d folded into parent)", len(agents), folded)
+
+	return fmt.Sprintf("fold: %d agents (%d actively folding)",
+		len(foldRegistry.contexts), folding)
 }
 
 // FoldVakedFit returns the fold primitive's Vaked fit.
 func FoldVakedFit() string {
 	return `FOLD = RECURSION THROUGH AGENTS
-  
-  Full-Stop recurses through LAYERS (Declares → SACRED)
-  Fold recurses through AGENTS (parent → subagent → leaf)
-  
-  parent >>= fold(subagent) >>= parent
-  
-  The subagent's runtime virtualizes into the parent.
-  Context wraps agent. Recursion continues.
-  
-  Fold IS the Vaked philosophy applied to agent execution.`
+
+Full-Stop recurses through LAYERS (Declares → SACRED)
+Fold recurses through AGENTS (parent → subagent → leaf)
+
+parent >>= fold(subagent) >>= parent
+
+The subagent's runtime virtualizes into the parent.
+Tool calls execute in parent context.
+Output flows up through the recursion tree.
+Context wraps agent. Recursion continues.`
 }
