@@ -115,3 +115,9 @@
 - Cross-Machine VFS + Self-Compile
 - Honesty Loop + SACRED surface + Keyboard Gate
 - The asymmetry of inputs — documented
+
+## v52.0.0 (2026-06-21) — UI Co-Creative + Dog Feed
+- UI Co-Creative: one engine to rule all UI surfaces
+- Dog Feed: continuous LLM data collection + public dataset
+- Task Manager: pure concurrent task queue
+- 86 blocks, 111 releases, 0 race conditions
