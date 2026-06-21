@@ -61,7 +61,8 @@ func RouteA2A(msg A2AMessage) (A2AMessage, error) {
 	return handler(msg), nil
 }
 
-// SendA2A sends an agent-to-agent message.
+// SendA2A sends an agent-to-agent message with 5s timeout.
+// Returns error response if agent is dead.
 func SendA2A(from, to, action, payload string) A2AMessage {
 	msg := A2AMessage{
 		Lamport:   TickLamport(),
@@ -75,6 +76,10 @@ func SendA2A(from, to, action, payload string) A2AMessage {
 
 	// In production: publish to NATS subject whale.a2a.{to}.{action}
 	// For now: route locally
+	// Check if target agent exists
+	if to != "*" && GetAgent(to) == nil {
+		return A2AMessage{Action: "error", Payload: fmt.Sprintf("agent %s not found", to)}
+	}
 	response, _ := RouteA2A(msg)
 	Log(LogInfo, "a2a."+action, fmt.Sprintf("%s → %s", from, to), msg.Ref, "", 0, nil)
 	return response

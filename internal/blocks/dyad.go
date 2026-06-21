@@ -173,3 +173,20 @@ func InitDyad(peerMachine, peerArch, peerTier string) *DyadBlock {
 
 // GetDyad returns the global dyad.
 func GetDyad() *DyadBlock { return globalDyad }
+
+
+// DyadHealth returns a health check response for the dyad.
+func DyadHealth() map[string]any {
+	d := GetDyad()
+	if d == nil {
+		return map[string]any{"status": "not_initialized"}
+	}
+	return map[string]any{
+		"status":      d.Status,
+		"self_alive":  d.SelfAlive,
+		"peer_alive":  d.PeerAlive,
+		"ping_count":  d.PingCount,
+		"last_ping":   d.LastPing.Format(time.RFC3339),
+		"paired_at":   d.PairedAt.Format(time.RFC3339),
+	}
+}

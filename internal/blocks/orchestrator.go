@@ -121,6 +121,10 @@ func GetOrchestrator() *Orchestrator {
 func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	// Classify the prompt to pick the right agent
 	def := o.classifyByCapability(prompt)
+	if def.Name == "" {
+		// Fallback: default to explore agent
+		def = AgentDef{Name: "explore", Model: "deepseek-v4-flash", MaxCalls: 128, MaxIters: 64}
+	}
 
 	// Ralph: observe delegation
 	ralph := GetRalph()

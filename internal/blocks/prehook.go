@@ -135,9 +135,18 @@ func RunPreHooks(op string, data []byte, path string) error {
 	}
 
 	for _, h := range hooks {
-		if err := h.Validate(data, path); err != nil {
+		// Timeout: 10s per pre-hook (prevents blocking)
+		done := make(chan error, 1)
+		go func() { done <- h.Validate(data, path) }()
+		select {
+		case err := <-done:
+			if err != nil {
 			Log(LogError, "prehook."+h.Name(), path, "", "", time.Since(start), err)
-			return fmt.Errorf("%s: %w", h.Name(), err)
+				return fmt.Errorf("%s: %w", h.Name(), err)
+			}
+		case <-time.After(10 * time.Second):
+			Log(LogWarn, "prehook."+h.Name(), "timeout after 10s", "", "", time.Since(start), nil)
+			return fmt.Errorf("%s: timeout", h.Name())
 		}
 	}
 
