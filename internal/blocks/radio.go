@@ -77,7 +77,7 @@ func RadioNow() string {
 	radio.mu.Lock()
 	defer radio.mu.Unlock()
 
-	bpm := deriveBPM()
+	bpm := deriveBPMLive() // live: agents + swarm latency
 	key := deriveKey()
 	bassNote := deriveBass()
 	ambience := deriveAmbience()
@@ -89,6 +89,13 @@ func RadioNow() string {
 
 	return fmt.Sprintf("%s %s | %d BPM | %s | %s | %s | %s",
 		radio.Name, radio.Genre, bpm, key, bassNote, ambience, melody)
+}
+
+func deriveBPMLive() int {
+	// BPM = base 60 + (agents * 10) + (swarm latency ms / 10)
+	agents := AgentCount()
+	latency := dyadLatencyMs()
+	return 60 + agents*10 + latency/10
 }
 
 func deriveBPM() int {
@@ -164,4 +171,24 @@ func RadioVakedFit() string {
   USER↔ultrawhale: by-definition-unique.
 
   "Co-wise unify space. The radio never stops."`
+}
+
+
+func dyadLatencyMs() int {
+	d := GetDyad()
+	if d == nil { return 0 }
+	// Measure actual latency from last ping
+	elapsed := time.Since(d.LastPing).Milliseconds()
+	if elapsed > 5000 { return 50 } // degraded
+	if elapsed < 100 { return 0 }   // healthy
+	return int(elapsed / 100)
+}
+
+func vakedBaseHealthBPM() int {
+	// BPM from vaked-base side: number of RFCs, compiler passes, grammar kinds
+	// Simulated: use block count and recursion depth as health indicators
+	blocks := len(schemaRegistry)
+	depth := currentFoldDepth()
+	if depth < 0 { depth = 0 }
+	return 60 + blocks/10 + depth*5
 }

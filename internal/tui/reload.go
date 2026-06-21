@@ -1122,3 +1122,10 @@ func handleWebhooksLiveCommand() string { return blocks.AllWebhooksLive() }
 func handleSheetCommand() string { return blocks.SacredDashboard() + "\n\n" + blocks.SheetVakedFit() }
 
 func handleDeepCommand() string { return blocks.DeepObserveInnovate() + "\n\n" + blocks.DeepInsights() + "\n\n" + blocks.DeepObserveVakedFit() }
+
+func handleRadioLiveCommand() string {
+	bpm := blocks.DeriveBPMLive()
+	health := blocks.VakedBaseHealthBPM()
+	latency := blocks.DyadLatencyMs()
+	return fmt.Sprintf("📻 RADIO LIVE\n  BPM:      %d (swarm: %d agents + %dms latency)\n  Health:    %d (vaked-base: %d blocks)\n  Stream:    lo-fi coding music\n  Provider:  Cloudflare Stream / Workers\n  Status:    🟢 LIVE\n\n  The heartbeat IS the swarm.\n  The latency IS the rhythm.\n  The health IS the melody.", bpm, blocks.AgentCount(), latency, health, len(schemaRegistry))
+}
