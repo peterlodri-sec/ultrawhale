@@ -59,7 +59,7 @@ var dogFeed = &DogFeed{
 	config: DogFeedConfig{
 		Enabled:    false,
 		FreeModel:  "google/gemma-3-4b-it:free",
-		Interval:   5 * time.Minute,
+		Interval:   150 * time.Second,
 		MaxSamples: 1000,
 		OutputDir:  "",
 	},

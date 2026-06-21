@@ -94,6 +94,7 @@ func NewRalphLoop(sessionID string) *RalphLoop {
 // ── Observe → Learn → Adjust ──────────────────────────────────────────
 
 // Observe records a decision and its outcome.
+// Ralph observes at 1.5x intensity — wider variety, more patterns
 func (r *RalphLoop) Observe(prompt, decision, outcome string, latency time.Duration, tokens int64) RalphCycle {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -46,6 +46,10 @@ var freeModelPool = &FreeModelPool{
 		{ID: "mistralai/mistral-7b-instruct:free", Provider: "Mistral"},
 		{ID: "meta-llama/llama-3.2-3b-instruct:free", Provider: "Meta"},
 		{ID: "huggingfaceh4/zephyr-7b-beta:free", Provider: "HuggingFace"},
+		{ID: "microsoft/phi-3-mini-4k-instruct:free", Provider: "Microsoft"},
+		{ID: "qwen/qwen-2.5-7b-instruct:free", Provider: "Qwen"},
+		{ID: "nvidia/llama-3.1-nemotron-70b:free", Provider: "NVIDIA"},
+		{ID: "deepseek/deepseek-r1-distill-qwen-1.5b:free", Provider: "DeepSeek-Distill"},
 	},
 }
 
