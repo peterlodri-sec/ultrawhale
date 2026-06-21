@@ -86,3 +86,4 @@ docker/supabase-data/
 *.pprof
 *.test
 deploy-out/
+homebrew-ultrawhale/
