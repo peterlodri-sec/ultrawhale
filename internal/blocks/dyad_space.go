@@ -44,7 +44,7 @@ func DyadSpaceAGUI() string {
 	d := GetDyad()
 	if d == nil { return "[AG-UI ▸ dyad] offline" }
 
-	if d.PeerAlive { return fmt.Sprintf("[AG-UI ▸ dyad] %s %s↔%s (%s)", d.Self.Machine, d.Peer.Machine, d.Status) }
+	if d.PeerAlive { return fmt.Sprintf("[AG-UI ▸ dyad] %s↔%s (%s)", d.Self.Machine, d.Peer.Machine, d.Status) }
 	return fmt.Sprintf("[AG-UI ▸ dyad] %s offline", d.Peer.Machine)
 }
 
