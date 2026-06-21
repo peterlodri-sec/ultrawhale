@@ -116,6 +116,8 @@ func StopDogFeed() string {
 }
 
 // DogFeedStatus returns compact status.
+func DogFeedLiveDebug() string { return fmt.Sprintf("dogfeed-live: %d samples · %d feeds · model: %s", len(dogFeed.samples), atomic.LoadInt64(&dogFeed.stats.FeedsAttempted), dogFeed.config.FreeModel) }
+
 func DogFeedStatus() string {
 	dogFeed.mu.Lock()
 	defer dogFeed.mu.Unlock()

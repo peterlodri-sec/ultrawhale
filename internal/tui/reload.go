@@ -874,3 +874,14 @@ func handlePOLACommand() string { return "POLA: Principle of Least Authority\n\n
 func handleClosureCommand() string { return blocks.UIClosureStatus() + "\n\n" + blocks.UIClosureVakedFit() }
 
 func handleGlyphsCommand() string { return blocks.HieroglyphStatus() + "\n\n" + blocks.HieroglyphVakedFit() }
+
+func handleLiveCommand() string {
+	var lines []string
+	lines = append(lines, "╔══ LIVE DEBUG ══╗")
+	lines = append(lines, "Brain: "+blocks.GetBrain().BrainDump()[:40])
+	lines = append(lines, "Memory: "+fmt.Sprintf("%d memos", blocks.GetBrain().memos.Count()))
+	lines = append(lines, blocks.DogFeedLiveDebug())
+	lines = append(lines, "RSS: "+blocks.RSSStatus())
+	lines = append(lines, blocks.LiveSessionStatus())
+	return strings.Join(lines, "\n")
+}

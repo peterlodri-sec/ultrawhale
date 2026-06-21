@@ -33,7 +33,7 @@
 
 <!--
 ╔══════════════════════════════════════════════════════════════╗
-║  GENESIS BLOCK — ultrawhale v64.0.0                          ║
+║  GENESIS BLOCK — ultrawhale v78.0.0                          ║
 ║  Trust Anchor: github.com/PeetPedro/ultrawhale           ║
 ║  Vaked-base Ref: github.com/PeetPedro/vaked-base         ║
 ║  Hash: GENESIS-v61-94blocks-6recursions-8engines              ║
@@ -54,11 +54,11 @@
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  ▸ ultrawhale v64.0.0                                    │
-│  99 blocks · 6 recursions · 8 engines · HF Pro           │
+│  ▸ ultrawhale v78.0.0                                    │
+│  106 blocks · 7 recursions · 8 engines · HF Pro           │
 │  brew install ultrawhale ✅  ·  docker pull ✅             │
 │  "The human abstracts toward the infinite.                │
-│   The machine recurses into it." — VEGED                  │
+│   The machine recurses into it." — vaked                  │
 └──────────────────────────────────────────────────────────┘
 ```
 [![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
@@ -68,7 +68,7 @@
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
 [![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro (create account + dataset → will be live))
 [![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
-[![v60](https://img.shields.io/badge/version-v64.0.0-00d4ff)](https://github.com/PeetPedro/ultrawhale/releases)
+[![v60](https://img.shields.io/badge/version-v78.0.0-00d4ff)](https://github.com/PeetPedro/ultrawhale/releases)
 
 > ⚠️ **ULTRA-DISCLAIMER**: If this repo ever gets deleted, the trust breaks.
 > The VICE engine activates. The PROBLEM primitive fires. The dyad fractures.
