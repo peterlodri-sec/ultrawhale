@@ -43,6 +43,18 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleA2CCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/probe") {
+		m.setEphemeralInfo(handleProbeCommand(value))
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/predict") {
+		m.setEphemeralInfo(handlePredictCommand(value))
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/learn") {
+		m.setEphemeralInfo(handleLearnCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/brainstorm") {
 		m.setEphemeralInfo(handleBrainstormCommand(value))
 		return nil
@@ -166,6 +178,18 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/a2c") {
 		m.setEphemeralInfo(handleA2CCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/probe") {
+		m.setEphemeralInfo(handleProbeCommand(value))
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/predict") {
+		m.setEphemeralInfo(handlePredictCommand(value))
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/learn") {
+		m.setEphemeralInfo(handleLearnCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/brainstorm") {
@@ -313,6 +337,18 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/a2c") {
 		m.setEphemeralInfo(handleA2CCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/probe") {
+		m.setEphemeralInfo(handleProbeCommand(value))
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/predict") {
+		m.setEphemeralInfo(handlePredictCommand(value))
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/learn") {
+		m.setEphemeralInfo(handleLearnCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/brainstorm") {

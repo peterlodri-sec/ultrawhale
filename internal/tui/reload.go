@@ -564,3 +564,25 @@ func handleBrainstormCommand(line string) string {
 		return "/brainstorm start|list|resume|complete"
 	}
 }
+
+func handleProbeCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/probe"))
+	if len(parts) == 0 { return "/probe status | /probe mesh" }
+	switch parts[0] {
+	case "status": return blocks.ProbeStatus()
+	case "mesh": 
+		blocks.ProbeMesh()
+		return blocks.ProbeStatus()
+	default: return "/probe status | /probe mesh"
+	}
+}
+
+func handlePredictCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/predict"))
+	if len(parts) < 2 { return blocks.PredictStatus() }
+	prompt := strings.Join(parts, " ")
+	p := blocks.PredictOutcome(prompt, "swe")
+	return fmt.Sprintf("predict: %s → %s (%.0f%%): %s", p.Prompt[:30], p.Agent, p.Confidence*100, p.Reason)
+}
+
+func handleLearnCommand() string { return blocks.LearnStatus() }
