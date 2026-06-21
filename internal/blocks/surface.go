@@ -52,14 +52,6 @@ func (s *Surface) Start() {
 			"sacred_health": GetSacredSurface().Health,
 			"sacred_direct": fmt.Sprintf("%v", GetSacredSurface().Direct),
 			"sacred_lag_ms": fmt.Sprintf("%d", GetSacredSurface().InputLag),
-			"_sacred": map[string]any{
-				"status":   GetSacredSurface().Health,
-				"direct":   GetSacredSurface().Direct,
-				"input_lag_ms": GetSacredSurface().InputLag,
-				"healthy":  IsSacredHealthy(),
-				"violations": SacredViolations,
-			},
-			},
 			"ring_overflow": OverflowCount(),
 			"a2c_streams": len(a2cStreams),
 		})
