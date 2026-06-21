@@ -593,3 +593,6 @@ func handleVakedCompileCommand(line string) string {
 	// Vaked plugin handles the full pipeline
 	return fmt.Sprintf("vaked: compile %s — use vakedz or vakedc for full pipeline", parts[0])
 }
+
+func handleContractCommand() string { return blocks.ContractStatus() }
+func handleStateCommand() string { return blocks.CrabCCStatus() }
