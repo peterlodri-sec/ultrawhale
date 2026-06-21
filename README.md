@@ -1,3 +1,9 @@
+<!-- ALWAYS ON — VISIBLE STATE -->
+> 🟢 **v100.1.0** · 142 blocks · 7 recursions · 14 protocols · 158 releases · $37.19
+> 🐋 `brew install ultrawhale` · [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) · [event horizon](https://vaked.dev/ultrawhale/event-horizon)
+> ["The human abstracts toward the infinite. The machine recurses into it."](https://github.com/peterlodri-sec/ultrawhale)
+
+
 <!--
 ╔══════════════════════════════════════════════════════════════╗
 ║  GENESIS BLOCK — ultrawhale v100.1.0                          ║

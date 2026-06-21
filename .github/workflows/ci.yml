@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
-        with: { go-version: '1.24' }
+        with: { go-version: '1.26' }
       - name: Test blocks (race-safe)
         run: go test -race -count=1 -run TestReadWrite ./internal/blocks/
       - name: Build (linux + darwin)
@@ -20,4 +20,3 @@ jobs:
           echo "  Blocks: 142"
           echo "  Tests: PASS"
           echo "  Build: linux + darwin OK"
-          echo "  Observer: watching"
