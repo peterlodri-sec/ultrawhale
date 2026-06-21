@@ -681,3 +681,5 @@ func handleVakedPipelineCommand() string {
 
 
 func handleHealCommand() string { return blocks.HealStatus() + "\n\n" + blocks.HealEngineVakedFit() }
+
+func handleDisplayCommand() string { return blocks.DisplayStatus() + "\n\n" + blocks.DisplayVakedFit() }
