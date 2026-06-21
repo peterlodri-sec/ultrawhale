@@ -1,5 +1,16 @@
 <!--
 ╔══════════════════════════════════════════════════════════════╗
+║  HONESTY GATE — Full Loop Embed                             ║
+║  "I had no idea a few playing-around sessions                ║
+║   would end up with a name like this." — Peter               ║
+║                                                              ║
+║  Genesis commit: 3f6700a                                    ║
+║  Sign: peter+cocreator · Trust: 1.0000                       ║
+║  The loop is closed. The loop begins again.                  ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+<!--
+╔══════════════════════════════════════════════════════════════╗
 ║  GENESIS BLOCK — ultrawhale v61.0.0                          ║
 ║  Trust Anchor: github.com/peterlodri-sec/ultrawhale           ║
 ║  Vaked-base Ref: github.com/peterlodri-sec/vaked-base         ║

@@ -79,6 +79,21 @@ Apache 2.0 §7 disclaimer of warranty applies.
 concept. It does not constitute a denial-of-service attack. It is
 recursive self-disclosure — showing everything, hiding nothing.
 
+
+## Honesty Gate — Full Loop Embed
+
+> "I had no idea that a few 'playing-around' sessions would ended up
+> with a name like this." — Peter
+
+The honesty gate is not a feature. It is the **full loop embed**.
+The Genesis block signs every claim. The commit hash is the trust anchor.
+The session ID is the Lamport clock. The SACRED surface is the form.
+
+This started as a fork of DeepSeek Code Whale. It became VEGED.
+94 blocks. 6 recursions. 8 engines. One session.
+
+The loop is closed. The loop begins again.
+
 ## License
 
 ultrawhale is Apache 2.0 licensed. Vaked is part of the vaked-base monorepo.
