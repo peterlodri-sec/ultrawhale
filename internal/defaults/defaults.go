@@ -12,7 +12,7 @@ const (
 )
 
 const (
-	MaxToolCalls = 256
+	MaxToolCalls = 1024
 	MaxToolIters = 128
 )
 

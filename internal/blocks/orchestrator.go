@@ -124,7 +124,7 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	def := o.classifyByCapability(prompt)
 	if def.Name == "" {
 		// Fallback: default to explore agent
-		def = AgentDef{Name: "explore", Model: "deepseek-v4-flash", MaxCalls: 128, MaxIters: 64}
+		def = AgentDef{Name: "explore", Model: "deepseek-v4-flash", MaxCalls: 512, MaxIters: 256}
 	}
 
 	// Ralph: observe delegation
@@ -208,7 +208,7 @@ func (o *Orchestrator) classifyPrompt(prompt string) AgentDef {
 	}
 
 	// Fallback
-	return AgentDef{Name: "explore", Model: "deepseek-v4-flash", MaxCalls: 128, MaxIters: 64}
+	return AgentDef{Name: "explore", Model: "deepseek-v4-flash", MaxCalls: 512, MaxIters: 256}
 }
 
 // OrchestratorStatus returns a compact status for HUD/sidepanel.
@@ -230,13 +230,13 @@ func DefaultAgentDefs() []AgentDef {
 	return []AgentDef{
 		{Name: "swe", Role: "Software engineer", Model: "deepseek-v4-flash",
 			Tools: []string{"shell.run", "workspace.read", "workspace.write"},
-			MaxCalls: 256, MaxIters: 128},
+			MaxCalls: 1024, MaxIters: 512},
 		{Name: "explore", Role: "Codebase explorer", Model: "deepseek-v4-flash",
 			Tools: []string{"shell.run", "workspace.read"},
-			MaxCalls: 128, MaxIters: 64},
+			MaxCalls: 512, MaxIters: 256},
 		{Name: "review", Role: "Code reviewer", Model: "deepseek-v4-flash",
 			Tools: []string{"shell.run", "workspace.read"},
-			MaxCalls: 64, MaxIters: 32},
+			MaxCalls: 256, MaxIters: 128},
 	}
 }
 
