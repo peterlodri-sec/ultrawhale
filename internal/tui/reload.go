@@ -802,3 +802,6 @@ func handleVICECommand() string { return blocks.VICEStatus() + "\n\n" + blocks.V
 
 func handleHardenCommand() string { return blocks.HardenAll() }
 func handleHugCommand() string { return blocks.MetaDigitalHug() }
+
+func handleWhoCommand() string { return blocks.Presence() }
+func handleSessionCommand() string { return blocks.LiveSessionStatus() + "\n\n" + blocks.LiveSessionVakedFit() }

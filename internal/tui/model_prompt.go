@@ -71,6 +71,8 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.TrimSpace(value) == "/who" { m.setEphemeralInfo(handleWhoCommand()); return nil }
+	if strings.HasPrefix(strings.TrimSpace(value), "/session") { m.setEphemeralInfo(handleSessionCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/harden") { m.setEphemeralInfo(handleHardenCommand()); return nil }
 	if strings.TrimSpace(value) == "/hug" { m.setEphemeralInfo(handleHugCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/vice") { m.setEphemeralInfo(handleVICECommand()); return nil }
@@ -303,6 +305,8 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.TrimSpace(value) == "/who" { m.setEphemeralInfo(handleWhoCommand()); return nil }
+	if strings.HasPrefix(strings.TrimSpace(value), "/session") { m.setEphemeralInfo(handleSessionCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/harden") { m.setEphemeralInfo(handleHardenCommand()); return nil }
 	if strings.TrimSpace(value) == "/hug" { m.setEphemeralInfo(handleHugCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/vice") { m.setEphemeralInfo(handleVICECommand()); return nil }
@@ -557,6 +561,8 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.TrimSpace(value) == "/who" { m.setEphemeralInfo(handleWhoCommand()); return nil }
+	if strings.HasPrefix(strings.TrimSpace(value), "/session") { m.setEphemeralInfo(handleSessionCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/harden") { m.setEphemeralInfo(handleHardenCommand()); return nil }
 	if strings.TrimSpace(value) == "/hug" { m.setEphemeralInfo(handleHugCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/vice") { m.setEphemeralInfo(handleVICECommand()); return nil }
