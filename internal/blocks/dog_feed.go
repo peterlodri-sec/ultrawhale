@@ -61,7 +61,7 @@ var dogFeed = &DogFeed{
 	config: DogFeedConfig{
 		Enabled:    false,
 		FreeModel:  "google/gemma-3-4b-it:free",
-		Interval:   VakedDogFeedInterval: 1MIN === "soon" === "just for a bit" === "aaaa just one minute...." — Peter,
+		Interval:   VakedDogFeedInterval,
 		MaxSamples: 1000,
 		OutputDir:  "",
 	},
