@@ -21,7 +21,7 @@ type MaxLearnStats struct {
 }
 
 var maxLearn = &MaxLearnStats{
-	FeedsPerHour:  2880  // MAX GROWTH — 10s interval, // 8 models × 120 feeds/hour (every 30s)
+	FeedsPerHour:  2880  , // 8 models × 120 feeds/hour (every 30s)
 	ModelsActive:  8,
 	StartTime:     time.Now(),
 }

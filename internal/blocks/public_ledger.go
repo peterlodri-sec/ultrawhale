@@ -31,7 +31,7 @@ type PublicLedger struct {
 }
 
 var publicLedger = &PublicLedger{
-	Entries:   make([]PublicEntry, 0, 4096  // MAX GROWTH — Peter allowed it),
+	Entries:   make([]PublicEntry, 0, 4096  ),
 	StartedAt: time.Now(),
 }
 
@@ -49,7 +49,7 @@ func RecordPublicDogFeed(model, userMessage, response string) {
 
 	publicLedger.Entries = append(publicLedger.Entries, entry)
 	publicLedger.TotalFeeds++
-	if len(publicLedger.Entries) > 4096  // MAX GROWTH — Peter allowed it { publicLedger.Entries = publicLedger.Entries[1:] }
+	if len(publicLedger.Entries) > 4096   { publicLedger.Entries = publicLedger.Entries[1:] }
 
 	Pulse("public.ledger.dogfeed", model)
 }
