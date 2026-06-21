@@ -1,6 +1,6 @@
 # 🐋 ultrawhale
 
-> ⚡ **CYBERPUNK THEME: ASCII-live WTF DEMO VIDEO COMING SOON...** ⚡
+> <span style="color:#b44dff">⚡ CYBERPUNK THEME · ASCII-live demo coming soon ⚡</span>
 
 A coding agent that builds itself. **148 blocks. 7 recursions. 14 protocols.** v100.1.0.
 
