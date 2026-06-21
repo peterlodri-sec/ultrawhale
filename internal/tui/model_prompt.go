@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/freemodels") { m.setEphemeralInfo(handleFreeModelsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/live") { m.setEphemeralInfo(handleLiveCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/glyphs") { m.setEphemeralInfo(handleGlyphsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/closure") { m.setEphemeralInfo(handleClosureCommand()); return nil }
@@ -318,6 +319,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/freemodels") { m.setEphemeralInfo(handleFreeModelsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/live") { m.setEphemeralInfo(handleLiveCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/glyphs") { m.setEphemeralInfo(handleGlyphsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/closure") { m.setEphemeralInfo(handleClosureCommand()); return nil }
@@ -587,6 +589,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/freemodels") { m.setEphemeralInfo(handleFreeModelsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/live") { m.setEphemeralInfo(handleLiveCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/glyphs") { m.setEphemeralInfo(handleGlyphsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/closure") { m.setEphemeralInfo(handleClosureCommand()); return nil }

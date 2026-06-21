@@ -885,3 +885,5 @@ func handleLiveCommand() string {
 	lines = append(lines, blocks.LiveSessionStatus())
 	return strings.Join(lines, "\n")
 }
+
+func handleFreeModelsCommand() string { return blocks.FreeModelStatsReport() + "\n\n" + blocks.FreeModelPoolVakedFit() }
