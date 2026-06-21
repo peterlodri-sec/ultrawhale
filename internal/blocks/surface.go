@@ -56,6 +56,16 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/api/v1/mesh/topology", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"agents":      AgentCount(),
+			"mesh_peers":  len(meshAnnouncements.peers),
+			"a2a_handlers": len(a2aRouter.handlers),
+			"a2c_streams":  len(a2cStreams),
+		})
+	})
+
 	mux.HandleFunc("/api/v1/vaked/graph", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{

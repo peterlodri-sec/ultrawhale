@@ -111,6 +111,12 @@ func (r *RalphLoop) Observe(prompt, decision, outcome string, latency time.Durat
 	// Learn from outcome
 	if outcome == "failed" || outcome == "timeout" {
 		r.ConsecutiveFailures++
+		// If agent with FULL caps fails, try OBSERVE first
+		if profile := GetCapProfile(decision); profile.Can(CapWrite) {
+			SetCapProfile(decision, CapOBSERVE)
+			cycle.Adjustment = fmt.Sprintf("downgraded %s to OBSERVE after failure", decision)
+		}
+		r.ConsecutiveFailures++
 		cycle.Pattern = extractPattern(prompt, decision)
 		cycle.Confidence = r.bumpPattern(cycle.Pattern, -0.1)
 

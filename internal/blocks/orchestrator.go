@@ -120,11 +120,11 @@ func GetOrchestrator() *Orchestrator {
 // The orchestrator NEVER calls the LLM directly — always delegates.
 func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	// Classify the prompt to pick the right agent
-	def := o.classifyPrompt(prompt)
+	def := o.classifyByCapability(prompt)
 
-	// Capabilities check
-	profile := GetCapProfile(def.Name)
-	_ = profile
+	// Ralph: observe delegation
+	ralph := GetRalph()
+	_ = ralph
 
 	// Spawn subagent
 	agent := SpawnAgent(
@@ -241,4 +241,26 @@ func parseAgentsMD(content string) []AgentDef {
 	// AGENTS.md overrides defaults — for now, use defaults
 	_ = content
 	return defs
+}
+
+
+func (o *Orchestrator) classifyByCapability(prompt string) AgentDef {
+	lower := strings.ToLower(prompt)
+	
+	// Capability-based routing: what does this task NEED?
+	needsWrite := strings.Contains(lower, "implement") || strings.Contains(lower, "build") || strings.Contains(lower, "write") || strings.Contains(lower, "fix") || strings.Contains(lower, "refactor")
+	needsExecute := strings.Contains(lower, "run") || strings.Contains(lower, "test") || strings.Contains(lower, "deploy") || strings.Contains(lower, "bench")
+	
+	if needsWrite || needsExecute {
+		// Needs FULL capabilities
+		for _, d := range o.Definitions {
+			if GetCapProfile(d.Name).Can(CapWrite) { return d }
+		}
+	}
+	
+	// Default: OBSERVE (explore, review)
+	for _, d := range o.Definitions {
+		if d.Name == "explore" { return d }
+	}
+	return o.Definitions[0]
 }

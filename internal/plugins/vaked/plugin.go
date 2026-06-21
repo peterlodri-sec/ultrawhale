@@ -158,6 +158,13 @@ func (p *Plugin) ParseVakedFile(path string) (*VakedGraph, error) {
 	// Journal the read
 	blocks.Log(blocks.LogInfo, "vaked.parse", path, blocks.Ref(content), "", 0, nil)
 
+	// Feed parsed capabilities to orchestrator registry
+	for _, d := range graph.Declares {
+		if d.Kind == "runtime" || d.Kind == "fiber" {
+			blocks.SetCapProfile(d.Name, blocks.CapFULL)
+		}
+	}
+
 	// Parse via vakedz/vakedc
 	var rawJSON []byte
 	switch p.compiler {

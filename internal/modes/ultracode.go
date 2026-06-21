@@ -93,6 +93,14 @@ func (u *UltracodeMode) StartPhase(name string) (int, error) {
 			u.current = i
 			u.emitUpdate()
 
+	// Ultracode → Ralph: inform capability learning
+	if ralph := blocks.GetRalph(); ralph != nil && len(u.phases) > 0 {
+		last := u.phases[u.current-1]
+		if last.Status == PhasePassed {
+			ralph.Observe(fmt.Sprintf("ultracode:%s", last.Name), "ultracode", "success", time.Since(last.StartedAt), 0)
+		}
+	}
+
 			return i, nil
 		}
 	}
@@ -132,6 +140,14 @@ func (u *UltracodeMode) EndPhase(name string, passed bool, err error) {
 	}
 	u.emitUpdate()
 
+	// Ultracode → Ralph: inform capability learning
+	if ralph := blocks.GetRalph(); ralph != nil && len(u.phases) > 0 {
+		last := u.phases[u.current-1]
+		if last.Status == PhasePassed {
+			ralph.Observe(fmt.Sprintf("ultracode:%s", last.Name), "ultracode", "success", time.Since(last.StartedAt), 0)
+		}
+	}
+
 }
 
 // RollbackPhase undoes the writes from the last phase via blocks.Rollback.
@@ -146,6 +162,14 @@ func (u *UltracodeMode) RollbackPhase(name string) {
 		}
 	}
 	u.emitUpdate()
+
+	// Ultracode → Ralph: inform capability learning
+	if ralph := blocks.GetRalph(); ralph != nil && len(u.phases) > 0 {
+		last := u.phases[u.current-1]
+		if last.Status == PhasePassed {
+			ralph.Observe(fmt.Sprintf("ultracode:%s", last.Name), "ultracode", "success", time.Since(last.StartedAt), 0)
+		}
+	}
 
 }
 
@@ -162,6 +186,14 @@ func (u *UltracodeMode) SkipPhase(name string) {
 	}
 	u.emitUpdate()
 
+	// Ultracode → Ralph: inform capability learning
+	if ralph := blocks.GetRalph(); ralph != nil && len(u.phases) > 0 {
+		last := u.phases[u.current-1]
+		if last.Status == PhasePassed {
+			ralph.Observe(fmt.Sprintf("ultracode:%s", last.Name), "ultracode", "success", time.Since(last.StartedAt), 0)
+		}
+	}
+
 }
 
 // AutoAdvance moves to the next pending phase.
@@ -176,11 +208,27 @@ func (u *UltracodeMode) AutoAdvance() (string, bool) {
 			u.current = i
 			u.emitUpdate()
 
+	// Ultracode → Ralph: inform capability learning
+	if ralph := blocks.GetRalph(); ralph != nil && len(u.phases) > 0 {
+		last := u.phases[u.current-1]
+		if last.Status == PhasePassed {
+			ralph.Observe(fmt.Sprintf("ultracode:%s", last.Name), "ultracode", "success", time.Since(last.StartedAt), 0)
+		}
+	}
+
 			return u.phases[i].Name, true
 		}
 	}
 	u.status.Verdict = "pass"
 	u.emitUpdate()
+
+	// Ultracode → Ralph: inform capability learning
+	if ralph := blocks.GetRalph(); ralph != nil && len(u.phases) > 0 {
+		last := u.phases[u.current-1]
+		if last.Status == PhasePassed {
+			ralph.Observe(fmt.Sprintf("ultracode:%s", last.Name), "ultracode", "success", time.Since(last.StartedAt), 0)
+		}
+	}
 
 	return "", false
 }
