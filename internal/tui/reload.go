@@ -1032,3 +1032,12 @@ func handleSpeakCommand(line string) string {
 	if len(parts) < 2 { return "usage: /speak <lang> <utterance>\n  langs: en, hu, de, fi, jp, zh" }
 	return blocks.SpeakIn(parts[0], strings.Join(parts[1:], " ")) + "\n\n  Graph: " + blocks.GraphNativeOp(strings.Join(parts[1:], " "))
 }
+
+func handleUltraCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/ultra"))
+	if len(parts) == 0 { return blocks.UltraTriggerStatus() + "\n\n" + blocks.UltraTriggerVakedFit() }
+	switch parts[0] {
+	case "trigger": return blocks.UltraTriggerFeedLearn()
+	default: return "/ultra trigger ← BIG RED BUTTON"
+	}
+}

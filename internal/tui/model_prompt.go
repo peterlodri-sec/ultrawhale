@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/ultra") { m.setEphemeralInfo(handleUltraCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/speak") { m.setEphemeralInfo(handleSpeakCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-medium") { m.setEphemeralInfo(handleUIMediumCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/pov") { m.setEphemeralInfo(handlePOVRecoveryCommand(value)); return nil }
@@ -342,6 +343,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/ultra") { m.setEphemeralInfo(handleUltraCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/speak") { m.setEphemeralInfo(handleSpeakCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-medium") { m.setEphemeralInfo(handleUIMediumCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/pov") { m.setEphemeralInfo(handlePOVRecoveryCommand(value)); return nil }
@@ -635,6 +637,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/ultra") { m.setEphemeralInfo(handleUltraCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/speak") { m.setEphemeralInfo(handleSpeakCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-medium") { m.setEphemeralInfo(handleUIMediumCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/pov") { m.setEphemeralInfo(handlePOVRecoveryCommand(value)); return nil }
