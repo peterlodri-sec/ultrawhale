@@ -121,3 +121,9 @@
 - Dog Feed: continuous LLM data collection + public dataset
 - Task Manager: pure concurrent task queue
 - 86 blocks, 111 releases, 0 race conditions
+
+## v56.0.0 (2026-06-21) — 2 CoCreator Wishes
+- Self Portrait: the system draws itself as ASCII art
+- OneShot Chain: pipe OneShots like Unix
+- Telemetry Tree: the system sees itself
+- 91 blocks, 115 releases
