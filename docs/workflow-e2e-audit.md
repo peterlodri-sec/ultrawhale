@@ -12,7 +12,7 @@
 | Workflow → Supabase | ✅ FULLY WIRED | persistWorkflow() via PostgREST |
 | Workflow → Vaked | ✅ FULLY WIRED | .vaked workflow declarations parsed |
 
-## Gap Fixes Applied (v15.1.0)
+## Gap Fixes Applied (v15.3.0)
 
 1. **Vaked → Workflow**: .vaked files with `workflow "name"` declarations are parsed and registered
 2. **Workflow → Supabase**: POST /api/v1/workflows/runs persists workflow execution results

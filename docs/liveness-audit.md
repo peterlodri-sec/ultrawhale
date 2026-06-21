@@ -1,4 +1,4 @@
-# Liveness Audit — v15.0.0
+# Liveness Audit — v15.3.0
 
 Liveness = "is the system still alive?" — distinct from safety and security.
 
@@ -17,7 +17,7 @@ Liveness = "is the system still alive?" — distinct from safety and security.
 | Pre-hooks | ✅ 10s timeout per hook | 1 (fixed) |
 | Ralph | ✅ Manual /ralph rollback override | 0 |
 
-## Gaps Fixed (v15.0.0)
+## Gaps Fixed (v15.3.0)
 
 | Gap | Severity | Fix |
 |-----|----------|-----|
