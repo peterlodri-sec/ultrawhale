@@ -21,11 +21,11 @@ type Engine struct {
 	Version    string
 	Blocks     []string          // registered block names
 	Capabilities CapProfile      // what the engine can do
-	Stats      EngineStats
+	Stats      EngineActivity
 }
 
-// EngineStats tracks engine activity.
-type EngineStats struct {
+// EngineActivity tracks engine activity.
+type EngineActivity struct {
 	TotalOps    int64
 	Writes      int64
 	Reads       int64
@@ -51,15 +51,15 @@ func InitEngine() {
 	Log(LogInfo, "engine.init", fmt.Sprintf("%d blocks", len(engine.Blocks)), "", "", 0, nil)
 }
 
-// EngineStats returns engine activity statistics.
-func GetEngineStats() EngineStats { return GetEngineStats }
+// EngineActivity returns engine activity statistics.
+func GetEngineActivity() EngineActivity { return GetEngineActivity }
 
 // EngineStatus returns compact engine status.
 func EngineStatus() string {
 	return fmt.Sprintf("engine: %s · %d blocks · %d ops (%d writes, %d reads, %d seds, %d delegates, %d oneshots)",
-		engine.Name, len(engine.Blocks), engine.Stats.TotalOps,
-		engine.Stats.Writes, engine.Stats.Reads, engine.Stats.Seds,
-		engine.Stats.Delegations, engine.Stats.OneShots)
+		engine.Name, len(engine.Blocks), engine.Activity.TotalOps,
+		engine.Activity.Writes, engine.Activity.Reads, engine.Activity.Seds,
+		engine.Activity.Delegations, engine.Activity.OneShots)
 }
 
 // EngineMaterialize takes a Vaked declaration and materializes it into a block operation.
@@ -71,23 +71,23 @@ func EngineMaterialize(declaration string) string {
 	
 	switch {
 	case strings.HasPrefix(lower, "write"):
-		engine.Stats.TotalOps++; engine.Stats.Writes++
+		engine.Activity.TotalOps++; engine.Activity.Writes++
 		return "engine: write → blocks.Write (journaled)"
 	case strings.HasPrefix(lower, "read"):
-		engine.Stats.TotalOps++; engine.Stats.Reads++
+		engine.Activity.TotalOps++; engine.Activity.Reads++
 		return "engine: read → blocks.Read (ref-verified)"
 	case strings.HasPrefix(lower, "sed"):
-		engine.Stats.TotalOps++; engine.Stats.Seds++
+		engine.Activity.TotalOps++; engine.Activity.Seds++
 		return "engine: sed → blocks.SedAll (SIMD)"
 	case strings.HasPrefix(lower, "delegate"):
-		engine.Stats.TotalOps++; engine.Stats.Delegations++
+		engine.Activity.TotalOps++; engine.Activity.Delegations++
 		return "engine: delegate → orchestrator"
 	case strings.HasPrefix(lower, "oneshot"):
-		engine.Stats.TotalOps++; engine.Stats.OneShots++
+		engine.Activity.TotalOps++; engine.Activity.OneShots++
 		result, _ := OneShotAllowed(declaration)
 		return fmt.Sprintf("engine: oneshot → %s (%dµs)", result.Materialized, result.Duration)
 	default:
-		engine.Stats.TotalOps++; engine.Stats.Errors++
+		engine.Activity.TotalOps++; engine.Activity.Errors++
 		return fmt.Sprintf("engine: unknown declaration '%s'", declaration[:min(40, len(declaration))])
 	}
 }
