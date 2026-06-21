@@ -12,7 +12,7 @@ import (
 
 // ── Dog Feed — Continuous LLM Data Collection ────────────────────────
 
-const VakedDogFeedInterval = 1 * time.Minute // vaked constant: 1MIN
+const VakedDogFeedInterval = 30 * time.Second  // 30s — "aaaa just thirty seconds...." — Peter // vaked constant: 30s (upgraded from 1MIN)
 //
 // Background loop: send user messages to free OpenRouter models,
 // collect responses, build fine-tuning dataset.
