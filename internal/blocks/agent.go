@@ -63,6 +63,7 @@ func SpawnAgent(id, role, parent string) *Agent {
 	// Start A2C stream for this agent
 	StartA2CStream(id)
 	AnnounceAgent(a)
+	EmitA2UI(A2UIEvent{AgentID: id, Type: "toast", Content: fmt.Sprintf("agent %s spawned (%s)", id[:8], role)})
 
 	// Place in space topology
 	PlaceNode(id, "agent",
@@ -87,6 +88,7 @@ func CompleteAgent(id string, status string, tools int, tokens int64, dur time.D
 	// A2C: emit completion event
 	if stream, ok := a2cStreams[id]; ok {
 		stream.Emit(A2CEvent{AgentID: id, Type: "done", Content: status, Seq: a.ToolCalls})
+	EmitA2UI(A2UIEvent{AgentID: id, Type: "layer_update", Layer: "Supervises", Content: fmt.Sprintf("agent %s: %s", id[:8], status)})
 	}
 
 	// Ralph: observe agent completion

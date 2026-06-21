@@ -97,6 +97,7 @@ func (pr *ProbeRunner) record(p Probe) {
 	if len(probeRunner.results[p.AgentID]) > 64 {
 		probeRunner.results[p.AgentID] = probeRunner.results[p.AgentID][len(probeRunner.results[p.AgentID])-64:]
 	}
+	EmitA2UI(A2UIEvent{AgentID: p.AgentID, Type: "layer_update", Layer: "Testifies", Content: fmt.Sprintf("probe: %s %s", capName(p.Capability), p.Result)})
 	Log(LogInfo, "probe."+p.Result, fmt.Sprintf("%s:%s", p.AgentID[:8], capName(p.Capability)),
 		"", "", p.Latency, nil)
 }

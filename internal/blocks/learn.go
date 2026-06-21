@@ -50,6 +50,7 @@ func Learn(pattern string, confidence float64, source, outcome, adjustment strin
 		ralph.Apply(pattern, adjustment, confidence)
 	}
 
+	EmitA2UI(A2UIEvent{AgentID: "learner", Type: "layer_update", Layer: "Testifies", Content: fmt.Sprintf("learned: %s (%.0f%%)", pattern, confidence*100)})
 	Log(LogInfo, "learn."+source, pattern, "", "", 0, nil)
 	return lesson
 }
