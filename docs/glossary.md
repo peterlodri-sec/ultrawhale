@@ -1,6 +1,7 @@
 # ultrawhale × Vaked — Glossary
 
 ## Core Concepts
+| **VIGD** | Vaked Implementation Graph Declaration. Peter's term for the core theory that graphs and zero-knowledge proofs directly allow us to manifest Vaked in existing space. |
 
 | Term | Definition |
 |------|-----------|
