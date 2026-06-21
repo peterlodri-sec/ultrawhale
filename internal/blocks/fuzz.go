@@ -38,7 +38,7 @@ func FuzzBlock(blockName string) error {
 		_ = Rollback("/tmp/ultrawhale-fuzz-test")
 	case "sed":
 		content := fmt.Sprintf("fuzz-test-%d", rand.Int63())
-		result := Sed(content, "fuzz", "FUZZ")
+		result, _ := Sed([]byte(content), []byte("fuzz"), []byte("FUZZ"))
 		if result == "" { fuzzHarness.Stats.Failures++ }
 	case "hash":
 		data := make([]byte, rand.Intn(1024))
