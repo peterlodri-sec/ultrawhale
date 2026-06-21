@@ -386,6 +386,22 @@ func (p *Plugin) persistSession(status string) {
 // PersistWorkflow stores a workflow result in Supabase.
 func (p *Plugin) PersistWorkflow(name, script, status, output string) {
 	if p.config.SupabaseURL == "" { return }
+	pov := blocks.CurrentPOV()
+	data := map[string]string{
+		"name":     name,
+		"script":   script,
+		"status":   status,
+		"version":  blocks.CurrentVersion(),
+		"machine":  pov.Machine,
+		"arch":     pov.Arch,
+		"tier":     pov.Tier,
+		"output":   output,
+		"space_id": fmt.Sprintf("workflow-%s-%s", name, pov.Machine),
+	}
+	body, _ := json.Marshal(data)
+	http.Post(p.config.SupabaseURL+"/workflows", "application/json", strings.NewReader(string(body)))
+}
+	if p.config.SupabaseURL == "" { return }
 	data := map[string]string{
 		"name":   name,
 		"script": script,

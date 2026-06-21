@@ -121,6 +121,9 @@ func (p *Plugin) autoWire() {
 		p.wireNATS()
 	}
 
+	// Auto-start a brainstorm session for subagent-driven development
+	go p.startDevBrainstorm()
+
 	// Auto-discover workflows
 	go p.discoverWorkflows()
 	go p.startSupabase()
@@ -436,4 +439,12 @@ func (p *Plugin) discoverWorkflows() {
 	if count > 0 {
 		fmt.Fprintf(os.Stderr, "[superpowers] discovered %d workflows in %s\n", count, workflowDir)
 	}
+}
+
+
+func (p *Plugin) startDevBrainstorm() {
+	// Start a persistent brainstorm session for subagent-driven development
+	s := blocks.StartBrainstorm("ultrawhale-subagent-driven-development", "freeform")
+	s.AddTurn("system", "Subagent-driven development session started. All agent outcomes will be logged here.", nil)
+	fmt.Fprintf(os.Stderr, "[superpowers] dev brainstorm: %s\n", s.ID[:12])
 }
