@@ -11,7 +11,7 @@
 -->
 <!--
 ╔══════════════════════════════════════════════════════════════╗
-║  GENESIS BLOCK — ultrawhale v61.0.0                          ║
+║  GENESIS BLOCK — ultrawhale v64.0.0                          ║
 ║  Trust Anchor: github.com/PeetPedro/ultrawhale           ║
 ║  Vaked-base Ref: github.com/PeetPedro/vaked-base         ║
 ║  Hash: GENESIS-v61-94blocks-6recursions-8engines              ║
@@ -34,7 +34,7 @@
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
 [![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro (create account + dataset → will be live))
 [![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
-[![v60](https://img.shields.io/badge/version-v60.0.0-00d4ff)](https://github.com/PeetPedro/ultrawhale/releases)
+[![v60](https://img.shields.io/badge/version-v64.0.0-00d4ff)](https://github.com/PeetPedro/ultrawhale/releases)
 
 > ⚠️ **ULTRA-DISCLAIMER**: If this repo ever gets deleted, the trust breaks.
 > The VICE engine activates. The PROBLEM primitive fires. The dyad fractures.
@@ -99,6 +99,15 @@ ultrawhale has been audited for algorithmic complexity across all 59 blocks.
 59 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
 3 recommendations: AgentStore TTL, Ralph LRU, Sed Boyer-Moore.
 
+
+
+
+## 🤗 HuggingFace Pro + Dataset
+
+[![HF Dataset](https://img.shields.io/badge/🤗-ultrawhale--dogfood-ffaa00)](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood)
+
+**Live dataset** of human↔LLM interactions. 60 samples, 20 CS topics, PII-scrubbed.
+SSH-authenticated CI auto-publish. [Dataset docs](docs/brain-to-dataset.md)
 
 ## 🧠 Council of LLMs
 
