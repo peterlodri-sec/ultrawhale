@@ -1114,3 +1114,5 @@ func handleMatrixCommand(line string) string {
 		return "/matrix | /matrix say <msg> | /matrix dyad <msg>"
 	}
 }
+
+func handleAnonCommand() string { return blocks.AnonReviewStatus() + "\n\n" + blocks.AnonReviewVakedFit() }

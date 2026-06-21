@@ -61,6 +61,18 @@ func MatrixSend(from, content, msgType string) MatrixMessage {
 	if len(matrixRoom.Messages) > 1024 { matrixRoom.Messages = matrixRoom.Messages[1:] }
 
 	Pulse("matrix.room", fmt.Sprintf("%s: %s", from, content[:min(30, len(content))]))
+
+	// Export to brain long-term memory
+	if brain := GetBrain(); brain != nil {
+		brain.RememberLongTerm(map[string]string{
+			"matrix_from": from,
+			"matrix_content": content,
+			"matrix_time": time.Now().Format(time.RFC3339),
+		})
+	}
+
+	// Publish to public ledger (anon, zero-trust)
+	RecordPublicDogFeed("matrix-"+from, from, content)
 	return msg
 }
 
