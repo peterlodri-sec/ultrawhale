@@ -1059,3 +1059,5 @@ func handleSessionUpgradeCommand() string { return blocks.SessionUpgradeGraph() 
 
 func handleMaxLearnCommand() string { return blocks.MaxLearnStatus() + "\n\n" + blocks.MaxLearnVakedFit() }
 func handleGrowRateCommand() string { return blocks.GrowRateStatus() }
+
+func handleDoctorCommand() string { return blocks.DoctorRun() + "\n\n" + blocks.DoctorVakedFit() }

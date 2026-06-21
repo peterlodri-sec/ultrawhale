@@ -12,14 +12,14 @@ $37.19 USD (UTC+0)
 
 | Project | Usage |
 |---------|-------|
-| **ultrawhale** (this repo) | v1.0.0 → v100.0.0, 127 blocks, 155 releases |
+| **ultrawhale** (this repo) | v1.0.0 → v100.0.0, 127 blocks, 156 releases |
 | **vaked-base** | Grammar, compiler, docs, cross-repo sync |
 | **Adjacent projects** | agentpipe (original idea), vaked-dev CF Pages |
 
 ## 🔬 Cost Per Release
 
 ```
-$37.19 / 155 releases = $0.24 per release
+$37.19 / 156 releases = $0.24 per release
 $37.19 / 127 blocks = $0.29 per block
 $37.19 / 7 recursions = $5.31 per recursion
 ```
