@@ -899,3 +899,19 @@ func handleHistoryCommand(line string) string {
 func handleSafeSpaceCommand() string { return blocks.SafeSpaceStatus() + "\n\n" + blocks.SafeSpaceVakedFit() }
 
 func handleSurfaceAtomsCommand() string { return blocks.SurfaceAtomStatus() + "\n\n" + blocks.SurfaceAtomVakedFit() }
+
+func handleOSCECommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/osce"))
+	if len(parts) == 0 { return blocks.OSCEStatus() + "\n\n" + blocks.OSCEVakedFit() }
+	switch parts[0] {
+	case "send":
+		if len(parts) < 3 { return "usage: /osce send <receiver> <claim>" }
+		c := blocks.OSCESend("ultrawhale", parts[1], strings.Join(parts[2:], " "))
+		return fmt.Sprintf("osce sent: %s → %s", c.ID[:12], c.Receiver)
+	case "exchange":
+		if len(parts) < 3 { return "usage: /osce exchange <peer> <claim>" }
+		return blocks.OSCEExchangeWith(parts[1], strings.Join(parts[2:], " "))
+	default:
+		return "/osce | /osce send <receiver> <claim> | /osce exchange <peer> <claim>"
+	}
+}
