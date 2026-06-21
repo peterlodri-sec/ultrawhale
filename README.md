@@ -35,7 +35,7 @@ One prompt → swarm launch → real PRs → meta-report → v18.0.0 tagged.
 
 ## Complexity
 
-ultrawhale has been audited for algorithmic complexity across all 53 blocks.
+ultrawhale has been audited for algorithmic complexity across all 59 blocks.
 
 | Class | Count | Examples |
 |-------|-------|----------|
@@ -45,7 +45,7 @@ ultrawhale has been audited for algorithmic complexity across all 53 blocks.
 | O(V+E) | 1 | space (BFS Distance/Reachable) |
 
 **[Full O(N)+O(T) Complexity Report](docs/complexity-report.md)** — 
-53 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
+59 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
 3 recommendations: AgentStore TTL, Ralph LRU, Sed Boyer-Moore.
 
 ## Quick Start

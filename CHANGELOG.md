@@ -60,7 +60,7 @@
 - predict: Ralph foresight (pre-failure prediction)
 - learn: dedicated pattern learning engine
 - brainstorm: turn-based co-creation mode
-- All 53 blocks carry POV context
+- All 59 blocks carry POV context
 - v14 primitives: brainstorm + probe + predict + learn
 
 ## v18.0.0 (2026-06-21) — Space Workflows + Superpowers SDD
@@ -71,8 +71,14 @@
 ## v18.0.0 (2026-06-21) — VFS: Space as Virtual Filesystem
 - VFS primitive: ls, cd, cat, tree, echo on the capability graph
 - Space materialized as a navigable filesystem
-- 53 blocks, 7/7 Vaked layers, 3/3 dimensions
+- 59 blocks, 7/7 Vaked layers, 3/3 dimensions
 - Contract, package, crabcc, state primitives added
 - O(N)+O(T) complexity hardened (AgentStore TTL, Ralph LRU, Brainstorm GC)
 - ~/.whale unified directory structure
 - File I/O audit + ReadRange + Glob primitives
+
+## v27.0.0 (2026-06-21) — SACRED Honesty Gate + Kill Switch
+- Permission gate: /allow once per session, ALLOWED+AUTHED until revoked
+- Kill switch: /STOP___KILL_SWITCH___DO_FULL_STOP — full stop
+- 59 blocks, 6 plugins, 5 protocols
+- QUIC, gRPC, Multi-Machine, OneShot atomic primitive

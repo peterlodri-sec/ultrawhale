@@ -12,7 +12,7 @@
 | **Indexes** | repomap, space | 2 |
 | **Reveals** | sacred, surface, ui, a2a, a2c, mesh_agent, dyad, notify | 8 |
 
-**Total: 53 blocks mapped to 7 Vaked layers.**
+**Total: 59 blocks mapped to 7 Vaked layers.**
 
 ## Dimension Coverage
 
