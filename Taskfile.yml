@@ -75,10 +75,14 @@ tasks:
     desc: Build + deploy site to CF Pages
     cmds:
       - rm -rf deploy-out
-      - mkdir -p deploy-out/ultrawhale/docs deploy-out/ultrawhale/book
+      - mkdir -p deploy-out/ultrawhale/docs deploy-out/ultrawhale/book deploy-out/ultrawhale/blog
       - cp site/index.html deploy-out/ultrawhale/
+      - cp site/robots.txt deploy-out/ultrawhale/ 2>/dev/null; true
+      - cp site/sitemap.xml deploy-out/ultrawhale/ 2>/dev/null; true
       - cp docs/index.html deploy-out/ultrawhale/docs/
+      - cp -r rendered-docs/* deploy-out/ultrawhale/docs/ 2>/dev/null; true
       - cp -r docs-book/book/* deploy-out/ultrawhale/book/ 2>/dev/null; true
+      - cp -r site/blog/* deploy-out/ultrawhale/blog/ 2>/dev/null; true
       - wrangler pages deploy deploy-out --project-name=vaked-dev --branch=main --commit-dirty=true
       - rm -rf deploy-out
 
