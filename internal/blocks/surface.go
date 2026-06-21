@@ -45,6 +45,11 @@ func (s *Surface) Start() {
 			"schema":  SchemaStatus(),
 			"dyad":    getDyadStatus(),
 			"uptime":  "since " + CurrentVersion(),
+			"vaked_triangle": map[string]string{
+				"context": "POV + capabilities + brain",
+				"time":    "journal + sessions + Ralph versions",
+				"space":   TopologyStatus(),
+			},
 			"ring_overflow": OverflowCount(),
 			"a2c_streams": len(a2cStreams),
 		})

@@ -519,3 +519,7 @@ func handleUICommand() string {
 func handleSpaceCommand() string {
 	return blocks.SpaceStatus() + "\n\n" + blocks.VakedTriangle()
 }
+
+func handleVakedTriangleCommand() string {
+	return blocks.VakedTriangle() + "\n\n" + blocks.SpaceStatus()
+}

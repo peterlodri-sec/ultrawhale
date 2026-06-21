@@ -114,6 +114,11 @@ func SpawnSwarm(name, parent string, complexity int) *Swarm {
 	s.startAgentField()
 
 	swarmStore.swarms[s.ID] = s
+
+	// Place swarm in space topology
+	PlaceNode(s.ID, "swarm",
+		SpacePosition{Depth: 1, Layer: "swarms", Machine: s.POV.Machine, Region: "eu"},
+		CapFULL)
 	return s
 }
 

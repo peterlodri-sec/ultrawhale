@@ -64,6 +64,11 @@ func SpawnAgent(id, role, parent string) *Agent {
 	StartA2CStream(id)
 	AnnounceAgent(a)
 
+	// Place in space topology
+	PlaceNode(id, "agent",
+		SpacePosition{Depth: 1, Layer: "agents", Machine: a.POV.Machine, Region: "eu"},
+		GetCapProfile(role))
+
 	// Auto-memo: record subagent spawn
 	GetBrain().memos.Remember(ScopeAgents,
 		fmt.Sprintf("spawned %s subagent: %s", role, id[:8]))

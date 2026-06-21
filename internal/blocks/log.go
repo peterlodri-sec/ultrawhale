@@ -29,6 +29,10 @@ type LogEvent struct {
 	PrevRef   string
 	Duration  time.Duration
 	Error     string
+	// Vaked Triangle dimensions
+	Context   string // POV snapshot at time of event
+	TimePoint int64  // Lamport clock value
+	SpaceNode string // originating node ID in topology
 }
 
 // LogSink receives log events. Implementations: ToastSink, NATSSink, FileSink.
@@ -67,6 +71,9 @@ func AddSink(sink LogSink) {
 // Log records an event to the ring buffer and all sinks.
 func Log(level LogLevel, operation, path, ref, prevRef string, duration time.Duration, err error) {
 	event := LogEvent{
+		Context:   CurrentPOV().String(),
+		TimePoint: LamportTime(),
+		SpaceNode: "orchestrator",
 		ID:        Ref([]byte(fmt.Sprintf("%s:%s:%s:%d", level, operation, path, time.Now().UnixNano())))[:12],
 		Timestamp: time.Now(),
 		Level:     level,
