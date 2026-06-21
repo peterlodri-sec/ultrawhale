@@ -90,7 +90,7 @@ func LandingWhoAmI() string {
 ║                    ║
 ║  Peter+CoCreator   ║
 ╚════════════════════╝`,
-		CurrentVersion(), len(schemaRegistry),
+		CurrentVersion(), fmt.Sprintf("%d", len(schemaRegistry)),
 		pov.Machine, pov.Arch, pov.Tier, 157)
 }
 
