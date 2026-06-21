@@ -35,7 +35,7 @@ func Fold3DVisualization(depth int) string {
 		
 
 		if d == depth {
-			connector = "│" + strings.Repeat(" ", d*4) + "└──"
+			_ = "│" + strings.Repeat(" ", d*4) + "└──"
 		}
 
 		gravity := float64(d) / float64(depth) * 100
