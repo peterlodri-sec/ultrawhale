@@ -49,6 +49,13 @@ func (s *Surface) Start() {
 				"context": "POV + capabilities + brain",
 				"time":    "journal + sessions + Ralph versions",
 				"space":   TopologyStatus(),
+			"sacred": map[string]any{
+				"status":   GetSacredSurface().Health,
+				"direct":   GetSacredSurface().Direct,
+				"input_lag_ms": GetSacredSurface().InputLag,
+				"healthy":  IsSacredHealthy(),
+				"violations": SacredViolations,
+			},
 			},
 			"ring_overflow": OverflowCount(),
 			"a2c_streams": len(a2cStreams),

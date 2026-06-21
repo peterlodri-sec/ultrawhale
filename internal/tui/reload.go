@@ -523,3 +523,7 @@ func handleSpaceCommand() string {
 func handleVakedTriangleCommand() string {
 	return blocks.VakedTriangle() + "\n\n" + blocks.SpaceStatus()
 }
+
+func handleSacredCommand() string {
+	return blocks.SacredStatus() + "\n\n" + blocks.SacredIsRevealsLayer()
+}

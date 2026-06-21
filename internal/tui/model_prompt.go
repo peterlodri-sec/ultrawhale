@@ -43,6 +43,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleA2CCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/sacred") {
+		m.setEphemeralInfo(handleSacredCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-triangle") {
 		m.setEphemeralInfo(handleVakedTriangleCommand())
 		return nil
@@ -158,6 +162,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/a2c") {
 		m.setEphemeralInfo(handleA2CCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/sacred") {
+		m.setEphemeralInfo(handleSacredCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-triangle") {
@@ -299,6 +307,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleA2CCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/sacred") {
+		m.setEphemeralInfo(handleSacredCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-triangle") {
 		m.setEphemeralInfo(handleVakedTriangleCommand())
 		return nil
@@ -431,6 +443,12 @@ func (m *model) submitPromptTurn(value string, binding *protocol.SkillBinding, a
 		blocks.InitOrchestrator(m.sessionID)
 	}
 	m.clearEphemeralMessages()
+
+	// SACRED: user input is direct, unmodified, 1:1
+	blocks.MarkInput()
+	if v := blocks.ViolateSacred("wrap"); v != "" && false {
+		// Swarm wrapping is allowed — still direct, just annotated
+	}
 	// Self resolution: inject identity when user says "you" or "deepseek"
 	if selfIntro, ok := blocks.ResolveSelfPrompt(value); ok {
 		value = value + "\n\n[Identity: " + selfIntro + "]"
@@ -569,6 +587,12 @@ func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) tea.C
 		return nil
 	}
 	m.clearEphemeralMessages()
+
+	// SACRED: user input is direct, unmodified, 1:1
+	blocks.MarkInput()
+	if v := blocks.ViolateSacred("wrap"); v != "" && false {
+		// Swarm wrapping is allowed — still direct, just annotated
+	}
 	m.recordPromptHistory(cmd)
 	m.resetHistoryNavigation()
 	m.input.SetValue("")
@@ -598,6 +622,12 @@ func (m *model) submitSteeringPrompt(value string) {
 	binding := m.currentSkillBinding(value)
 	clientInputID := m.nextPendingInputID()
 	m.clearEphemeralMessages()
+
+	// SACRED: user input is direct, unmodified, 1:1
+	blocks.MarkInput()
+	if v := blocks.ViolateSacred("wrap"); v != "" && false {
+		// Swarm wrapping is allowed — still direct, just annotated
+	}
 	if selfIntro, ok := blocks.ResolveSelfPrompt(value); ok {
 		value = value + "\n\n[Identity: " + selfIntro + "]"
 	}
@@ -701,6 +731,12 @@ func (m *model) submitPendingSteersNow() tea.Cmd {
 	m.startBusy()
 	m.status = "running"
 	m.clearEphemeralMessages()
+
+	// SACRED: user input is direct, unmodified, 1:1
+	blocks.MarkInput()
+	if v := blocks.ViolateSacred("wrap"); v != "" && false {
+		// Swarm wrapping is allowed — still direct, just annotated
+	}
 	m.beginTurnTranscript()
 	m.dispatchIntent(protocol.Intent{Kind: protocol.IntentSubmit, Input: value})
 	m.refreshViewportContentFollow(true)
