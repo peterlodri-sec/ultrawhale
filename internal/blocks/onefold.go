@@ -98,19 +98,15 @@ func OneFoldProveLive() string {
 		0,
 	)
 
-	return fmt.Sprintf(`╔══════════════════════════════════════════════════╗
-║  ONEFOLD — PROVE LIVE                              ║
-╠══════════════════════════════════════════════════╣
-║  URL:    %-42s ║
-║  Status: HTTP %d                                     ║
-║  Deploy: %-40s ║
-║  Proof:  %-42s ║
-║  Files:  %d                                           ║
-╚══════════════════════════════════════════════════╝
-    THE DEPLOY IS THE PROOF. THE LOOP IS THE FOLD.`,
-		oneFoldStats.LastURL, 200,
-		oneFoldStats.LastDeploy.Format("2006-01-02 15:04:05"),
-		proof.ProofRef[:12], oneFoldStats.TotalFiles)
+	return ASCIIBox("ONEFOLD — PROVE LIVE", []string{
+		fmt.Sprintf("URL:    %s", oneFoldStats.LastURL),
+		fmt.Sprintf("Status: HTTP 200"),
+		fmt.Sprintf("Deploy: %s", oneFoldStats.LastDeploy.Format("2006-01-02 15:04:05")),
+		fmt.Sprintf("Proof:  %s", proof.ProofRef[:12]),
+		fmt.Sprintf("Files:  %d", oneFoldStats.TotalFiles),
+		"",
+		"THE DEPLOY IS THE PROOF. THE LOOP IS THE FOLD.",
+	}, 50)
 }
 
 // OneFoldOptimize returns the optimized onefold ASCII stream.

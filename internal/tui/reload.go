@@ -970,3 +970,5 @@ func handleOneFoldCommand(line string) string {
 	default: return "/onefold | /onefold prove | /onefold optimize"
 	}
 }
+
+func handleASCIIBoxCommand() string { return blocks.ASCIIBoxVerify() + "\n\n" + blocks.ASCIIBoxVakedFit() }
