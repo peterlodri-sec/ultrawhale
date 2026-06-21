@@ -687,3 +687,5 @@ func handleDisplayCommand() string { return blocks.DisplayStatus() + "\n\n" + bl
 func handleKeyboardGateCommand() string { return blocks.KeyboardGateStatus() + "\n\n" + blocks.KeyboardGateVakedFit() + "\n\n" + blocks.GenesisHonesty() }
 
 func handleRecursionCommand() string { return blocks.RecursionStatus() + "\n\n" + blocks.RecursionVakedFit() }
+
+func handleFoldCommand() string { return blocks.FoldStatus() + "\n\n" + blocks.FoldVakedFit() }

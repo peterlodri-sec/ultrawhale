@@ -71,6 +71,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/fold") {
+		m.setEphemeralInfo(handleFoldCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/recursion") {
 		m.setEphemeralInfo(handleRecursionCommand())
 		return nil
@@ -234,6 +238,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/fold") {
+		m.setEphemeralInfo(handleFoldCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/recursion") {
@@ -421,6 +429,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/fold") {
+		m.setEphemeralInfo(handleFoldCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/recursion") {
