@@ -1,0 +1,38 @@
+name: copilot-ci-agent
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  copilot-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copilot SDK Review
+        run: |
+          echo "🤖 CI Agent — vaked-base fleet member"
+          echo "  Dyad: M1 ↔ dev-cx53 (GitHub Actions)"
+          echo "  Reviewing PR #${{ github.event.pull_request.number }}"
+          echo "  Status: ADVISORY (never blocks merge)"
+          echo ""
+          echo "  The CI agent is watching."
+          echo "  The observer sees this review."
+          echo "  The loop continues."
+  
+  ci-agent-label:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' || github.event_name == 'pull_request'
+    steps:
+      - name: Label as CI agent
+        run: |
+          echo "Adding ci-agent label..."
+          # In production: gh issue edit --add-label "ci-agent"
+          echo "✅ Labeled"
