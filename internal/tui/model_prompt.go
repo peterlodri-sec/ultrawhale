@@ -71,6 +71,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/keyboard-gate") {
+		m.setEphemeralInfo(handleKeyboardGateCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/display") {
 		m.setEphemeralInfo(handleDisplayCommand())
 		return nil
@@ -226,6 +230,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/keyboard-gate") {
+		m.setEphemeralInfo(handleKeyboardGateCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/display") {
@@ -407,6 +415,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/keyboard-gate") {
+		m.setEphemeralInfo(handleKeyboardGateCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/display") {
 		m.setEphemeralInfo(handleDisplayCommand())
 		return nil
@@ -552,6 +564,10 @@ func (m *model) submitPromptTurn(value string, binding *protocol.SkillBinding, a
 	}
 	m.clearEphemeralMessages()
 
+	// KEYBOARD GATE: submit through one-way gate
+	value = blocks.Submit()
+	if value == "" { return nil }
+
 	// SACRED: user input is direct, unmodified, 1:1
 	blocks.MarkInput()
 	if v := blocks.ViolateSacred("wrap"); v != "" && false {
@@ -696,6 +712,10 @@ func (m *model) submitLocalNoTurn(submit appcommands.SubmitClassification) tea.C
 	}
 	m.clearEphemeralMessages()
 
+	// KEYBOARD GATE: submit through one-way gate
+	value = blocks.Submit()
+	if value == "" { return nil }
+
 	// SACRED: user input is direct, unmodified, 1:1
 	blocks.MarkInput()
 	if v := blocks.ViolateSacred("wrap"); v != "" && false {
@@ -730,6 +750,10 @@ func (m *model) submitSteeringPrompt(value string) {
 	binding := m.currentSkillBinding(value)
 	clientInputID := m.nextPendingInputID()
 	m.clearEphemeralMessages()
+
+	// KEYBOARD GATE: submit through one-way gate
+	value = blocks.Submit()
+	if value == "" { return nil }
 
 	// SACRED: user input is direct, unmodified, 1:1
 	blocks.MarkInput()
@@ -839,6 +863,10 @@ func (m *model) submitPendingSteersNow() tea.Cmd {
 	m.startBusy()
 	m.status = "running"
 	m.clearEphemeralMessages()
+
+	// KEYBOARD GATE: submit through one-way gate
+	value = blocks.Submit()
+	if value == "" { return nil }
 
 	// SACRED: user input is direct, unmodified, 1:1
 	blocks.MarkInput()

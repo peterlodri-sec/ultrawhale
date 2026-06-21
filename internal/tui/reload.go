@@ -683,3 +683,5 @@ func handleVakedPipelineCommand() string {
 func handleHealCommand() string { return blocks.HealStatus() + "\n\n" + blocks.HealEngineVakedFit() }
 
 func handleDisplayCommand() string { return blocks.DisplayStatus() + "\n\n" + blocks.DisplayVakedFit() }
+
+func handleKeyboardGateCommand() string { return blocks.KeyboardGateStatus() + "\n\n" + blocks.KeyboardGateVakedFit() + "\n\n" + blocks.GenesisHonesty() }
