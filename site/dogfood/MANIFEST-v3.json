@@ -1,0 +1,17 @@
+{
+  "dataset": "ultrawhale-dogfood",
+  "version": "v3-enriched",
+  "samples": 60,
+  "fields": 13,
+  "enriched": true,
+  "pii_scrubbed": true,
+  "brain_context": true,
+  "memory_refs": true,
+  "pipeline_trace": "dogfeed \u2192 brain \u2192 memory \u2192 dataset \u2192 HF",
+  "vice_genesis": "527a437",
+  "signed": "peter+cocreator",
+  "hash": "0cf2f6944e2f865c",
+  "timestamp": "2026-06-21T07:49:53Z",
+  "trust": 1.0,
+  "verified": true
+}
