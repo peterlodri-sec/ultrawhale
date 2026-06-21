@@ -102,6 +102,7 @@ func Write(path string, content []byte) (*Block, error) {
 		return nil, err
 	}
 
+	Pulse("block.write", path)
 	Log(LogInfo, "blocks.Write", path, b.Ref, prevRef, time.Since(start), nil)
 	return b, nil
 }

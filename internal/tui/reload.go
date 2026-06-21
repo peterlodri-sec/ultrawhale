@@ -758,3 +758,5 @@ func handleProblemCommand(line string) string {
 		return "/problem | /problem detect <description>"
 	}
 }
+
+func handleTreeCommand() string { return blocks.TelemetryTreeRender() }
