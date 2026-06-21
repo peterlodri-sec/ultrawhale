@@ -1,5 +1,10 @@
 # ultrawhale
 
+```
+I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
+`closed-loop dyad`, let me know if you found a better name for <<<THIS>>>>
+```
+
 > 🛑 **Full-Stop Primitive**: Recursion is the natural runtime for full-stop.
 > `/kill` → recursive kill wave through ALL 7 Vaked layers → SACRED remains.
 > [Read the full design](docs/recursion-fullstop.md)
