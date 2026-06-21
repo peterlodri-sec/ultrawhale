@@ -699,3 +699,5 @@ func handleRenderCommand(line string) string {
 	content2 := strings.Join(parts[1:], " ")
 	return blocks.RenderFormat(content2, format)
 }
+
+func handleEvolveCommand() string { return blocks.EvolveStatus() + "\n\n" + blocks.EvolveVakedFit() }

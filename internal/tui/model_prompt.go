@@ -71,6 +71,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/evolve") {
+		m.setEphemeralInfo(handleEvolveCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/render") {
 		m.setEphemeralInfo(handleRenderCommand(value))
 		return nil
@@ -246,6 +250,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/evolve") {
+		m.setEphemeralInfo(handleEvolveCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/render") {
@@ -445,6 +453,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/evolve") {
+		m.setEphemeralInfo(handleEvolveCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/render") {
