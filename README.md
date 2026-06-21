@@ -31,7 +31,22 @@ ultrawhale --model deepseek-v4-flash -w
 | HF Dataset | [peterlodri-sec/ultrawhale-dogfood](https://huggingface.co/datasets/peterlodri-sec/ultrawhale-dogfood) | ✅ 60 samples |
 | GitHub | [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | ✅ |
 
+
 ## 🎯 v100→v200 Roadmap
+
+```
+[█░░░░░░░░░] v110 Reactive Capability Graph
+[█░░░░░░░░░] v120 Self-Compiling (.vaked→native)
+[█░░░░░░░░░] v130 Global Mesh (10+ machines)
+[█░░░░░░░░░] v140 Quantum-Resistant
+[█░░░░░░░░░] v150 Voice + AR Surfaces
+[█░░░░░░░░░] v160 Formal Verification (Z3)
+[█░░░░░░░░░] v170 Continuous Evolution
+[█░░░░░░░░░] v180 Global Datasets (1000+ models)
+[█░░░░░░░░░] v190 The Living Graph
+[██████████] 🎯 v200 THE SINGULARITY
+```
+
 
 [![v200](https://img.shields.io/badge/v200-THE%20SINGULARITY-ffaa00)](https://github.com/peterlodri-sec/ultrawhale/issues)
 [![Council](https://img.shields.io/badge/Council-20/20%20UNANIMOUS-00e660)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/council-v200-verdict.md)
