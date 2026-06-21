@@ -70,3 +70,34 @@ With Space:
 - Orchestrator prefers topologically close agents
 - A2A routes via shortest path
 - The Vaked triangle is complete: Context × Time × Space
+
+
+## Context-Gated Space Connectivity
+
+Space is not a flat graph. Edges only form if context permits:
+
+```
+FULL agent → OBSERVE agent: ✅ delegates (FULL has CapDelegate)
+OBSERVE agent → FULL agent: ❌ blocked (OBSERVE lacks CapDelegate)
+Same machine nodes: ✅ adjacent (shared locality)
+Different region nodes: ❌ adjacent blocked (must share region)
+```
+
+### MergeSpace
+
+Two subspaces merge if there is a valid context-gated path:
+```go
+MergeSpace("agent-1", "agent-2")
+// → checks: same machine? can delegate? region match?
+// → creates edge if context permits
+```
+
+### SpaceReachable
+
+Find all nodes reachable with a required capability:
+```go
+SpaceReachable("orchestrator", CapWrite)
+// → returns only agents with FULL capabilities
+```
+
+This is the Vaked philosophy materialized: **space merges if context permits the path.**

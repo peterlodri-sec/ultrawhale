@@ -87,7 +87,15 @@ func PlaceNode(id, kind string, pos SpacePosition, caps CapProfile) *SpaceNode {
 }
 
 // ConnectNodes creates a directed edge between two nodes.
+// The edge is only created if the FROM node has sufficient capabilities
+// to reach the TO node. This is context-gated space connectivity.
 func ConnectNodes(from, to, kind string, latency time.Duration) {
+	// Context-gated: only connect if FROM can reach TO
+	if !canConnect(from, to, kind) {
+		Log(LogWarn, "space.connect", fmt.Sprintf("%s → %s (%s) denied by context gate", from, to, kind),
+			"", "", 0, nil)
+		return
+	}
 	spaceTopology.mu.Lock()
 	defer spaceTopology.mu.Unlock()
 
@@ -219,4 +227,82 @@ func VakedTriangle() string {
 		"Time   (WHEN: journal, sessions, Ralph versions)",
 		"Space  (WHERE: topology, distance, reachability)",
 	}, "\n")
+}
+
+
+// canConnect checks if a connection is permitted by capability profiles.
+// Context-gated space: edges only form if context allows the path.
+func canConnect(from, to, kind string) bool {
+	fromNode, ok := spaceTopology.Nodes[from]
+	if !ok { return true } // unknown nodes can connect (trust but verify)
+	
+	toNode, ok := spaceTopology.Nodes[to]
+	if !ok { return true }
+	
+	// Delegation: from must have CapDelegate to connect to another agent
+	if kind == "delegates" && !fromNode.Capabilities.Can(CapDelegate) {
+		return false
+	}
+	
+	// Streaming: from must have CapRead to stream data
+	if kind == "streams" && !fromNode.Capabilities.Can(CapRead) {
+		return false
+	}
+	
+	// Contains: parent must have CapSpawn to contain children
+	if kind == "contains" && !fromNode.Capabilities.Can(CapSpawn) {
+		return false
+	}
+	
+	// Pings: any node can ping any other (liveness check)
+	if kind == "pings" { return true }
+	
+	// Adjacent: nodes must share a region OR be on same machine
+	if kind == "adjacent" {
+		return fromNode.Position.Region == toNode.Position.Region ||
+			fromNode.Position.Machine == toNode.Position.Machine
+	}
+	
+	return true
+}
+
+// MergeSpace attempts to merge two subspaces if context allows.
+// Two nodes merge if there is a valid path between them.
+func MergeSpace(a, b string) bool {
+	dist := Distance(a, b)
+	if dist < 0 {
+		// No path exists — try to create one via context-gated connection
+		aNode := spaceTopology.Nodes[a]
+		bNode := spaceTopology.Nodes[b]
+		
+		if aNode != nil && bNode != nil {
+			// Can they be adjacent?
+			if aNode.Position.Machine == bNode.Position.Machine {
+				ConnectNodes(a, b, "adjacent", 0)
+				ConnectNodes(b, a, "adjacent", 0)
+				return true
+			}
+			// Can A delegate to B?
+			if aNode.Capabilities.Can(CapDelegate) {
+				ConnectNodes(a, b, "delegates", 0)
+				return true
+			}
+		}
+		return false
+	}
+	return true // already connected
+}
+
+// SpaceReachable returns nodes reachable with context constraints.
+func SpaceReachable(from string, needCap Capability) []string {
+	all := Reachable(from)
+	var result []string
+	for _, id := range all {
+		if node, ok := spaceTopology.Nodes[id]; ok {
+			if node.Capabilities.Can(needCap) {
+				result = append(result, id)
+			}
+		}
+	}
+	return result
 }
