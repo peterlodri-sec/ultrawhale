@@ -895,3 +895,5 @@ func handleHistoryCommand(line string) string {
 	if len(parts) > 0 { fmt.Sscanf(parts[0], "%d", &page) }
 	return blocks.SelfLiveHistoryRender(page, 10)
 }
+
+func handleSafeSpaceCommand() string { return blocks.SafeSpaceStatus() + "\n\n" + blocks.SafeSpaceVakedFit() }
