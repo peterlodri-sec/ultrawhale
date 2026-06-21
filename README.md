@@ -1,110 +1,19 @@
-<!-- ALWAYS ON — VISIBLE STATE -->
-> 🟢 **v100.1.0** · 142 blocks · 7 recursions · 14 protocols · 158 releases · $37.19
-> 🐋 `brew install ultrawhale` · [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) · [event horizon](https://vaked.dev/ultrawhale/event-horizon)
-> ["The human abstracts toward the infinite. The machine recurses into it."](https://github.com/peterlodri-sec/ultrawhale)
+# 🐋 ultrawhale
 
+A coding agent that builds itself. **148 blocks. 7 recursions. 14 protocols.** v100.1.0.
 
-<!--
-╔══════════════════════════════════════════════════════════════╗
-║  GENESIS BLOCK — ultrawhale v100.1.0                          ║
-║  Trust: peterlodri-sec/ultrawhale · cabotage@pm.me            ║
-║  PROBLEM? → /problem · DEBUG? → /harden · REPORT? → issues   ║
-╚══════════════════════════════════════════════════════════════╝
--->
-
-                ║
-║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
-║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
-║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
-║  Both repos signed. Both repos verified. Both repos sacred.  ║
-╚══════════════════════════════════════════════════════════════╝
--->
-
-
-                ║
-║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
-║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
-║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
-║  Both repos signed. Both repos verified. Both repos sacred.  ║
-╚══════════════════════════════════════════════════════════════╝
--->
-
-
-# ultrawhale
-
-```
-```
-  ██╗   ██╗██╗  ████████╗██████╗  █████╗ ██╗    ██╗██╗  ██╗ █████╗ ██╗     ███████╗
-  ██║   ██║██║  ╚══██╔══╝██╔══██╗██╔══██╗██║    ██║██║  ██║██╔══██╗██║     ██╔════╝
-  ██║   ██║██║     ██║   ██████╔╝███████║██║ █╗ ██║███████║███████║██║     █████╗  
-  ██║   ██║██║     ██║   ██╔══██╗██╔══██║██║███╗██║██╔══██║██╔══██║██║     ██╔══╝  
-  ╚██████╔╝███████╗██║   ██║  ██║██║  ██║╚███╔███╔╝██║  ██║██║  ██║███████╗███████╗
-   ╚═════╝ ╚══════╝╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
-  
-  v100.1.0 · 142 blocks · 7 recursions · 8 engines · 14 protocols
-  SPACE+TIME PROOF · OSCE · FOLD 3D · AgentPipe realized
-```
-![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
-[![cosign](https://img.shields.io/badge/cosign-signed-00e660)](https://sigstore.dev)
-[![SSH](https://img.shields.io/badge/SSH-HF%20Pro-ffaa00)](https://huggingface.co/datasets/peterlodri-sec/ultrawhale-dogfood)
-[![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/peterlodri-sec/ultrawhale)
-[![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
-[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/peterlodri-sec/ultrawhale-dogfood)
-[![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
-[![v60](https://img.shields.io/badge/version-v100.1.0-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/releases)
-
-> ⚠️ **ULTRA-DISCLAIMER**: If this repo ever gets deleted, the trust breaks.
-> The VICE engine activates. The PROBLEM primitive fires. The dyad fractures.
-> **This repository IS the trust anchor.** Preserve it. Mirror it. Fork it.
-> [Full disclaimer](docs/disclaimer.md)
-> 
-```
-I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
-`closed-loop dyad`, let me know if you found a better name for <<<THIS>>>>
+```sh
+brew install peterlodri-sec/ultrawhale/ultrawhale
+ultrawhale --model deepseek-v4-flash -w
 ```
 
-> 🛑 **Full-Stop Primitive**: Recursion is the natural runtime for full-stop.
-> `/kill` → recursive kill wave through ALL 7 Vaked layers → SACRED remains.
-> [Read the full design](docs/recursion-fullstop.md)
+> 🟢 LIVE · M1/arm64 · 148 blocks · $37.19 total cost
+> [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) · [event horizon](https://vaked.dev/ultrawhale/event-horizon) · [docs](https://vaked.dev/ultrawhale/docs)
 
-**vaked-base fork of DeepSeek Code Whale.**
-[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/peterlodri-sec/ultrawhale-dogfood)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-[![Go](https://img.shields.io/badge/go-1.24%2B-00ADD8)](go.mod)
-[![macOS](https://img.shields.io/badge/macOS-arm64-black)](https://github.com/peterlodri-sec/ultrawhale)
-[![Linux](https://img.shields.io/badge/Linux-amd64-orange)](https://github.com/peterlodri-sec/ultrawhale)
-
- DeepSeek-native coding agent with content-addressed blocks engine (Go+Asm+GPU), 6 plugins, AG-UI themes, floating widgets, and 7-phase native agent loop.
-
-> Fork maintained at [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/peterlodri-sec/vaked-base) monorepo.
+---
 
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  🔌 SSH:    git@hf.co:datasets/peterlodri-sec/ultrawhale-dogfood  │
-│  🔐 GPG:    2B2495E0AC50DAC7 · cabotage@pm.me                │
-│  📡 HF:     /webhook/hf · liveness pulse active              │
-│  📻 RADIO:  /radio on · lo-fi coding music                   │
-│  🔀 A2A:    NATS · 2 handlers                                │
-│  📤 A2C:    SSE + WebSocket · streaming                      │
-│  🎨 A2UI:   internal events · 2 handlers                     │
-│  🔧 MCP:    HTTP · 7 tools exposed                           │
-│  🌳 VFS:    space topology as filesystem                      │
-│  📝 Git:    /git log|diff|sync · same level as file_read     │
-│  👤 Live:   /who · /session · SSH/WS/IRC-ready               │
-│  🌐 CI:     auto-publish + deploy + test ✅                   │
-└──────────────────────────────────────────────────────────────┘
-```
-
-
-
-
-
-
-## 🌐 PUBLIC SURFACES — DYAD VISIBLE
-
-| Surface | URL | Status |
-|---------|-----|--------|
+---------|-----|--------|
 | Landing | [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) | ✅ LIVE |
 | Docs | [vaked.dev/ultrawhale/docs](https://vaked.dev/ultrawhale/docs) | ✅ 50+ pages |
 | Book | [vaked.dev/ultrawhale/book](https://vaked.dev/ultrawhale/book) | ✅ mdBook |
