@@ -401,13 +401,3 @@ func (p *Plugin) PersistWorkflow(name, script, status, output string) {
 	body, _ := json.Marshal(data)
 	http.Post(p.config.SupabaseURL+"/workflows", "application/json", strings.NewReader(string(body)))
 }
-	if p.config.SupabaseURL == "" { return }
-	data := map[string]string{
-		"name":   name,
-		"script": script,
-		"status": status,
-		"version": blocks.CurrentVersion(),
-	}
-	body, _ := json.Marshal(data)
-	http.Post(p.config.SupabaseURL+"/workflows", "application/json", strings.NewReader(string(body)))
-}
