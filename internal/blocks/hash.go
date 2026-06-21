@@ -90,3 +90,6 @@ func SetTier(t HashTier) {
 func CurrentTier() HashTier {
 	return HashTier(activeTier.Load())
 }
+
+// HashVakedFit documents this as a pure utility function.
+func HashVakedFit() string { return "PURE UTILITY — no Vaked layer. Performance-critical." }

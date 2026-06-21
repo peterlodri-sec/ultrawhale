@@ -138,3 +138,12 @@ func SelfMainStateVakedFit() string {
 
   "DREAM is connection error." — Peter`
 }
+
+
+// SystemState returns the ONE source of truth.
+func SystemState() string {
+	state := GetMainState()
+	loopRunning := loopState.Load() == int32(LoopRunning)
+	return fmt.Sprintf("system: %s · loop: %v · sacred: %v",
+		stateName(state), loopRunning, IsSacredIntact())
+}

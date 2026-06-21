@@ -92,3 +92,6 @@ func MMapBenchRead(path string) (string, error) {
 
 	return fmt.Sprintf("mmap: %s (%d bytes, %s, %.0f MB/s)", path, b.Size, elapsed.Round(time.Microsecond), mbps), nil
 }
+
+// MmapVakedFit documents this as a pure utility function.
+func MmapVakedFit() string { return "PURE UTILITY — no Vaked layer. Performance-critical." }

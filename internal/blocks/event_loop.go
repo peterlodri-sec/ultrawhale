@@ -54,7 +54,7 @@ type LoopStats struct {
 }
 
 var sacredLoop = &SACREDEventLoop{
-	FrameRate:    60,
+	FrameRate:    60, // 0 = headless mode
 	TickDuration: time.Second / 60,
 }
 
@@ -91,6 +91,13 @@ func StopLoop() string {
 
 // run is the main event loop.
 func (l *SACREDEventLoop) run() {
+	defer func() {
+		if r := recover(); r != nil {
+			Log(LogError, "loop.crash", fmt.Sprintf("panic: %v — restarting", r), "", "", 0, nil)
+			time.Sleep(1 * time.Second)
+			go l.run() // auto-restart
+		}
+	}()
 	l.ActiveRecursion = detectActiveRecursion()
 	l.Stats.RecursionsEntered++
 
@@ -188,4 +195,12 @@ func LoopVakedFit() string {
 
   "We can only start if we are in a recursion."
   — Peter, SACRED Event Loop v67`
+}
+
+
+// SetHeadlessMode disables visual rendering (FrameRate = 0).
+func SetHeadlessMode() {
+	sacredLoop.FrameRate = 0
+	sacredLoop.TickDuration = 0
+	Log(LogInfo, "loop.headless", "FrameRate=0 — no visual rendering", "", "", 0, nil)
 }

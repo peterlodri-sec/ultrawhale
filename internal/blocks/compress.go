@@ -59,3 +59,6 @@ func CompressFile(path string) (*Block, error) {
 	}
 	return Compress(data, path+".zlib")
 }
+
+// CompressVakedFit documents this as a pure utility function.
+func CompressVakedFit() string { return "PURE UTILITY — no Vaked layer. Performance-critical." }
