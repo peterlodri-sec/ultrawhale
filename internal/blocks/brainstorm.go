@@ -200,7 +200,7 @@ func StartBrainstormGC() {
 		for range ticker.C {
 			brainstormSessions.mu.Lock()
 			cutoff := time.Now().Add(-1 * time.Hour)
-			for id, s := range brainstormSessions.sessions {
+			for _, s := range brainstormSessions.sessions {
 				if s.Status == "active" && s.UpdatedAt.Before(cutoff) {
 					s.Complete()
 				}
