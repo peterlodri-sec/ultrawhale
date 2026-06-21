@@ -808,3 +808,13 @@ func handleSessionCommand() string { return blocks.LiveSessionStatus() + "\n\n" 
 func handleDebugCommand() string { return blocks.DebugPanelStatus() + "\n\n" + blocks.DebugPanelVakedFit() }
 
 func handleHFCommand() string { return blocks.HFWebhookStatus() + "\n\n" + blocks.HFWebhookVakedFit() }
+
+func handleRadioCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/radio"))
+	if len(parts) == 0 { return blocks.RadioNow() }
+	switch parts[0] {
+	case "on": return blocks.RadioStart()
+	case "off": return blocks.RadioStop()
+	default: return blocks.RadioNow()
+	}
+}

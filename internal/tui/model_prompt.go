@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/radio") { m.setEphemeralInfo(handleRadioCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/hf") { m.setEphemeralInfo(handleHFCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/debug") { m.setEphemeralInfo(handleDebugCommand()); return nil }
 	if strings.TrimSpace(value) == "/who" { m.setEphemeralInfo(handleWhoCommand()); return nil }
@@ -307,6 +308,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/radio") { m.setEphemeralInfo(handleRadioCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/hf") { m.setEphemeralInfo(handleHFCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/debug") { m.setEphemeralInfo(handleDebugCommand()); return nil }
 	if strings.TrimSpace(value) == "/who" { m.setEphemeralInfo(handleWhoCommand()); return nil }
@@ -565,6 +567,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/radio") { m.setEphemeralInfo(handleRadioCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/hf") { m.setEphemeralInfo(handleHFCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/debug") { m.setEphemeralInfo(handleDebugCommand()); return nil }
 	if strings.TrimSpace(value) == "/who" { m.setEphemeralInfo(handleWhoCommand()); return nil }
