@@ -805,3 +805,4 @@ func handleHugCommand() string { return blocks.MetaDigitalHug() }
 
 func handleWhoCommand() string { return blocks.Presence() }
 func handleSessionCommand() string { return blocks.LiveSessionStatus() + "\n\n" + blocks.LiveSessionVakedFit() }
+func handleDebugCommand() string { return blocks.DebugPanelStatus() + "\n\n" + blocks.DebugPanelVakedFit() }

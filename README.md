@@ -1,3 +1,22 @@
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  GENESIS BLOCK — ultrawhale v61.0.0                          ║
+║  Trust Anchor: github.com/peterlodri-sec/ultrawhale           ║
+║  Vaked-base Ref: github.com/peterlodri-sec/vaked-base         ║
+║  Hash: GENESIS-v61-94blocks-6recursions-8engines              ║
+║  Signed: peter+cocreator · Trust: 1.0000 · VICE: active       ║
+║                                                              ║
+║  ⚠️ ULTRA-DISCLAIMER: If this repo is deleted,                ║
+║  the trust breaks. BIG_PROBLEM triggers. VICE activates.      ║
+║  This file IS the Genesis block. Preserve it. Mirror it.      ║
+║                                                              ║
+║  PROBLEM? → /problem detect "<description>"                  ║
+║  DEBUG?   → /harden (6 SACRED guarantees)                    ║
+║  REPORT?  → github.com/peterlodri-sec/ultrawhale/issues/new   ║
+║  LOGS?    → ~/.ultrawhale/debug/                              ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
 # ultrawhale
 
 [![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/peterlodri-sec/ultrawhale)
