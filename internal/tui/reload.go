@@ -1043,3 +1043,13 @@ func handleUltraCommand(line string) string {
 }
 
 func handleMinecraftCommand() string { return blocks.MinecraftMCPStart() + "\n\n" + blocks.MinecraftMCPVakedFit() }
+
+func handleSealing() string { return blocks.SealingStatus() + '\n\n' + blocks.SealingVakedFit() }
+
+func handleRoughLoop() string { return blocks.RoughLoopDashboard() }
+
+func handleDns() string { return blocks.PulsingDNSTree() }
+
+func handleHardware() string { return blocks.HardwareContextReport() }
+
+func handleTrust() string { return blocks.TrustStatus() }
