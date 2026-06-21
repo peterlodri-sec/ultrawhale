@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 5
     environment: ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Push to HuggingFace
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
