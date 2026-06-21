@@ -1,7 +1,12 @@
-
 <!--
 ╔══════════════════════════════════════════════════════════════╗
-║  CROSS-REPO GENESIS — vaked-base ↔ ultrawhale                ║
+║  GENESIS BLOCK — ultrawhale v82.0.0                          ║
+║  Trust: peterlodri-sec/ultrawhale · cabotage@pm.me            ║
+║  PROBLEM? → /problem · DEBUG? → /harden · REPORT? → issues   ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
+REPLACE_ME — vaked-base ↔ ultrawhale                ║
 ║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
 ║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
 ║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
@@ -9,21 +14,8 @@
 ╚══════════════════════════════════════════════════════════════╝
 -->
 
-<!--
-╔══════════════════════════════════════════════════════════════╗
-║  HONESTY GATE — Full Loop Embed                             ║
-║  "I had no idea a few playing-around sessions                ║
-║   would end up with a name like this." — Peter               ║
-║                                                              ║
-║  Genesis commit: 3f6700a                                    ║
-║  Sign: peter+cocreator · Trust: 1.0000                       ║
-║  The loop is closed. The loop begins again.                  ║
-╚══════════════════════════════════════════════════════════════╝
--->
 
-<!--
-╔══════════════════════════════════════════════════════════════╗
-║  CROSS-REPO GENESIS — vaked-base ↔ ultrawhale                ║
+REPLACE_ME — vaked-base ↔ ultrawhale                ║
 ║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
 ║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
 ║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
@@ -31,24 +23,6 @@
 ╚══════════════════════════════════════════════════════════════╝
 -->
 
-<!--
-╔══════════════════════════════════════════════════════════════╗
-║  GENESIS BLOCK — ultrawhale v78.0.0                          ║
-║  Trust Anchor: github.com/PeetPedro/ultrawhale           ║
-║  Vaked-base Ref: github.com/PeetPedro/vaked-base         ║
-║  Hash: GENESIS-v61-94blocks-6recursions-8engines              ║
-║  Signed: peter+cocreator · Trust: 1.0000 · VICE: active       ║
-║                                                              ║
-║  ⚠️ ULTRA-DISCLAIMER: If this repo is deleted,                ║
-║  the trust breaks. BIG_PROBLEM triggers. VICE activates.      ║
-║  This file IS the Genesis block. Preserve it. Mirror it.      ║
-║                                                              ║
-║  PROBLEM? → /problem detect "<description>"                  ║
-║  DEBUG?   → /harden (6 SACRED guarantees)                    ║
-║  REPORT?  → github.com/PeetPedro/ultrawhale/issues/new   ║
-║  LOGS?    → ~/.ultrawhale/debug/                              ║
-╚══════════════════════════════════════════════════════════════╝
--->
 
 # ultrawhale
 
