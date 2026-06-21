@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Brain To Dataset — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Brain → Memory → Files → Dataset → HuggingFace — E2E Pipeline
+
+## The Loop
+
+```
+Human types → SACRED surface
+    ↓
+Brain short-term memory (32 turns)
+    ↓
+Brain long-term memory (JSONL append)
+    ↓
+Dog Feed loop (background, free model)
+    ↓
+DogFeed samples (user, free_response, deepseek_response)
+    ↓
+Enrich with brain_context + memory_ref
+    ↓
+Export JSONL → ~/.ultrawhale/dogfeed/
+    ↓
+task dev-deploy → vaked.dev/ultrawhale/dogfood/
+    ↓
+CI auto-publish → HuggingFace datasets
+    ↓
+HF webhook → Vaked liveness pulse
+    ↓
+Telemetry Tree ring grows
+```
+
+## Dataset Versions
+
+| Version | Samples | Fields | Enriched? |
+|---------|---------|--------|-----------|
+| v1-initial | 3 | 6 | ❌ |
+| v2-science | 60 | 9 | ❌ |
+| v3-enriched | 60 | 13 | ✅ brain_context, memory_ref, pipeline |
+
+## Enrichment Fields
+
+| Field | Purpose |
+|-------|---------|
+| `brain_context` | POV, session, capabilities, space node |
+| `memory_ref` | SHA256 hash of user message (content-addressed) |
+| `enriched_at` | ISO 8601 timestamp of enrichment |
+| `pipeline` | Full trace: dogfeed → brain → memory → dataset → HF |
+
+## Hardening
+
+- All datasets PII-scrubbed before enrichment
+- Memory refs are content-addressed (SHA256)
+- Brain context is immutable per session
+- Pipeline trace is append-only
+- VICE Genesis block signs every export manifest
+
+## Usage
+
+```python
+from datasets import load_dataset
+dataset = load_dataset("PeetPedro/ultrawhale-dogfood")
+# Enriched samples have brain_context and memory_ref fields
+```
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Dataset Publishing — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Dataset Publishing — HuggingFace + Git LFS
+
+## Current Datasets
+
+| Dataset | Size | Format | License |
+|---------|------|--------|---------|
+| DogFood v1 | Growing | JSONL | MIT + CC-BY-4.0 |
+| DogFood v2 | Planned | JSONL + Parquet | MIT + CC-BY-4.0 |
+| Council Verdicts | Planned | JSONL | MIT + CC-BY-4.0 |
+
+## Publishing Paths
+
+### Primary: HuggingFace Datasets
+
+```
+huggingface.co/PeetPedro/ultrawhale-dogfood (create: hf repos create)
+```
+
+```python
+# Load directly from HuggingFace
+from datasets import load_dataset
+dataset = load_dataset("PeetPedro/ultrawhale-dogfood")
+```
+
+### Mirror: GitHub LFS
+
+```sh
+# Track large dataset files with Git LFS
+git lfs track "*.jsonl" "*.parquet" "*.arrow"
+git lfs push origin main
+```
+
+### Mirror: vaked.dev
+
+```
+vaked.dev/ultrawhale/dogfood/          # Live counter + info
+vaked.dev/ultrawhale/dogfood-v1.jsonl  # Direct download
+```
+
+## Setup (Manual Steps)
+
+1. **HuggingFace**:
+   - Create account at huggingface.co
+   - `hf login`
+   - `hf repos create ultrawhale-dogfood --type dataset`
+   - Push: `cp ~/.ultrawhale/dogfeed/*.jsonl . && git add . && git commit -m "v1" && git push`
+
+2. **Git LFS**:
+   - `brew install git-lfs && git lfs install`
+   - `git lfs track "*.jsonl"`
+   - Push datasets as LFS objects
+
+3. **vaked.dev**:
+   - Already deployed: `vaked.dev/ultrawhale/dogfood/`
+   - Direct download link: add to Taskfile dev-deploy
+
+## Auto-Publish (v65)
+
+```sh
+# One command to publish all datasets
+/dog-feed export          # exports JSONL
+/dataset publish          # pushes to HuggingFace + GitHub LFS + vaked.dev
+```
+
+## PII Guarantee
+
+All datasets are zero-trust scrubbed before publishing.
+See `.dev/scrub-pii.sh` and `.dev/DATASET-MANIFEST.md`.
+No API keys. No emails. No private IPs.
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>

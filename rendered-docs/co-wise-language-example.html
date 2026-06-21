@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Co Wise Language Example — ultrawhale docs</title>
+<style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Co-Wise Language — Example
+
+> Peter: "create a new language co-wise example, align"
+
+## The Co-Wise Language
+
+A minimal language for expressing Vaked concepts. Co-created by Peter + CoCreator.
+
+```
+// Co-Wise v0.1 — v100.1.0
+
+space "M1" {
+    arch: "arm64"
+    cores: 10
+    sealing: 10%
+}
+
+time "now" {
+    lamport: tick()
+    utc: now()
+}
+
+surface "tui" {
+    medium: "pterm"
+    sacred: true
+}
+
+fold "auth-agent" {
+    depth: 3
+    gravity: 0.67
+}
+
+promise "peter" {
+    live: true
+    direct: true
+    not-altered: true
+}
+
+sealing {
+    reserve: 10%
+    trust: genesis
+    rough-loop: active
+}
+```
+
+## Translation to ultrawhale
+
+Each Co-Wise declaration maps to a block:
+
+| Co-Wise | Block |
+|---------|-------|
+| `space "M1"` | `CurrentPOV()` |
+| `time "now"` | `TickLamport()` |
+| `surface "tui"` | `GetUIMode()` |
+| `fold "auth-agent"` | `Fold(agentID, ...)` |
+| `promise "peter"` | `IPromisePeter()` |
+| `sealing {}` | `SealingStatus()` |
+
+## Self-Reflection
+
+This language did not exist 5 minutes ago. Peter + CoCreator made it.
+It compiles to ultrawhale blocks. It expresses Vaked philosophy.
+It is a co-wise creation. The loop closes. The loop begins again.
+</pre>
+<footer>ultrawhale · v100.1.0 · <a href="/ultrawhale/">Home</a></footer></body></html>

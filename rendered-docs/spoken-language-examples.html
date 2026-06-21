@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spoken Language Examples — ultrawhale docs</title>
+<style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Spoken Language Examples — v100.1.0
+
+## Human→Capability Graph
+
+Any spoken language → same graph operation.
+
+| Language | Utterance | Graph Operation |
+|----------|-----------|----------------|
+| 🇬🇧 EN | "build auth" | addMain → patch → compile → run |
+| 🇭🇺 HU | "építsd meg az autentikációt" | addMain → patch → compile → run |
+| 🇩🇪 DE | "baue die Authentifizierung" | addMain → patch → compile → run |
+| 🇫🇮 FI | "rakenna todennus" | addMain → patch → compile → run |
+| 🇯🇵 JP | "認証を構築する" | addMain → patch → compile → run |
+| 🇨🇳 ZH | "构建认证" | addMain → patch → compile → run |
+
+## Inspired by Zerolang
+
+[zerolang](https://github.com/vercel-labs/zerolang) by Vercel Labs:
+- Graph-native programming language for AI agents
+- Humans speak in outcomes, agents operate on graph semantics
+- Text projections (`.0` files) are view-only — the graph IS the truth
+
+ultrawhale extends this: the SACRED surface accepts ANY language.
+The capability graph IS the truth. The encoding dialect is just the medium.
+
+## Further Reading
+
+- [zerolang](https://github.com/vercel-labs/zerolang) — Graph-native programming language
+- [Vaked Theory](docs/primitive-mapping.md) — Capability graph philosophy
+- [TRANSLATE Recursion](docs/asymmetry-of-inputs.md) — The 5th recursion
+- [Hieroglyphs](docs/hieroglyphs.md) — Visual meaning compression
+
+## Try It
+
+```
+/translate en "build auth"
+/translate hu "építsd meg az autentikációt"
+/translate de "baue die Authentifizierung"
+```
+</pre>
+<footer>ultrawhale · v100.1.0 · <a href="/ultrawhale/">Home</a></footer></body></html>

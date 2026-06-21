@@ -1,0 +1,33 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Contributing — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Contributing to ultrawhale
+
+## Good First Issues
+
+- Add a new block primitive (see `docs/primitive-mapping.md`)
+- Add a new Vaked .vaked declaration example
+- Improve AG-UI theme colors
+- Add benchmarks for a block
+
+## Architecture
+
+See `docs/primitive-mapping.md` for the 53-block → 7 Vaked layer mapping.
+
+## Development
+
+```sh
+git clone https://github.com/peterlodri-sec/ultrawhale.git
+cd ultrawhale
+go build ./cmd/whale
+task dev-deploy
+```
+
+## Code Style
+
+- All blocks must carry POV context (`_ = CurrentPOV()`)
+- Operations must be journaled via `blocks.Write()`
+- New commands: add to `internal/tui/reload.go` + `model_prompt.go`
+
+## RFC Process
+
+Use `.dev/agents/meta-architect.md` for architectural thinking.
+Submit RFCs as GitHub issues with label `rfc`.
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>
