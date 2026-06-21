@@ -45,6 +45,8 @@ func (s *Surface) Start() {
 			"schema":  SchemaStatus(),
 			"dyad":    getDyadStatus(),
 			"uptime":  "since " + CurrentVersion(),
+			"ring_overflow": OverflowCount(),
+			"a2c_streams": len(a2cStreams),
 		})
 	})
 

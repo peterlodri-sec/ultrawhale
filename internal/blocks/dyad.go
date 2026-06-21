@@ -89,6 +89,7 @@ func (d *DyadBlock) Ping() {
 		d.Status = "paired"
 	} else {
 		d.Status = "degraded"
+	d.PeerAlive = false // NATS may be down
 	}
 
 	Log(LogInfo, "dyad.ping", fmt.Sprintf("%s → %s (%s)", d.Self.Machine, d.Peer.Machine, d.Status),

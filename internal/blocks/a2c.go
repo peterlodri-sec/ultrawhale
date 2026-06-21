@@ -31,6 +31,7 @@ var a2cStreams = make(map[string]*A2CStream)
 
 // StartA2CStream opens a streaming channel for an agent.
 func StartA2CStream(agentID string) *A2CStream {
+	
 	s := &A2CStream{
 		agentID: agentID,
 		clients: make(map[string]chan A2CEvent),
@@ -110,4 +111,17 @@ func A2CSSEHandler(w http.ResponseWriter, r *http.Request) {
 // A2CStatus returns compact streaming status.
 func A2CStatus() string {
 	return fmt.Sprintf("a2c: %d active streams", len(a2cStreams))
+}
+
+
+func (s *A2CStream) heartbeat() {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.mu.Lock()
+		alive := len(s.clients)
+		s.mu.Unlock()
+		if alive == 0 { return } // no clients, stop heartbeat
+		s.Emit(A2CEvent{AgentID: s.agentID, Type: "heartbeat", Content: "", Seq: -1})
+	}
 }

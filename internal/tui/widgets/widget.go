@@ -64,3 +64,16 @@ func (b Base) Good() lipgloss.Color { return lipgloss.Color("#00e660") }
 func (b Base) WarnColor() lipgloss.Color { return lipgloss.Color("#ffaa00") }
 
 var ShellActive bool // set by model when a shell tool is running
+
+
+// SafeView wraps a widget's View() with panic recovery.
+// If a widget panics, the TUI shows an error block instead of crashing.
+func SafeView(name string, render func() string) string {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "[widget] %s panic: %v
+", name, r)
+		}
+	}()
+	return render()
+}

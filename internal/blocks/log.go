@@ -38,6 +38,7 @@ type LogSink interface {
 
 // Logger is the global event logger. Lock-free ring buffer.
 type Logger struct {
+	overflows int64 // ring buffer overflow counter
 	mu      sync.RWMutex
 	buffer  []LogEvent // ring buffer, capacity 4096
 	head    int64 // atomic — lock-free writes
@@ -94,6 +95,7 @@ func Log(level LogLevel, operation, path, ref, prevRef string, duration time.Dur
 	count := atomic.AddInt64(&globalLogger.count, 1)
 	if count > int64(len(globalLogger.buffer)) {
 		atomic.StoreInt64(&globalLogger.count, int64(len(globalLogger.buffer)))
+		atomic.AddInt64(&globalLogger.overflows, 1)
 	}
 	
 	globalLogger.mu.RLock()
@@ -150,3 +152,6 @@ func (t *ToastSink) Emit(e LogEvent) {
 	}
 	t.onEmit(msg)
 }
+
+
+func OverflowCount() int64 { return atomic.LoadInt64(&globalLogger.overflows) }

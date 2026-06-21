@@ -31,6 +31,6 @@ Liveness = "is the system still alive?" — distinct from safety and security.
 | Gap | Why not critical |
 |-----|-----------------|
 | TUI widget crash | Bubble Tea recovers via panic handler |
-| Ring buffer overflow | 4096 slots, oldest evicted silently — acceptable |
-| NATS down during dyad | Dyad degrades to "degraded" mode, self continues |
-| SSE client heartbeat | Channel close on disconnect is sufficient for now |
+| Ring buffer overflow | OverflowCount() counter exposed via /api/v1/status | 1 (fixed) |
+| NATS down during dyad | Dyad marks PeerAlive=false on degraded | 1 (fixed) |
+| SSE client heartbeat | 15s heartbeat ping to detect dead clients | 1 (fixed) |
