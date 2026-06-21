@@ -1080,3 +1080,5 @@ func handleExpandCommand(line string) string {
 	if cmd == "/expand" || cmd == "" { return blocks.BackwardExpandStatus() + "\n\n" + blocks.BackwardExpandVakedFit() }
 	return blocks.BackwardExpandCommand(cmd)
 }
+
+func handleObserverCommand() string { return blocks.ObserverDashboard() + "\n\n" + blocks.ObserverVakedFit() }
