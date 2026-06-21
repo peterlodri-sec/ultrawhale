@@ -87,12 +87,7 @@ func RadioNow() string {
 	radio.Stats.CurrentBPM = bpm
 	radio.Stats.CurrentKey = key
 
-	return fmt.Sprintf("🎵 [%s] %s · %s
-├─ 🥁 %d BPM (%d agents active)
-├─ 🎹 %s (%s layer health)
-├─ 🎸 %s (fold depth %d)
-├─ 🌫️  %s (%d space nodes)
-└─ 🎧 %s · lo-fi · unique",
+	return fmt.Sprintf("🎵 [%s] %s · %s\n├─ 🥁 %d BPM (%d agents active)\n├─ 🎹 %s (%s layer health)\n├─ 🎸 %s (fold depth %d)\n├─ 🌫️  %s (%d space nodes)\n└─ 🎧 %s · lo-fi · unique",
 		radio.Name, radio.Genre,
 		bpm, AgentCount(),
 		key, layerHealthSummary(),
