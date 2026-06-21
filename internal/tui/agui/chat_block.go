@@ -62,3 +62,23 @@ func classifyBlock(kind string) BlockType {
 		return BlockText
 	}
 }
+
+
+// OneShot renders a complete Vaked pipeline: declare → materialize → reveal.
+// Single-pass from .vaked declaration to AG-UI rendered block.
+func OneShot(declaration string) string {
+	// Declares: the input is a Vaked declaration
+	// Materializes: render as AG-UI block
+	// Reveals: return the rendered output
+	
+	block := NewChatBlock("plan_card", "Vaked OneShot", declaration, 80)
+	block.Streaming = false
+	return block.Render()
+}
+
+// StreamingBlock renders a partial ChatBlock with ⏳ suffix.
+func StreamingBlock(kind, title, content string, width int) string {
+	block := NewChatBlock(kind, title, content, width)
+	block.Streaming = true
+	return block.Render()
+}

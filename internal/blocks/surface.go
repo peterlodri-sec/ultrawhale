@@ -97,6 +97,17 @@ func (s *Surface) Start() {
 
 	mux.HandleFunc("/a2c/stream", A2CSSEHandler)
 
+	mux.HandleFunc("/api/v1/theme", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"bg":     "#0a0a14",
+			"fg":     "#e0e8f5",
+			"accent": "#00d4ff",
+			"green":  "#00e660",
+			"dim":    "#6878a0",
+		})
+	})
+
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
