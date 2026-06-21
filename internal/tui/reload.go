@@ -1026,3 +1026,9 @@ func handlePOVRecoveryCommand(line string) string {
 }
 
 func handleUIMediumCommand() string { return blocks.LiveExperiment() + "\n\n" + blocks.UIMediumVakedFit() }
+
+func handleSpeakCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/speak"))
+	if len(parts) < 2 { return "usage: /speak <lang> <utterance>\n  langs: en, hu, de, fi, jp, zh" }
+	return blocks.SpeakIn(parts[0], strings.Join(parts[1:], " ")) + "\n\n  Graph: " + blocks.GraphNativeOp(strings.Join(parts[1:], " "))
+}
