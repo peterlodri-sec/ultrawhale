@@ -101,6 +101,8 @@ func (l *SACREDEventLoop) run() {
 		select {
 		case <-ticker.C:
 			l.tick()
+			// Auto-transition SELF_MAIN_STATE
+			AutoTransition()
 		}
 	}
 }
