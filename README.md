@@ -97,14 +97,22 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  🔌 SSH: git@hf.co:datasets/PeetPedro/ultrawhale-dogfood │
-│  🔐 GPG: 2B2495E0AC50DAC7 · cabotage@pm.me               │
-│  📡 HF webhook: /webhook/hf · liveness pulse active       │
-│  📻 RADIO: /radio on · lo-fi coding music live            │
-│  🌐 vaked.dev/ultrawhale · CI auto-publish ✅              │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  🔌 SSH:    git@hf.co:datasets/PeetPedro/ultrawhale-dogfood  │
+│  🔐 GPG:    2B2495E0AC50DAC7 · cabotage@pm.me                │
+│  📡 HF:     /webhook/hf · liveness pulse active              │
+│  📻 RADIO:  /radio on · lo-fi coding music                   │
+│  🔀 A2A:    NATS · 2 handlers                                │
+│  📤 A2C:    SSE + WebSocket · streaming                      │
+│  🎨 A2UI:   internal events · 2 handlers                     │
+│  🔧 MCP:    HTTP · 7 tools exposed                           │
+│  🌳 VFS:    space topology as filesystem                      │
+│  📝 Git:    /git log|diff|sync · same level as file_read     │
+│  👤 Live:   /who · /session · SSH/WS/IRC-ready               │
+│  🌐 CI:     auto-publish + deploy + test ✅                   │
+└──────────────────────────────────────────────────────────────┘
 ```
+
 
 ## Install
 
