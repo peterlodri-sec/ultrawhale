@@ -1074,3 +1074,9 @@ func handleInjectCommand(line string) string {
 	if cmd == "/inject" || cmd == "" { return blocks.ForwardInjectStatus() + "\n\n" + blocks.ForwardInjectVakedFit() }
 	return blocks.ForwardInjectCommand(cmd)
 }
+
+func handleExpandCommand(line string) string {
+	cmd := strings.TrimPrefix(strings.TrimSpace(line), "/expand ")
+	if cmd == "/expand" || cmd == "" { return blocks.BackwardExpandStatus() + "\n\n" + blocks.BackwardExpandVakedFit() }
+	return blocks.BackwardExpandCommand(cmd)
+}
