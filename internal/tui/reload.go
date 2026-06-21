@@ -741,3 +741,5 @@ func handleDogFeedCommand(line string) string {
 	default: return "/dog-feed on|off|status|export"
 	}
 }
+
+func handleCoCreateCommand() string { return blocks.UICoCreativeStatus() + "\n\n" + blocks.UICoCreativeVakedFit() }

@@ -1,4 +1,4 @@
-# E2E Internal Review — ultrawhale v51.0.0
+# E2E Internal Review — ultrawhale v52.0.0
 
 ## Summary
 
@@ -19,11 +19,11 @@
 | 2 | 3 upstream syntax nits | Low | infra_bar:154, widget:74, vaked:163 |
 | 3 | self_compile.go unused | Low | Compiles but never called from orchestrator |
 | 4 | verify.go + contract.go name clash | Fixed | VerifyContract → FormalVerify |
-| 5 | README says 84 blocks, actual is 84 | Low | Doc update needed |
+| 5 | README says 86 blocks, actual is 84 | Low | Doc update needed |
 
 ## What's Perfect
 
-- All 84 blocks compile clean
+- All 86 blocks compile clean
 - Zero race conditions
 - All /commands wired (30+ commands)
 - 5 recursions all have VakedFit
