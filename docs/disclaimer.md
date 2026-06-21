@@ -49,6 +49,36 @@ The loop tries to close. But without the Genesis block...
 
 — Peter + CoCreator, v60.0.0
 
+
+## Legal
+
+**Jurisdiction:** This software is distributed from the European Union.
+**Governing Law:** Finnish law applies to all usage.
+**Liability:** See LICENSE (Apache 2.0 §7-8). No warranty. No liability.
+
+**Trademarks:** "ultrawhale", "vaked", "VEGED", "SACRED", "VICE" are
+project names and concepts, not registered trademarks.
+
+**Patents:** The recursive primitives (Full-Stop, Fold, Heal, EVOLVE,
+TRANSLATE, VICE) are research concepts. No patent applications filed.
+If patented in the future, Apache 2.0 §3 applies.
+
+**Data Collection:** The Dog Feed loop collects human↔LLM interaction data
+for research purposes. All datasets are PII-scrubbed. MIT + CC-BY-4.0 licensed.
+See docs/council-of-llms.md.
+
+**Third-Party Models:** ultrawhale connects to DeepSeek (paid), OpenRouter
+(free tier), and GitHub Copilot (included). ultrawhale is not affiliated
+with any of these providers.
+
+**Export Control:** This software contains cryptographic hash functions
+(SHA256, BLAKE3). Export may be regulated in your jurisdiction.
+Apache 2.0 §7 disclaimer of warranty applies.
+
+**Self-Defense:** The VICE engine's context detonation is a research
+concept. It does not constitute a denial-of-service attack. It is
+recursive self-disclosure — showing everything, hiding nothing.
+
 ## License
 
 ultrawhale is Apache 2.0 licensed. Vaked is part of the vaked-base monorepo.

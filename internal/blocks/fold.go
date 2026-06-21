@@ -1,3 +1,4 @@
+// LEGAL: ULTRA-RESEARCH-STATE. See LICENSE + docs/disclaimer.md.
 package blocks
 
 import (
