@@ -1120,3 +1120,5 @@ func handleAnonCommand() string { return blocks.AnonReviewStatus() + "\n\n" + bl
 func handleWebhooksLiveCommand() string { return blocks.AllWebhooksLive() }
 
 func handleSheetCommand() string { return blocks.SacredDashboard() + "\n\n" + blocks.SheetVakedFit() }
+
+func handleDeepCommand() string { return blocks.DeepObserveInnovate() + "\n\n" + blocks.DeepInsights() + "\n\n" + blocks.DeepObserveVakedFit() }
