@@ -57,6 +57,26 @@ ultrawhale has been audited for algorithmic complexity across all 59 blocks.
 59 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
 3 recommendations: AgentStore TTL, Ralph LRU, Sed Boyer-Moore.
 
+
+## 🧠 Council of LLMs
+
+ultrawhale runs a **COUNCIL** of language models:
+
+| Council | Models | Cost |
+|---------|--------|------|
+| DeepSeek | V4 Flash, V4 Pro, Coder V3 | Paid |
+| OpenRouter FREE | Gemma 3 4B, Mistral 7B, Llama 3.2 3B | **$0** |
+| GitHub Copilot | Via CI | Included |
+
+All outputs stored in **dedicated mem-brain**. Multi-model verification.
+Dog Feed collects training data from free models.
+
+**[Full Council Documentation](docs/council-of-llms.md)** · 
+**[Disclaimer](docs/disclaimer.md)** · 
+**[Glossary](docs/glossary.md)**
+
+⚠️ ULTRA-RESEARCH-STATE: Experimental multi-model collaboration.
+
 ## Quick Start
 
 ```sh
