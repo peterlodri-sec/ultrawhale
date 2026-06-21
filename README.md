@@ -32,6 +32,22 @@ ultrawhale building its own v15.3.0 release via subagent swarms.
 
 One prompt → swarm launch → real PRs → meta-report → v15.3.0 tagged.
 
+
+## Complexity
+
+ultrawhale has been audited for algorithmic complexity across all 44 blocks.
+
+| Class | Count | Examples |
+|-------|-------|----------|
+| O(1) | 28 | journal, log, hash, pov, self, current, sacred |
+| O(n) | 12 | sed, diff, agent, swarm, orchestrator, ralph |
+| O(n²) | 3 | dyad broadcast, sed worst-case, a2a mesh |
+| O(V+E) | 1 | space (BFS Distance/Reachable) |
+
+**[Full O(N)+O(T) Complexity Report](docs/complexity-report.md)** — 
+44 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
+3 recommendations: AgentStore TTL, Ralph LRU, Sed Boyer-Moore.
+
 ## Quick Start
 
 ```sh
