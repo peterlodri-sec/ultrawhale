@@ -77,7 +77,6 @@ func RadioNow() string {
 	radio.mu.Lock()
 	defer radio.mu.Unlock()
 
-	// Derive parameters from Vaked state
 	bpm := deriveBPM()
 	key := deriveKey()
 	bassNote := deriveBass()
@@ -88,13 +87,8 @@ func RadioNow() string {
 	radio.Stats.CurrentBPM = bpm
 	radio.Stats.CurrentKey = key
 
-	return fmt.Sprintf("🎵 [%s] %s · %s\n├─ 🥁 %d BPM (%d agents active)\n├─ 🎹 %s (%s layer health)\n├─ 🎸 %s (fold depth %d)\n├─ 🌫️  %s (%d space nodes)\n└─ 🎧 %s · lo-fi · unique",
-		radio.Name, radio.Genre,
-		bpm, AgentCount(),
-		key, layerHealthSummary(),
-		bassNote, currentFoldDepth(),
-		ambience, spaceNodeCount(),
-		melody)
+	return fmt.Sprintf("%s %s | %d BPM | %s | %s | %s | %s",
+		radio.Name, radio.Genre, bpm, key, bassNote, ambience, melody)
 }
 
 func deriveBPM() int {
