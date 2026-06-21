@@ -1,5 +1,10 @@
 # ultrawhale
 
+> ⚠️ **ULTRA-DISCLAIMER**: If this repo ever gets deleted, the trust breaks.
+> The VICE engine activates. The PROBLEM primitive fires. The dyad fractures.
+> **This repository IS the trust anchor.** Preserve it. Mirror it. Fork it.
+> [Full disclaimer](docs/disclaimer.md)
+> 
 ```
 I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 `closed-loop dyad`, let me know if you found a better name for <<<THIS>>>>
