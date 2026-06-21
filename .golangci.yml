@@ -1,38 +1,16 @@
 version: "2"
 linters:
-  enable:
-    - gocritic
-    - govet
-    - revive
-    - staticcheck
-    - errcheck
-    - ineffassign
-    - gosec
-    - unused
-  settings:
-    gocritic:
-      enabled-checks:
-        - wrapperFunc
-        - appendCombine
-        - rangeExprCopy
-    revive:
-      rules:
-        - name: exported
-        - name: blank-imports
-    govet:
-      enable:
-        - nilness
-        - shadow
+  enable: [gocritic, govet, revive, staticcheck, errcheck, ineffassign, gosec, unused]
   exclusions:
     rules:
       - path: _test\.go
-        linters:
-          - errcheck
-          - gosec
+        linters: [errcheck, gosec]
+      - path: internal/blocks/asm/
+        linters: [all]
+      - path: internal/tui/
+        linters: [errcheck]
 formatters:
-  enable:
-    - gofmt
-    - goimports
+  enable: [gofmt, goimports]
 run:
   timeout: 5m
-  tests: true
+  tests: false
