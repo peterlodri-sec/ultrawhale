@@ -1,13 +1,10 @@
 name: release
-
 on:
   push:
-    tags:
-      - 'v*'
-
+    tags: ['v*']
 permissions:
   contents: write
-
+  packages: write
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -15,28 +12,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-
-      - name: Build binaries
+        with: { go-version: '1.24' }
+      - name: Build
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-linux-amd64 ./cmd/whale
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-linux-arm64 ./cmd/whale
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-amd64 ./cmd/whale
-
-      - name: Generate checksums
-        run: cd bin && sha256sum * > SHA256SUMS
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            bin/ultrawhale-linux-amd64
-            bin/ultrawhale-linux-arm64
-            bin/ultrawhale-darwin-arm64
-            bin/ultrawhale-darwin-amd64
-            bin/SHA256SUMS
-          generate_release_notes: true
+          cd bin && sha256sum * > SHA256SUMS
+      - name: GPG Sign
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          for f in bin/ultrawhale-*; do
+            gpg --batch --passphrase "$GPG_PASSPHRASE" --detach-sign --armor "$f"
+          done
+          gpg --batch --passphrase "$GPG_PASSPHRASE" --detach-sign --armor bin/SHA256SUMS
+      - name: Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.3'
+      - run: cosign sign-blob --yes --output-signature=bin/cosign.sig --output-certificate=bin/cosign.pem bin/ultrawhale-linux-amd64
+        if: env.COSIGN_PRIVATE_KEY != ''
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: bin/*
+          generate_release_notes: true
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
