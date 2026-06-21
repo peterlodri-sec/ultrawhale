@@ -1131,5 +1131,5 @@ func handleRadioLiveCommand() string {
 }
 
 func handleVastAICommand() string {
-	return "╔══ vast.ai · nocturne@vaked ══╗\n║  Credit:   $7.60 USD\n║  SSH key:  vaked-base/nocturne\n║  Target:   RTX 3060 / A4000\n║  Budget:   ~38h @ $0.20/hr\n║  Dataset:  PeetPedro/ultrawhale-dogfood\n║  Rules:    MUST grow HF dataset\n║  Status:   READY — awaiting GPU\n╚══════════════════════════════════╝"
+	return "╔══ vast.ai · nocturne@vaked ══╗\n║  Credit:   $7.60 USD\n║  SSH key:  vaked-base/nocturne\n║  Target:   RTX 3060 / A4000\n║  Budget:   ~38h @ $0.20/hr\n║  Dataset:  PeetPedro/ultrawhale-dogfood\n║  Rules:    MUST grow HF dataset\n║  Status:   🟢 LIVE — instance 41971470 · RTX 3060 · $0.08/hr · Alberta, CA\n╚══════════════════════════════════╝"
 }
