@@ -596,3 +596,35 @@ func handleVakedCompileCommand(line string) string {
 
 func handleContractCommand() string { return blocks.ContractStatus() }
 func handleStateCommand() string { return blocks.CrabCCStatus() }
+
+func handleVFSCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/vfs"))
+	if len(parts) == 0 {
+		return "/vfs ls | /vfs cat <path> | /vfs tree | /vfs cd <path>"
+	}
+	switch parts[0] {
+	case "ls":
+		path := "/ultrawhale"
+		if len(parts) > 1 { path = parts[1] }
+		entries, err := blocks.VFSLs(path)
+		if err != nil { return err.Error() }
+		return path + ":\n" + strings.Join(entries, "\n")
+	case "cat":
+		if len(parts) < 2 { return "usage: /vfs cat <path>" }
+		content, err := blocks.VFSCat(parts[1])
+		if err != nil { return err.Error() }
+		return content
+	case "tree":
+		return blocks.VFSTree()
+	case "cd":
+		if len(parts) < 2 { return "usage: /vfs cd <path>" }
+		return blocks.VFSCD(parts[1])
+	case "echo":
+		if len(parts) < 3 { return "usage: /vfs echo <path> <content>" }
+		result, err := blocks.VFSEcho(parts[1], strings.Join(parts[2:], " "))
+		if err != nil { return err.Error() }
+		return result
+	default:
+		return "/vfs ls|cat|tree|cd|echo"
+	}
+}
