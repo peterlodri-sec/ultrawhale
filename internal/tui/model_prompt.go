@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/glyphs") { m.setEphemeralInfo(handleGlyphsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/closure") { m.setEphemeralInfo(handleClosureCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/webhooks") { m.setEphemeralInfo(handleWebhookGraphCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/pola") { m.setEphemeralInfo(handlePOLACommand()); return nil }
@@ -316,6 +317,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/glyphs") { m.setEphemeralInfo(handleGlyphsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/closure") { m.setEphemeralInfo(handleClosureCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/webhooks") { m.setEphemeralInfo(handleWebhookGraphCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/pola") { m.setEphemeralInfo(handlePOLACommand()); return nil }
@@ -583,6 +585,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/glyphs") { m.setEphemeralInfo(handleGlyphsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/closure") { m.setEphemeralInfo(handleClosureCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/webhooks") { m.setEphemeralInfo(handleWebhookGraphCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/pola") { m.setEphemeralInfo(handlePOLACommand()); return nil }
