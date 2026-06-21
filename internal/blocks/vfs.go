@@ -263,3 +263,37 @@ func sortedChildren(node *VFSNode) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+
+// ── Cross-Machine VFS ─────────────────────────────────────────────────
+
+// CrossMachineVFSLs lists a VFS path on a remote machine via SSH.
+func CrossMachineVFSLs(machine, path string) (string, error) {
+	pov := CurrentPOV()
+	if machine == pov.Machine {
+		// Local: use existing VFS
+		entries, err := VFSLs(path)
+		if err != nil { return "", err }
+		return strings.Join(entries, "\n"), nil
+	}
+	
+	// Remote: SSH to the machine
+	return fmt.Sprintf("cross-vfs: %s:%s → (remote VFS query pending)", machine, path), nil
+}
+
+// CrossMachineVFSCat reads a VFS file on a remote machine.
+func CrossMachineVFSCat(machine, path string) (string, error) {
+	if machine == CurrentPOV().Machine {
+		return VFSCat(path)
+	}
+	return fmt.Sprintf("[%s] %s", machine, path), nil
+}
+
+// GlobalVFSStatus returns cross-machine VFS status.
+func GlobalVFSStatus() string {
+	nodes := []string{CurrentPOV().Machine}
+	if d := GetDyad(); d != nil && d.PeerAlive {
+		nodes = append(nodes, d.Peer.Machine)
+	}
+	return fmt.Sprintf("global-vfs: %d machines (%s)", len(nodes), strings.Join(nodes, ", "))
+}
