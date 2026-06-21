@@ -1,7 +1,5 @@
 package blocks
 
-import 
-
 // ── QUIC Transport — Dyad Protocol Upgrade ──────────────────────────
 // v23: HTTP/3 QUIC for dyad peer communication.
 // 0-RTT reconnect, survives network changes, multiplexed streams.
