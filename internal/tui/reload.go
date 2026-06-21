@@ -662,3 +662,6 @@ func handlePermCommand() string {
 
 
 func handleEngineCommand() string { return blocks.EngineStatus() + "\n\n" + blocks.EngineVakedFit() }
+
+
+func handleUIEngineCommand() string { return blocks.UIEngineStatus() + "\n\n" + blocks.UIEngineVakedFit() }
