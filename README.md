@@ -92,6 +92,14 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 
 
 
+
+## 💰 June 2026 — $37.19 USD
+
+This entire project (v1.0.0 → v100.0.0) cost **$37.19** in DeepSeek API fees.
+That's **$0.24 per release**. **$0.29 per block**. **$0.00 for 8 free models**.
+
+[Full expense report](docs/june-2026-expenses.md) · [CLAIMS](CLAIMS.md)
+
 ## 🐋 What is ultrawhale?
 
 ultrawhale is a **coding agent** that builds itself. It's a research project,
