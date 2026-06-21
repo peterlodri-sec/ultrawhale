@@ -1,14 +1,28 @@
 name: ci
 on: [push, pull_request]
 jobs:
-  test:
+  test-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: '1.24' }
-      - run: go test -race -count=1 -run TestReadWrite ./internal/blocks/
-      - run: |
-          echo "Building ultrawhale binary (our blocks only)..."
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale ./cmd/whale 2>&1 | grep -v "vaked\|widgets\|infra_bar" || true
-          ls -lh bin/ultrawhale && echo "  ✅ Build OK"
+      - name: Test blocks
+        run: go test -race -count=1 -run TestReadWrite ./internal/blocks/
+      - name: Build binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-linux ./cmd/whale
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin ./cmd/whale
+          ls -lh bin/
+      - name: Self-bench
+        run: |
+          go test -bench=BenchmarkWrite -benchmem -benchtime=300ms ./internal/blocks/ 2>&1 | grep -E "Benchmark|ok" | head -5
+          echo "  Blocks: $(ls internal/blocks/*.go | grep -v _test | wc -l)"
+          echo "  Tags: $(git tag | wc -l)"
+      - name: Publish bench
+        run: |
+          echo "## v95.0.0 Benchmarks" > /tmp/bench.md
+          echo '```' >> /tmp/bench.md
+          go test -bench=. -benchmem -benchtime=200ms ./internal/blocks/ 2>&1 | grep -E "Benchmark|ok" >> /tmp/bench.md
+          echo '```' >> /tmp/bench.md
+          cat /tmp/bench.md
