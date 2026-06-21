@@ -31,8 +31,8 @@ func Fold3DVisualization(depth int) string {
 
 	// Layers 1..depth: Folded agents (going down/right — 3D perspective)
 	for d := 1; d <= depth; d++ {
-		indent := strings.Repeat("    ", d)
-		connector := "│" + strings.Repeat(" ", d*4) + "├──"
+		
+		
 
 		if d == depth {
 			connector = "│" + strings.Repeat(" ", d*4) + "└──"
