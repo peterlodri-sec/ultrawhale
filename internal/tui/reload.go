@@ -1013,3 +1013,14 @@ func handleOneMinCommand() string {
 }
 
 func handleDyadSpaceCommand() string { return "╔══ ALWAYS-IN-DYAD-SPACE ══╗\n\n  " + blocks.DyadSpaceStatus() + "\n  " + blocks.DyadSpaceAGUI() + "\n\n" + blocks.DyadSpaceVakedFit() }
+
+func handlePOVRecoveryCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/pov"))
+	if len(parts) == 0 { return blocks.POVRecoveryStatus() + "\n\n" + blocks.HumanPOVVakedFit() }
+	switch parts[0] {
+	case "away": return blocks.HumanAway()
+	case "back": return blocks.HumanBack()
+	case "cleanup": return blocks.CleanupBuildArtifacts()
+	default: return "/pov away|back|cleanup"
+	}
+}
