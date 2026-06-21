@@ -119,6 +119,7 @@ func GetOrchestrator() *Orchestrator {
 // DelegatePrompt spawns a subagent for the given prompt.
 // The orchestrator NEVER calls the LLM directly — always delegates.
 func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
+	if !IsAllowed() { return "", "permission-denied" }
 	// Classify the prompt to pick the right agent
 	def := o.classifyByCapability(prompt)
 	if def.Name == "" {

@@ -640,3 +640,22 @@ func handleVakedUICommand() string {
 	lines = append(lines, "Reveals:      "+blocks.UIStatus())
 	return "Vaked Layers:\n" + strings.Join(lines, "\n")
 }
+
+func handleAllowCommand() string {
+	blocks.GrantPermission()
+	return blocks.PermissionStatus()
+}
+
+func handleDenyCommand() string {
+	blocks.DenyPermission()
+	return blocks.PermissionStatus()
+}
+
+func handleKillCommand() string {
+	blocks.RevokePermission()
+	return blocks.PermissionStatus() + "\n\n🛑 KILL SWITCH ACTIVATED — Session terminated. All operations stopped."
+}
+
+func handlePermCommand() string {
+	return blocks.PermissionStatus()
+}
