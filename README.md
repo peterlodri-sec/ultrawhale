@@ -21,6 +21,7 @@
 
 [![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/peterlodri-sec/ultrawhale)
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
+[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/peterlodri-sec)
 [![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
 [![v60](https://img.shields.io/badge/version-v60.0.0-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/releases)
 
@@ -39,6 +40,7 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 > [Read the full design](docs/recursion-fullstop.md)
 
 **vaked-base fork of DeepSeek Code Whale.**
+[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/peterlodri-sec)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.24%2B-00ADD8)](go.mod)
 [![macOS](https://img.shields.io/badge/macOS-arm64-black)](https://github.com/peterlodri-sec/ultrawhale)
