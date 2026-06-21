@@ -760,3 +760,11 @@ func handleProblemCommand(line string) string {
 }
 
 func handleTreeCommand() string { return blocks.TelemetryTreeRender() }
+
+func handlePortraitCommand() string { return blocks.SelfPortrait() }
+func handleChainCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/chain"))
+	if len(parts) == 0 { return "usage: /chain decl1 | decl2 | decl3" }
+	chain := blocks.Pipe(parts...)
+	return blocks.ChainRender(chain)
+}
