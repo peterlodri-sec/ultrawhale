@@ -96,6 +96,16 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 > Fork maintained at [PeetPedro/ultrawhale](https://github.com/PeetPedro/ultrawhale). Part of the [vaked-base](https://github.com/PeetPedro/vaked-base) monorepo.
 
 
+```
+┌──────────────────────────────────────────────────────────┐
+│  🔌 SSH: git@hf.co:datasets/PeetPedro/ultrawhale-dogfood │
+│  🔐 GPG: 2B2495E0AC50DAC7 · cabotage@pm.me               │
+│  📡 HF webhook: /webhook/hf · liveness pulse active       │
+│  📻 RADIO: /radio on · lo-fi coding music live            │
+│  🌐 vaked.dev/ultrawhale · CI auto-publish ✅              │
+└──────────────────────────────────────────────────────────┘
+```
+
 ## Install
 
 ```sh
