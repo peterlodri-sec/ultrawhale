@@ -91,11 +91,11 @@ func ProbeMesh() map[string][]Probe {
 }
 
 func (pr *ProbeRunner) record(p Probe) {
-	pr.mu.Lock()
-	defer pr.mu.Unlock()
-	pr.results[p.AgentID] = append(pr.results[p.AgentID], p)
-	if len(pr.results[p.AgentID]) > 64 {
-		pr.results[p.AgentID] = pr.results[p.AgentID][len(pr.results[p.AgentID])-64:]
+	probeRunner.mu.Lock()
+	defer probeRunner.mu.Unlock()
+	probeRunner.results[p.AgentID] = append(probeRunner.results[p.AgentID], p)
+	if len(probeRunner.results[p.AgentID]) > 64 {
+		probeRunner.results[p.AgentID] = probeRunner.results[p.AgentID][len(probeRunner.results[p.AgentID])-64:]
 	}
 	Log(LogInfo, "probe."+p.Result, fmt.Sprintf("%s:%s", p.AgentID[:8], capName(p.Capability)),
 		"", "", p.Latency, nil)
@@ -103,11 +103,11 @@ func (pr *ProbeRunner) record(p Probe) {
 
 // ProbeStatus returns compact probe status.
 func ProbeStatus() string {
-	pr.mu.Lock()
-	defer pr.mu.Unlock()
+	probeRunner.mu.Lock()
+	defer probeRunner.mu.Unlock()
 	total := 0
 	failed := 0
-	for _, probes := range pr.results {
+	for _, probes := range probeRunner.results {
 		total += len(probes)
 		if len(probes) > 0 && probes[len(probes)-1].Result != "pass" { failed++ }
 	}
