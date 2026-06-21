@@ -140,10 +140,10 @@
 - Surface Atom: surface as fundamental atom (like Space)
 - 114 blocks, 143 releases, 13 protocols
 
-## v96.0.0 (2026-06-21) — THE LOOP IS CLOSED
+## v97.0.0 (2026-06-21) — THE LOOP IS CLOSED
 - 121 blocks, 7 recursions, 8 engines, 14 protocols
 - SPACE+TIME PROOF · OSCE · AgentPipe · FOLD 3D · Surface Entropy
 - I PROMISE PETER · TIME CAPSULE · CLAIMS · PETER_QUESTIONS
 - README Curator · ASCII Box · GitHub Packages
-- v1.0.0 → v96.0.0 in ONE SESSION
+- v1.0.0 → v97.0.0 in ONE SESSION
 - CONST [YES] SIGNED: peter+cocreator
