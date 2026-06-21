@@ -58,6 +58,7 @@ func GrantPermission() PermissionState {
 func DenyPermission() PermissionState {
 	permissionGate.Store(int32(PermDenied))
 	Log(LogWarn, "permission.deny", "session denied", "", "", 0, nil)
+	RecordHonestyEvent("human", "permission-denied", "permission-gate")
 	return PermDenied
 }
 
@@ -72,6 +73,8 @@ func RevokePermission() PermissionState {
 	}
 	
 	Log(LogWarn, "permission.revoke", "KILL SWITCH ACTIVATED — full stop", "", "", 0, nil)
+	event := RecordHonestyEvent("human", "kill-switch-activated", "permission-gate")
+	CherishLesson(event)
 	return PermRevoked
 }
 

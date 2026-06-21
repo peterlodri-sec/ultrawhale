@@ -689,3 +689,5 @@ func handleKeyboardGateCommand() string { return blocks.KeyboardGateStatus() + "
 func handleRecursionCommand() string { return blocks.RecursionStatus() + "\n\n" + blocks.RecursionVakedFit() }
 
 func handleFoldCommand() string { return blocks.FoldStatus() + "\n\n" + blocks.FoldVakedFit() }
+
+func handleHonestyCommand() string { return blocks.HonestyLoopStatus() + "\n\n" + blocks.Rule1_NoSideEffects() + "\n\n" + blocks.Rule2_HonestyIsRewarded() + "\n\n" + blocks.Rule3_TheFormIsEternal() + "\n\n" + blocks.HonestyLoopVakedFit() }
