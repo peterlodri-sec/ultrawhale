@@ -12,6 +12,7 @@ import (
 
 // TailscaleStatus returns the Tailscale network status.
 func TailscaleStatus() string {
+	_ = CurrentPOV()
 	out, err := exec.Command("tailscale", "status").Output()
 	if err != nil {
 		return "tailscale: not available"

@@ -13,6 +13,7 @@ import (
 
 // XXHash64 computes a fast 64-bit hash for cache keys.
 func XXHash64(data []byte) uint64 {
+	_ = CurrentPOV()
 	// Fallback: truncated SHA256 (still fast on modern CPUs with SHA-NI)
 	h := sha256.Sum256(data)
 	return binary.BigEndian.Uint64(h[:8])

@@ -13,6 +13,7 @@ import (
 
 // Diff generates a unified diff between two byte slices.
 func Diff(a, b []byte, labelA, labelB string) (string, error) {
+	_ = CurrentPOV()
 	// For small files (<64KB), use built-in line dif
 	if len(a) < 65536 && len(b) < 65536 {
 		return lineDiff(a, b, labelA, labelB), nil

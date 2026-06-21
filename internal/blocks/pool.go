@@ -19,6 +19,7 @@ var (
 
 // GetBuffer returns a buffer from the appropriate pool.
 func GetBuffer(size int) []byte {
+	_ = CurrentPOV()
 	switch {
 	case size <= 4096:
 		return smallPool.Get().([]byte)[:0]

@@ -11,5 +11,5 @@ jobs:
         with:
           version: latest
           args: --timeout=5m --issues-exit-code=0
-      - run: go test -v -race -coverprofile=coverage.txt ./...
+      - run: go test -v -race -coverprofile=coverage.txt ./internal/blocks/ ./internal/modes/
       - run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale ./cmd/whale

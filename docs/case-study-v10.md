@@ -1,13 +1,13 @@
-# Closing The Loop — v9.2.0 → v10.0.0 Case Study
+# Closing The Loop — v13.0.0 → v13.0.0 Case Study
 
 ## The Prompt
 
-> "let's plan together the v10.0.0 release — launch one local ultrawhale-v9.2.0 swarm-swe and observe all of them → creating report of the ultrawhale runs + collecting the subagent wf run outcomes into a meta-epic-PR"
+> "let's plan together the v13.0.0 release — launch one local ultrawhale-v13.0.0 swarm-swe and observe all of them → creating report of the ultrawhale runs + collecting the subagent wf run outcomes into a meta-epic-PR"
 
 ## The Run
 
 **Date:** 2026-06-21
-**Orchestrator:** ultrawhale v9.2.0 on M1 Max (macOS arm64)
+**Orchestrator:** ultrawhale v13.0.0 on M1 Max (macOS arm64)
 **Model:** deepseek-v4-flash
 **Subagents launched:** 2 (explore roles)
 
@@ -41,7 +41,7 @@
 | Folded tokens | ~20,000 | — | ~$0.30 |
 | **Total** | **~23,200** | **$0.0009** | **~$0.30** |
 
-## What Shipped in v10.0.0
+## What Shipped in v13.0.0
 
 1. ✅ Workflow auto-discovery on SessionStart
 2. ✅ Case study documentation

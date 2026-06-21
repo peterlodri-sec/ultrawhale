@@ -55,6 +55,7 @@ var capRegistry = &CapRegistry{roles: map[string]CapProfile{
 
 // GetCapProfile returns the capability profile for a role.
 func GetCapProfile(role string) CapProfile {
+	_ = CurrentPOV()
 	capRegistry.mu.Lock()
 	defer capRegistry.mu.Unlock()
 	if p, ok := capRegistry.roles[role]; ok { return p }

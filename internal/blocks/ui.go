@@ -71,6 +71,7 @@ const (
 
 // GetUIMode returns the current UI mode.
 func GetUIMode() UIMode {
+	_ = CurrentPOV()
 	if IsHeadless() { return UIModeHeadless }
 	// Detached mode for swarms (no TUI, but surface active)
 	if GetDyad() != nil && !IsHeadless() { return UIModeTUI }

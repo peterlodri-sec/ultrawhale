@@ -32,6 +32,7 @@ func detectTier() HashTier {
 
 // hashContent computes the sha256 ref of content using the best available tier.
 func hashContent(content []byte) string {
+	_ = CurrentPOV()
 	if useBlake3.Load() {
 		return Blake3Ref(content)
 	}

@@ -31,6 +31,7 @@ var a2cStreams = make(map[string]*A2CStream)
 
 // StartA2CStream opens a streaming channel for an agent.
 func StartA2CStream(agentID string) *A2CStream {
+	_ = CurrentPOV()
 	
 	s := &A2CStream{
 		agentID: agentID,

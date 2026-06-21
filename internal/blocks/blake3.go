@@ -15,6 +15,7 @@ func init() {
 }
 
 func Blake3Ref(data []byte) string {
+	_ = CurrentPOV()
 	if useBlake3.Load() {
 		return blake3Hash(data)
 	}

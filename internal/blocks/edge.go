@@ -57,6 +57,7 @@ type FiberEntry struct {
 
 // NewEdgeAgent creates a new CF edge agent.
 func NewEdgeAgent(name, role string) *EdgeAgent {
+	_ = CurrentPOV()
 	return &EdgeAgent{
 		ID:     fmt.Sprintf("ultrawhale-%s-%d", role, time.Now().Unix()),
 		Name:   name,

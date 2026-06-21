@@ -15,6 +15,7 @@ type journalShard struct {
 }
 
 func NewJournal() *Journal {
+	_ = CurrentPOV()
 	j := &Journal{maxDepth: 16}
 	for i := range j.shards {
 		j.shards[i].entries = make(map[string][]*Block)

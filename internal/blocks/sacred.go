@@ -55,6 +55,7 @@ func init() {
 
 // GetSacredSurface returns the sacred surface state.
 func GetSacredSurface() *SacredSurface {
+	_ = CurrentPOV()
 	return sacredSurface.Load().(*SacredSurface)
 }
 

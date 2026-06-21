@@ -77,6 +77,7 @@ func RecordFoldedTokens(input, output int64) {
 
 // GetRealCost returns the current cost state.
 func GetRealCost() *RealCost {
+	_ = CurrentPOV()
 	return realCost.Load().(*RealCost)
 }
 

@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-06-20  
-**Version:** v8.1.0
+**Version:** v13.0.0
 
 ## Context
 
