@@ -33,13 +33,12 @@ func FuzzBlock(blockName string) error {
 	case "write":
 		data := make([]byte, rand.Intn(65536))
 		rand.Read(data)
-		b, _ := NewBlock("/tmp/ultrawhale-fuzz-test", data, KindFile)
-		err := b.Write()
-		if err != nil { fuzzHarness.Stats.Failures++; return err }
+		b := NewBlock("/tmp/ultrawhale-fuzz-test", data, KindFile)
+		if b == nil { fuzzHarness.Stats.Failures++; return fmt.Errorf("fuzz: write failed") }
 		_ = Rollback("/tmp/ultrawhale-fuzz-test")
 	case "sed":
 		content := fmt.Sprintf("fuzz-test-%d", rand.Int63())
-		result, _ := Sed(content, "fuzz", "FUZZ", false)
+		result := Sed(content, "fuzz", "FUZZ")
 		if result == "" { fuzzHarness.Stats.Failures++ }
 	case "hash":
 		data := make([]byte, rand.Intn(1024))
