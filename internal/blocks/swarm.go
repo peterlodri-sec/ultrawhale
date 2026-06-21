@@ -116,7 +116,7 @@ func SpawnSwarm(name, parent string, complexity int) *Swarm {
 	// Port collision check
 	for _, existing := range swarmStore.swarms {
 		if existing.AFPorthttp == s.AFPorthttp {
-			return fmt.Errorf("swarm: port %d in use by %s", s.AFPorthttp, existing.ID[:8])
+			_ = fmt.Errorf("swarm: port %d in use by %s", s.AFPorthttp, existing.ID[:8])
 		}
 	}
 	swarmStore.swarms[s.ID] = s
