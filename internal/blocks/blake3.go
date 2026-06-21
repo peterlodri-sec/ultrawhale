@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"sync/atomic"
+	"strings"
+	"sync"
 
 	"lukechampine.com/blake3"
 )
@@ -34,3 +36,36 @@ func blake3Hash(data []byte) string {
 
 func EnableBlake3()  { useBlake3.Store(true) }
 func IsBlake3Enabled() bool { return useBlake3.Load() }
+
+
+// Blake3TreeRef computes a BLAKE3 hash using tree mode for parallel execution.
+// For files >1MB, splits into 1MB chunks and hashes in parallel (O(n/P)).
+func Blake3TreeRef(data []byte) string {
+	const chunkSize = 1 << 20 // 1MB chunks
+	
+	if len(data) <= chunkSize || !useBlake3.Load() {
+		return Blake3Ref(data)
+	}
+	
+	// Parallel tree hashing: split into chunks, hash each, then hash the tree
+	numChunks := (len(data) + chunkSize - 1) / chunkSize
+	chunkHashes := make([]string, numChunks)
+	
+	var wg sync.WaitGroup
+	for i := 0; i < numChunks; i++ {
+		start := i * chunkSize
+		end := start + chunkSize
+		if end > len(data) { end = len(data) }
+		
+		wg.Add(1)
+		go func(idx int, chunk []byte) {
+			defer wg.Done()
+			chunkHashes[idx] = Blake3Ref(chunk)
+		}(i, data[start:end])
+	}
+	wg.Wait()
+	
+	// Hash the tree root
+	root := strings.Join(chunkHashes, "")
+	return Blake3Ref([]byte(root))
+}

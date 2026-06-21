@@ -586,3 +586,10 @@ func handlePredictCommand(line string) string {
 }
 
 func handleLearnCommand() string { return blocks.LearnStatus() }
+
+func handleVakedCompileCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/vaked-compile"))
+	if len(parts) == 0 { return "usage: /vaked-compile <file.vaked>" }
+	// Vaked plugin handles the full pipeline
+	return fmt.Sprintf("vaked: compile %s — use vakedz or vakedc for full pipeline", parts[0])
+}

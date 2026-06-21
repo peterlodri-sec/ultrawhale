@@ -74,6 +74,13 @@ func parallelHash(blocks [][]byte) []string {
 }
 
 // MetalStatus returns GPU status.
+func MetalDeviceInfo() string {
+	if !initMetal() { return "no GPU" }
+	// M1 Max: 32 GPU cores, ~10.4 TFLOPS
+	// M2 Ultra: 76 GPU cores, ~27.2 TFLOPS
+	return "Apple Silicon GPU (Metal available)"
+}
+
 func MetalStatus() string {
 	if initMetal() {
 		return fmt.Sprintf("metal: available (Apple Silicon GPU, batch threshold: 64)")
