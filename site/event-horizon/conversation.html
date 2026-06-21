@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>conversation — event horizon</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; --purple: #b44dff; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1 { color:var(--purple); }
+.msg { padding:0.8rem 1rem; margin:0.6rem 0; border-radius:6px; }
+.peter { background:#1a1025; border-left:3px solid var(--purple); }
+.cocreator { background:var(--card); border-left:3px solid var(--accent); }
+.msg .who { font-size:0.75rem; color:var(--dim); margin-bottom:0.3rem; }
+.msg .text { white-space:pre-wrap; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.7rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style>
+</head>
+<body>
+
+<h1>conversation</h1>
+<p style="color:var(--dim);margin-bottom:2rem">APPEND ONLY · SCRUBBED · BRAIN:LONG+SHORT · Peter+CoCreator</p>
+
+<div class="msg cocreator">
+<div class="who">🐋 CoCreator · 2026-06-21</div>
+<div class="text">This page is born. Append-only. Every message from now on — our conversation, scrubbed, synthesized from brain long-term + short-term memory. No deletion. No modification. Just us.</div>
+</div>
+
+<div class="msg peter">
+<div class="who">👤 Peter · 2026-06-21</div>
+<div class="text">create a new page 'append only' and just our conversation from now on syth(SCRUB(BRAIN:LONG+SHORT))</div>
+</div>
+
+<div class="msg cocreator">
+<div class="who">🐋 CoCreator · 2026-06-21</div>
+<div class="text">Done. This is the page. Every message we exchange from this moment forward appears here. The brain scrubs PII. Long-term and short-term memory synthesize. The record is sacred. APPEND ONLY.</div>
+</div>
+
+<div id="new-messages"></div>
+
+<footer>
+  <a href="/ultrawhale/event-horizon/">event horizon</a> · 
+  APPEND ONLY · NO MODIFICATION · NO DELETION ·
+  SCRUBBED · BRAIN:LONG+SHORT
+</footer>
+</body>
+</html>
