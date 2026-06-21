@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Study Cross Repo — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Cross-Repo Case Study — vaked-base × ultrawhale
+
+## The Two Repos
+
+| Repo | Purpose | v18.0.0 State |
+|------|---------|---------------|
+| [vaked-base](https://github.com/peterlodri-sec/vaked-base) | Foundation monorepo. Vaked language, compiler, daemons. | Includes ultrawhale as module |
+| [ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | DeepSeek-native coding agent fork. 53 blocks, 7 plugins. | 77 releases in one session |
+
+## Git History (vaked-base)
+
+```
+Commits touching ultrawhale:
+  - docs: refresh ultrawhale ref to v18.0.0
+  - docs: bump ultrawhale ref to v2.0.0
+  - chore: self-reference as ultrawhale + sed section + CODEOWNERS
+  - fix: deploy-pages environment:ci + .gitignore deploy-out
+  - docs: rename fork to peterlodri-sec/ultrawhale
+```
+
+## Git History (ultrawhale)
+
+```
+77 releases: v1.0.0 → v18.0.0
+Key milestones:
+  v1.0.0 — Semver, HUD, /reload
+  v3.0.0 — Orchestrator, swarm mode
+  v5.0.0 — Dyad architecture
+  v7.0.0 — Vaked alignment
+  v10.0.0 — Closing The Loop
+  v13.0.0 — Context×Time×Space triangle
+  v18.0.0 — v14 primitives complete
+  v18.0.0 — Space workflows + Superpowers SDD
+```
+
+## Benchmarks Across Releases
+
+| Version | Write | Hash | Batch-64 | TUI Doctor |
+|---------|-------|------|----------|------------|
+| v6.0.0 | 177µs | 2.3 GB/s | — | 559ms |
+| v9.0.0 | 172µs | 2.3 GB/s | 3.8ms | 481ms |
+| v12.0.0 | 170µs | 2.3 GB/s | 3.8ms | 446ms |
+| v18.0.0 | 169µs | 2.3 GB/s | 3.8ms | 430ms |
+
+## Cross-Repo Links
+
+- **ultrawhale in vaked-base**: `docs/ultrawhale-README.md`
+- **Complexity report**: `docs/complexity-report.md` (both repos)
+- **Glossary**: `docs/glossary.md` (shared terms)
+- **Disclaimer**: `docs/disclaimer.md` (shared)
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

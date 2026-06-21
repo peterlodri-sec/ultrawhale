@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liveness Audit — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Liveness Audit — v18.0.0
+
+Liveness = "is the system still alive?" — distinct from safety and security.
+
+## Layers Audited (10)
+
+| Layer | Liveness Status | Gaps Found |
+|-------|----------------|------------|
+| Blocks engine | ✅ Write falls back, journal rollback works, BLAKE3 fallback active | 0 |
+| Agent | ✅ Supervisor restarts (3 retries, exponential backoff) | 0 |
+| Orchestrator | ✅ Fallback to explore agent if classify fails | 1 (fixed) |
+| A2A | ✅ Dead agent check before send | 1 (fixed) |
+| A2C | ✅ Channel close on disconnect | 0 |
+| Dyad | ✅ Failover at 30s, health endpoint | 1 (fixed) |
+| Surface | ✅ /api/v1/health endpoint | 0 |
+| AGUI | ✅ Bubble Tea handles panic recovery | 0 |
+| Pre-hooks | ✅ 10s timeout per hook | 1 (fixed) |
+| Ralph | ✅ Manual /ralph rollback override | 0 |
+
+## Gaps Fixed (v18.0.0)
+
+| Gap | Severity | Fix |
+|-----|----------|-----|
+| Orchestrator no fallback | High | classifyByCapability falls back to explore agent |
+| A2A to dead agent | High | Check agent existence before send, return error |
+| Dyad health opaque | Medium | DyadHealth() returns full status map |
+| Pre-hook indefinite block | Medium | 10s timeout per Validate() call |
+
+## Remaining (low priority)
+
+| Gap | Why not critical |
+|-----|-----------------|
+| TUI widget crash | Bubble Tea recovers via panic handler |
+| Ring buffer overflow | OverflowCount() counter exposed via /api/v1/status | 1 (fixed) |
+| NATS down during dyad | Dyad marks PeerAlive=false on degraded | 1 (fixed) |
+| SSE client heartbeat | 15s heartbeat ping to detect dead clients | 1 (fixed) |
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

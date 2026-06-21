@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Io Audit — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# File I/O Primitives Audit — v18.0.0
+
+## Primitives Audited
+
+| Primitive | O(T) | Uses blocks? | Journaled? | Gaps |
+|-----------|------|-------------|------------|------|
+| **Write** | O(1) | ✅ self | ✅ journal.Push | Large files need streaming |
+| **Read** | O(n) | ✅ self | ❌ | No partial reads, no glob |
+| **Sed** | O(n*m) | ❌ os.ReadFile | ❌ | Pre-allocated, no streaming |
+| **Diff** | O(n) | ❌ os.ReadFile | ❌ | No streaming diff |
+| **MMap** | O(1) map | ✅ self | ❌ | Unix-only, no Windows |
+| **Compress** | O(n) | ❌ in-memory | ❌ | No streaming compress |
+| **Export** | O(n) | ❌ json.Marshal | ❌ | No streaming export |
+
+## Gaps
+
+| Gap | Severity | Fix |
+|-----|----------|-----|
+| No streaming Write | Medium | Add WriteStream for large files |
+| No partial Read | Medium | Add ReadRange(offset, length) |
+| No glob support | Low | Add Glob(pattern) for file discovery |
+| Sed doesn't use blocks.Write | High | Wire SedFile through blocks.Write |
+| Diff doesn't use blocks.Read | Medium | Use blocks.Read for prev state |
+| MMap is Unix-only | Low | Add Windows fallback |
+| No streaming export | Low | Add ExportStream for large brains |
+
+## Performance Suggestions
+
+1. **Sed: use mmap** instead of os.ReadFile for large files
+2. **Diff: use mmap** for both files when >64KB
+3. **Compress: streaming** instead of in-memory for >1MB
+4. **Export: streaming JSON** instead of json.Marshal for large brains
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

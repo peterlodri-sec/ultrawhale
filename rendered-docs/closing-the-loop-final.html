@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Closing The Loop Final — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Closing The Loop — Final E2E Verification
+
+## v18.0.0 → v18.0.0
+
+**70+ releases in one session.** ultrawhale built ultrawhale.
+
+## The Vaked Triangle — Complete
+
+| Dimension | Primitive | Since |
+|-----------|-----------|-------|
+| **Context** (WHAT) | POV, capabilities, brain, memos | v1.0 |
+| **Time** (WHEN) | Journal, sessions, Ralph versions, Lamport clock | v1.0 |
+| **Space** (WHERE) | Topology, distance, reachability, context-gated edges | v12.6 |
+
+## Context Wraps Space
+
+Space edges only form if context permits:
+- FULL → OBSERVE: ✅ (FULL has CapDelegate)
+- OBSERVE → FULL: ❌ (blocked)
+- Same machine: ✅ (adjacent)
+- Different region: ❌ (must share region)
+
+## Every Log Carries All Three
+
+```go
+Log(LogInfo, "blocks.Write", path, ref, prevRef, duration, err)
+//  ↑ context (what, where in code)
+//     ↑ time (duration)
+//        ↑ space (which node originated)
+```
+
+## E2E Verification
+
+- [x] 39 blocks compile + test PASS
+- [x] 7 plugins load (doctor OK)
+- [x] All 12 issues CLOSED
+- [x] vaked-base PR #381 MERGEABLE
+- [x] Vaked Triangle: Context × Time × Space complete
+- [x] Context-gated space: edges form only if capability permits
+- [x] Surface /api/v1/status carries all three dimensions
+- [x] /vaked-triangle command shows the complete picture
+
+## What ultrawhale IS
+
+ultrawhale is the surface that reveals. It is where Vaked's seven layers
+(Declares → Materializes → Supervises → Enforces → Testifies → Indexes → Reveals)
+become a running, self-improving, context-aware, time-ordered, space-gated system.
+
+The loop is closed. The loop begins again.
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>
