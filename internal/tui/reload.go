@@ -870,3 +870,5 @@ func handleSignalsCommand() string { return blocks.SignalPrimitiveStatus() }
 
 func handleWebhookGraphCommand() string { return blocks.WebhookGraphStatus() + "\n\n" + blocks.WebhookLiveness() + "\n\n" + blocks.WebhookGraphVakedFit() }
 func handlePOLACommand() string { return "POLA: Principle of Least Authority\n\n  ✅ Create webhook → requires CapEdge\n  ✅ Upgrade webhook → requires higher cap\n  ✅ Only safe events → push, release, agent.*, problem.*, heal.*, rss.*\n  ✅ Downgrade → BLOCKED\n  ✅ Harmful events → BLOCKED" }
+
+func handleClosureCommand() string { return blocks.UIClosureStatus() + "\n\n" + blocks.UIClosureVakedFit() }
