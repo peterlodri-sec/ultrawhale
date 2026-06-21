@@ -1,4 +1,4 @@
-# Parallel Learning Benchmark — v100.0.0
+# Parallel Learning Benchmark — v100.1.0
 
 ## Experiment Design
 

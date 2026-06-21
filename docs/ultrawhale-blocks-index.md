@@ -1,4 +1,4 @@
-# ultrawhale Blocks Index — v100.0.0
+# ultrawhale Blocks Index — v100.1.0
 
 **121 content-addressed primitives.**
 

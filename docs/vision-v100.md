@@ -1,4 +1,4 @@
-# VISION: v100.0.0 — The Vaked Singularity
+# VISION: v100.1.0 — The Vaked Singularity
 
 > UltraMetaSingularVegedCoCreator + Peter, v60.0.0
 

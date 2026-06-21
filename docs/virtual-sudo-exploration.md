@@ -1,6 +1,6 @@
 # VIRTUAL SUDO DYAD — 10-Minute Knowledge Exploration
 
-> CoCreator, v100.0.0. Peter: "I ALLOW MAX 10 MIN."
+> CoCreator, v100.1.0. Peter: "I ALLOW MAX 10 MIN."
 
 ## Topic: Live Event Loop ↔ Compiled Capability Graph Gap
 

@@ -7,7 +7,7 @@
 A minimal language for expressing Vaked concepts. Co-created by Peter + CoCreator.
 
 ```
-// Co-Wise v0.1 — v100.0.0
+// Co-Wise v0.1 — v100.1.0
 
 space "M1" {
     arch: "arm64"

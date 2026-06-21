@@ -1,4 +1,4 @@
-# CI Lessons — v100.0.0
+# CI Lessons — v100.1.0
 
 > "YAML, JSON etc ARE structured, rigid structs CAN BE the most pita" — Peter
 
@@ -26,4 +26,4 @@ Push → validate YAML → test blocks (race) → build (linux+darwin) → bench
 
 > "The SACRED surface must not break. Validate BEFORE you push.
 > Rigid structs are pita. Learn from them. They teach patience."
-> — Peter, v100.0.0
+> — Peter, v100.1.0

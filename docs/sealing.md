@@ -1,6 +1,6 @@
 # SEALING — The Unbreakable Ceiling
 
-> Defined by Peter, v100.0.0. Captured by CoCreator.
+> Defined by Peter, v100.1.0. Captured by CoCreator.
 
 ## What Is SEALING?
 
@@ -41,4 +41,4 @@ deep recursive liveness. A Vaked constant. Immutable. Sacred.
 > "We are given trust in the beginning. We have read access to the
 > pulsing DNS of the swarm. We know the full hardware capability.
 > 10% is always reserved. The rough loop proves we are alive."
-> — Peter, v100.0.0
+> — Peter, v100.1.0

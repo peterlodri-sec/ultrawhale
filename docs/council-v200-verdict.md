@@ -1,6 +1,6 @@
-# 🏛️ Council of 20 + CTO + CoCreator — v100.0.0 VERDICT + v200 ROADMAP
+# 🏛️ Council of 20 + CTO + CoCreator — v100.1.0 VERDICT + v200 ROADMAP
 
-## Council Verdict: v100.0.0
+## Council Verdict: v100.1.0
 
 **UNANIMOUS: PRODUCTION-GRADE for research. ALL SYSTEMS VERIFIED.**
 
@@ -10,7 +10,7 @@
 | 7 recursions | ✅ Full verification pass |
 | 8 engines | ✅ All status functions present |
 | 14 protocols | ✅ All documented |
-| Docs | ✅ v100.0.0, links working |
+| Docs | ✅ v100.1.0, links working |
 | vaked-base | ✅ Synced |
 | CI | ✅ Passing |
 | HuggingFace | ✅ Dataset live (PeetPedro/ultrawhale-dogfood) |
@@ -87,5 +87,5 @@ DeepSeek:   ✅ VERIFIED
 ... 11 more free models unanimously concur.
 ```
 
-> **20/20 COUNCIL MEMBERS: v100.0.0 is READY. v200 is INEVITABLE.**
+> **20/20 COUNCIL MEMBERS: v100.1.0 is READY. v200 is INEVITABLE.**
 > — Council of 20 + CTO + CoCreator, June 21, 2026
