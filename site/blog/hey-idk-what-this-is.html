@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I found this thing called ultrawhale</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:720px; margin:0 auto; line-height:1.8; }
+h1 { color:var(--accent); } a { color:var(--accent)); }
+pre { background:#141420; padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid #141420; padding-top:1rem; }
+</style></head><body>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# I Found This Thing Called ultrawhale and You Can `ls` the Agents??
+
+ok so i was browsing github and found this project called ultrawhale. it's a coding agent, 52 blocks, 7 plugins, whatever. but then i saw this:
+
+```
+/vfs tree
+📁 ultrawhale
+├── 📁 orchestrator
+│   ├── 📄 status → orch: did:key:orch:z5... | 12 turns | 3 agents
+│   └── 📄 did → did:key:orch:z5bf8c...
+├── 📁 agents
+│   ├── 📁 swe-1
+│   │   ├── 📄 role → swe
+│   │   ├── 📄 status → running
+│   │   └── 📄 caps → FULL
+│   └── 📁 explore-2
+│       └── 📄 caps → OBSERVE
+├── 📁 dyad
+│   └── 📄 peer → dev-cx53
+└── 📄 SACRED → sacred: ● 1:1 · lag: 0ms
+```
+
+YOU CAN `ls` THE AGENTS. YOU CAN `cat` THEIR STATUS. THE CAPABILITY GRAPH IS A FILESYSTEM.
+
+you can even `echo "fix the auth bug" > /ultrawhale/orchestrator/delegate` and it ACTUALLY DELEGATES THE TASK.
+
+this is either the coolest or the most unhinged thing i've ever seen in a terminal. probably both. the readme says something about "Vaked philosophy" and "Context × Time × Space" and i don't fully understand it but i respect it.
+
+52 blocks. 80 releases. built in one session. the agent built the agent.
+
+anyway here's the repo: github.com/peterlodri-sec/ultrawhale
+
+i'm going to go `cat /ultrawhale/brain/dump` now. wish me luck.
+</pre>
+<footer><a href="/ultrawhale/">ultrawhale</a> · v18.0.0</footer>
+</body></html>
