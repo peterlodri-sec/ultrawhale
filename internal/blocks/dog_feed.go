@@ -176,7 +176,7 @@ func (df *DogFeed) run() {
 }
 
 func (df *DogFeed) feed() {
-	atomic.AddInt64(&df.stats.FeedsAttempted)
+	atomic.AddInt64(&df.stats.FeedsAttempted, 1)
 
 	// Get recent user messages from brain
 	brain := GetBrain()
@@ -206,7 +206,7 @@ func (df *DogFeed) feed() {
 		SessionID:        CurrentVersion(),
 	}
 	df.samples = append(df.samples, sample)
-	atomic.AddInt64(&df.stats.FeedsSuccess)
+	atomic.AddInt64(&df.stats.FeedsSuccess, 1)
 	atomic.AddInt64(&df.stats.TotalTokens, int64(len(prompt)+len(freeResponse)))
 	df.stats.LastFeed = time.Now()
 
