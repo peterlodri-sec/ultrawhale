@@ -659,3 +659,6 @@ func handleKillCommand() string {
 func handlePermCommand() string {
 	return blocks.PermissionStatus()
 }
+
+
+func handleEngineCommand() string { return blocks.EngineStatus() + "\n\n" + blocks.EngineVakedFit() }

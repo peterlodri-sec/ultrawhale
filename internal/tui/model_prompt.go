@@ -67,6 +67,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleVakedTriangleCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/engine") {
+		m.setEphemeralInfo(handleEngineCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/space") {
 		m.setEphemeralInfo(handleSpaceCommand())
 		return nil
@@ -202,6 +206,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-triangle") {
 		m.setEphemeralInfo(handleVakedTriangleCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/engine") {
+		m.setEphemeralInfo(handleEngineCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/space") {
@@ -361,6 +369,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-triangle") {
 		m.setEphemeralInfo(handleVakedTriangleCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/engine") {
+		m.setEphemeralInfo(handleEngineCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/space") {
