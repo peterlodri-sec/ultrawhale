@@ -768,3 +768,31 @@ func handleChainCommand(line string) string {
 	chain := blocks.Pipe(parts...)
 	return blocks.ChainRender(chain)
 }
+func handleCounterCommand() string { return blocks.TokensCounter() }
+
+func handleProgressCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/progress"))
+	if len(parts) < 2 { return "usage: /progress <current> <total>" }
+	var cur, tot int
+	fmt.Sscanf(parts[0], "%d", &cur)
+	fmt.Sscanf(parts[1], "%d", &tot)
+	return blocks.ProgressBar(cur, tot, 40)
+}
+
+func handleSparklineCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/sparkline"))
+	if len(parts) == 0 { return "usage: /sparkline 1 2 3 4 5 6 7 8" }
+	var vals []int64
+	for _, p := range parts {
+		var v int64
+		fmt.Sscanf(p, "%d", &v)
+		vals = append(vals, v)
+	}
+	return blocks.Sparkline(vals)
+}
+
+func handleThemeCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/theme"))
+	if len(parts) == 0 { return blocks.ThemeStatus() }
+	return blocks.SetTheme(parts[0])
+}
