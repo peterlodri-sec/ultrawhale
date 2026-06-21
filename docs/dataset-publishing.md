@@ -13,7 +13,7 @@
 ### Primary: HuggingFace Datasets
 
 ```
-huggingface.co/datasets/peterlodri-sec/ultrawhale-dogfood
+huggingface.co/peterlodri-sec/ultrawhale-dogfood (create: huggingface-cli repo create)
 ```
 
 ```python
