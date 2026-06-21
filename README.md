@@ -7,6 +7,16 @@ brew install peterlodri-sec/ultrawhale/ultrawhale
 ultrawhale --model deepseek-v4-flash -w
 ```
 
+
+```
+╔══ LIVE ═══════════════════════════════════════╗
+║  🟢 v100.1.0 · M1/arm64 · 148 blocks          ║
+║  🐋 SACRED: ● 1:1 · perm: GRANTED              ║
+║  📡 HF: PeetPedro/ultrawhale-dogfood ✅         ║
+║  🌐 vaked.dev/ultrawhale · /help               ║
+╚════════════════════════════════════════════════╝
+```
+
 > 🟢 LIVE · M1/arm64 · 148 blocks · $37.19 total cost
 > [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) · [event horizon](https://vaked.dev/ultrawhale/event-horizon) · [docs](https://vaked.dev/ultrawhale/docs)
 
