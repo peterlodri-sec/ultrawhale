@@ -511,3 +511,7 @@ func handleCapsCommand() string { return blocks.CapStatus() }
 func handleMeshCommand() string {
 	return blocks.MeshAgentStatus()
 }
+
+func handleUICommand() string {
+	return blocks.UIStatus() + "\n" + blocks.VakedLayersRevealed()
+}

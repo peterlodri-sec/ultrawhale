@@ -1,23 +1,18 @@
 name: deploy-ultrawhale-site
-
 on:
   push:
     branches: [main]
-    paths:
-      - 'site/**'
-      - 'docs-book/book/**'
-
+    paths: ['site/**', 'docs-book/book/**']
 permissions:
   contents: read
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment: ci
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
