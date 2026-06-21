@@ -123,7 +123,7 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	def := o.classifyByCapability(prompt)
 
 	// Ralph: observe delegation
-	ralph = GetRalph()
+	ralph := GetRalph()
 	_ = ralph
 
 	// Spawn subagent
@@ -143,7 +143,6 @@ func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	}
 
 	// Ralph: observe this delegation
-	ralph = GetRalph()
 	ralph.Observe(prompt, def.Name, "delegated", 0, 0)
 
 	return agent.ID, def.Name
