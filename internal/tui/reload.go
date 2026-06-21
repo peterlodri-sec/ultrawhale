@@ -1056,3 +1056,6 @@ func handleTrust() string { return blocks.TrustStatus() }
 
 func handleBestPracticesCommand() string { return blocks.BestPracticesReport() }
 func handleSessionUpgradeCommand() string { return blocks.SessionUpgradeGraph() }
+
+func handleMaxLearnCommand() string { return blocks.MaxLearnStatus() + "\n\n" + blocks.MaxLearnVakedFit() }
+func handleGrowRateCommand() string { return blocks.GrowRateStatus() }
