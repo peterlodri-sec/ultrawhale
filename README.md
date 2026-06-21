@@ -46,10 +46,10 @@
 ```
 ![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
 [![cosign](https://img.shields.io/badge/cosign-signed-00e660)](https://sigstore.dev)
-[![SSH](https://img.shields.io/badge/SSH-HF%20Pro-ffaa00)](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood)
+[![SSH](https://img.shields.io/badge/SSH-HF%20Pro-ffaa00)](https://huggingface.co/datasets/peterlodri-sec/ultrawhale-dogfood)
 [![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/peterlodri-sec/ultrawhale)
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
-[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro/ultrawhale-dogfood)
+[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/peterlodri-sec/ultrawhale-dogfood)
 [![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
 [![v60](https://img.shields.io/badge/version-v100.1.0-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/releases)
 
@@ -68,7 +68,7 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 > [Read the full design](docs/recursion-fullstop.md)
 
 **vaked-base fork of DeepSeek Code Whale.**
-[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro/ultrawhale-dogfood)
+[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/peterlodri-sec/ultrawhale-dogfood)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.24%2B-00ADD8)](go.mod)
 [![macOS](https://img.shields.io/badge/macOS-arm64-black)](https://github.com/peterlodri-sec/ultrawhale)
@@ -76,12 +76,12 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 
  DeepSeek-native coding agent with content-addressed blocks engine (Go+Asm+GPU), 6 plugins, AG-UI themes, floating widgets, and 7-phase native agent loop.
 
-> Fork maintained at [PeetPedro/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/PeetPedro/vaked-base) monorepo.
+> Fork maintained at [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/peterlodri-sec/vaked-base) monorepo.
 
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  🔌 SSH:    git@hf.co:datasets/PeetPedro/ultrawhale-dogfood  │
+│  🔌 SSH:    git@hf.co:datasets/peterlodri-sec/ultrawhale-dogfood  │
 │  🔐 GPG:    2B2495E0AC50DAC7 · cabotage@pm.me                │
 │  📡 HF:     /webhook/hf · liveness pulse active              │
 │  📻 RADIO:  /radio on · lo-fi coding music                   │
@@ -109,7 +109,7 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 | Docs | [vaked.dev/ultrawhale/docs](https://vaked.dev/ultrawhale/docs) | ✅ 50+ pages |
 | Book | [vaked.dev/ultrawhale/book](https://vaked.dev/ultrawhale/book) | ✅ mdBook |
 | Blog | [vaked.dev/ultrawhale/blog](https://vaked.dev/ultrawhale/blog) | ✅ 2 posts |
-| HF Dataset | [PeetPedro/ultrawhale-dogfood](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood) | ✅ 60 samples |
+| HF Dataset | [peterlodri-sec/ultrawhale-dogfood](https://huggingface.co/datasets/peterlodri-sec/ultrawhale-dogfood) | ✅ 60 samples |
 | GitHub | [peterlodri-sec/ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | ✅ |
 
 ## 🎯 v100→v200 Roadmap
@@ -158,10 +158,10 @@ ultrawhale --model deepseek-v4-flash -w
 
 ```sh
 # Homebrew
-brew install PeetPedro/ultrawhale/ultrawhale
+brew install peterlodri-sec/ultrawhale/ultrawhale
 
 # Docker
-docker pull ghcr.io/PeetPedro/ultrawhale:latest
+docker pull ghcr.io/peterlodri-sec/ultrawhale:latest
 
 # Go install
 go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
@@ -196,7 +196,7 @@ ultrawhale has been audited for algorithmic complexity across all 59 blocks.
 
 ## 🤗 HuggingFace Pro + Dataset
 
-[![HF Dataset](https://img.shields.io/badge/🤗-ultrawhale--dogfood-ffaa00)](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood)
+[![HF Dataset](https://img.shields.io/badge/🤗-ultrawhale--dogfood-ffaa00)](https://huggingface.co/datasets/peterlodri-sec/ultrawhale-dogfood)
 
 **Live dataset** of human↔LLM interactions. 60 samples, 20 CS topics, PII-scrubbed.
 SSH-authenticated CI auto-publish. [Dataset docs](docs/brain-to-dataset.md)
@@ -319,4 +319,4 @@ Bench: go test -bench=. -benchmem ./internal/blocks/
 
 ## License
 
-Apache 2.0 (upstream). Fork maintained by [PeetPedro](https://github.com/PeetPedro).
+Apache 2.0 (upstream). Fork maintained by [peterlodri-sec](https://github.com/peterlodri-sec).
