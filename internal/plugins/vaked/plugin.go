@@ -161,6 +161,7 @@ func (p *Plugin) ParseVakedFile(path string) (*VakedGraph, error) {
 	// Feed parsed capabilities to orchestrator registry
 	// Parse workflow declarations
 	for _, d := range graph.Declares {
+			_ = d.Name // parsed declaration
 		if d.Kind == "workflow" {
 			fmt.Printf("[vaked] workflow declared: %s\n", d.Name)
 			// Register workflow with orchestrator
@@ -281,6 +282,7 @@ func (p *Plugin) buildGraph(rawJSON []byte, path string) (*VakedGraph, error) {
 	// Build edges from declarations
 	// Parse workflow declarations
 	for _, d := range graph.Declares {
+			_ = d.Name // parsed declaration
 		if d.Kind == "workflow" {
 			fmt.Printf("[vaked] workflow declared: %s\n", d.Name)
 			// Register workflow with orchestrator

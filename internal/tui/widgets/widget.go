@@ -71,8 +71,7 @@ var ShellActive bool // set by model when a shell tool is running
 func SafeView(name string, render func() string) string {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "[widget] %s panic: %v
-", name, r)
+			fmt.Fprintf(os.Stderr, "[widget] %s panic: %v\n", name, r)
 		}
 	}()
 	return render()

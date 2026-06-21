@@ -97,6 +97,15 @@ func (s *Surface) Start() {
 
 	mux.HandleFunc("/a2c/stream", A2CSSEHandler)
 
+	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(MCPInitialize())
+	})
+	mux.HandleFunc("/mcp/tools", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"tools": MCPListTools()})
+	})
+
 	mux.HandleFunc("/api/v1/theme", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
