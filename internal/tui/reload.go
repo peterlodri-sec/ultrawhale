@@ -691,3 +691,11 @@ func handleRecursionCommand() string { return blocks.RecursionStatus() + "\n\n" 
 func handleFoldCommand() string { return blocks.FoldStatus() + "\n\n" + blocks.FoldVakedFit() }
 
 func handleHonestyCommand() string { return blocks.HonestyLoopStatus() + "\n\n" + blocks.Rule1_NoSideEffects() + "\n\n" + blocks.Rule2_HonestyIsRewarded() + "\n\n" + blocks.Rule3_TheFormIsEternal() + "\n\n" + blocks.HonestyLoopVakedFit() }
+
+func handleRenderCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/render"))
+	if len(parts) < 2 { return "usage: /render <format> <content>\nformats: md, gsm, diff, json, csv" }
+	format := parts[0]
+	content2 := strings.Join(parts[1:], " ")
+	return blocks.RenderFormat(content2, format)
+}
