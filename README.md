@@ -1,5 +1,7 @@
 # 🐋 ultrawhale
 
+> ⚡ **CYBERPUNK THEME: ASCII-live WTF DEMO VIDEO COMING SOON...** ⚡
+
 A coding agent that builds itself. **148 blocks. 7 recursions. 14 protocols.** v100.1.0.
 
 ```sh
