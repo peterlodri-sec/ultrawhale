@@ -743,3 +743,5 @@ func handleDogFeedCommand(line string) string {
 }
 
 func handleCoCreateCommand() string { return blocks.UICoCreativeStatus() + "\n\n" + blocks.UICoCreativeVakedFit() }
+
+func handleObsidianCommand() string { return blocks.ObsidianStatus() + "\n\n" + blocks.ObsidianVakedFit() }
