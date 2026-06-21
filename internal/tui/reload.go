@@ -976,3 +976,8 @@ func handleASCIIBoxCommand() string { return blocks.ASCIIBoxVerify() + "\n\n" + 
 func handlePromiseCommand() string { return blocks.PromiseRender() + "\n\n" + blocks.PromiseVakedFit() }
 
 func handleEntropyCommand() string { return blocks.LivenessProofLoop() + "\n\n" + blocks.SurfaceEntropyVakedFit() }
+
+func handleEntropyLiveCommand() string {
+	blocks.CaptureFrame("manual-check")
+	return blocks.LivenessProofLoop()
+}

@@ -161,8 +161,10 @@ func (i *InfraBarWidget) renderBar() string {
 	i.probeMu.Unlock()
 
 	// Right: perf stat + uptime
+	entropy := blocks.SurfaceDrift()
+	entropyStr := fmt.Sprintf("▓ %.2f", entropy)
 	right := lipgloss.NewStyle().Foreground(i.dimColor()).Render(
-		i.PerfStat + " · " + fmt.Sprintf("%d tok", blocks.GetCurrent().TotalTokens))
+		i.PerfStat + " · " + fmt.Sprintf("%d tok · ▓ %.2f", blocks.GetCurrent().TotalTokens, blocks.SurfaceDrift()))
 
 	// Assemble: left · services · right
 	center := strings.Join(services, " │ ")
