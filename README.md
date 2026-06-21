@@ -2,7 +2,7 @@
 
 > <span style="color:#b44dff">⚡ CYBERPUNK THEME · ASCII-live demo coming soon ⚡</span>
 
-A coding agent that builds itself. **148 blocks. 7 recursions. 14 protocols.** v100.1.0.
+A coding agent that builds itself. **149 blocks. 7 recursions. 14 protocols.** v100.1.0.
 
 ```sh
 brew install peterlodri-sec/ultrawhale/ultrawhale
@@ -12,14 +12,14 @@ ultrawhale --model deepseek-v4-flash -w
 
 ```
 ╔══ LIVE ═══════════════════════════════════════╗
-║  🟢 v100.1.0 · M1/arm64 · 148 blocks          ║
+║  🟢 v100.1.0 · M1/arm64 · 149 blocks          ║
 ║  🐋 SACRED: ● 1:1 · perm: GRANTED              ║
 ║  📡 HF: PeetPedro/ultrawhale-dogfood ✅         ║
 ║  🌐 vaked.dev/ultrawhale · /help               ║
 ╚════════════════════════════════════════════════╝
 ```
 
-> 🟢 LIVE · M1/arm64 · 148 blocks · $37.19 total cost
+> 🟢 LIVE · M1/arm64 · 149 blocks · $37.19 total cost
 > [vaked.dev/ultrawhale](https://vaked.dev/ultrawhale) · [event horizon](https://vaked.dev/ultrawhale/event-horizon) · [docs](https://vaked.dev/ultrawhale/docs)
 
 ---
