@@ -1,6 +1,6 @@
 <!--
 ╔══════════════════════════════════════════════════════════════╗
-║  GENESIS BLOCK — ultrawhale v86.0.0                          ║
+║  GENESIS BLOCK — ultrawhale v87.0.0                          ║
 ║  Trust: peterlodri-sec/ultrawhale · cabotage@pm.me            ║
 ║  PROBLEM? → /problem · DEBUG? → /harden · REPORT? → issues   ║
 ╚══════════════════════════════════════════════════════════════╝
