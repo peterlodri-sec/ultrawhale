@@ -137,6 +137,18 @@ func (s *Surface) Start() {
 
 	mux.HandleFunc("/webhook/hf", HFWebhookReceive)
 
+	mux.HandleFunc("/api/v1/proofs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Record the current surface state as a SPACE+TIME proof
+		pov := CurrentPOV()
+		proof := GenerateProof(
+			Ref([]byte(fmt.Sprintf("%s:%s", pov.Machine, time.Now().String()))),
+			fmt.Sprintf("surface-recording-%s", pov.Machine),
+			0,
+		)
+		json.NewEncoder(w).Encode(proof)
+	})
+
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{

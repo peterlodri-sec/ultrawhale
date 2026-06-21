@@ -948,3 +948,13 @@ func handleProofCommand(line string) string {
 		return "/proof generate <hash> <watermark> | /proof verify <ref>"
 	}
 }
+
+func handleRecordPOVCommand() string {
+	pov := blocks.CurrentPOV()
+	proof := blocks.GenerateProof(
+		blocks.Ref([]byte(fmt.Sprintf("pov:%s:%d", pov.Machine, time.Now().UnixNano()))),
+		fmt.Sprintf("human-pov-%s", pov.Machine),
+		0,
+	)
+	return "📸 POV RECORDED\n\n" + blocks.RenderWatermark(proof)
+}
