@@ -1061,3 +1061,10 @@ func handleMaxLearnCommand() string { return blocks.MaxLearnStatus() + "\n\n" + 
 func handleGrowRateCommand() string { return blocks.GrowRateStatus() }
 
 func handleDoctorCommand() string { return blocks.DoctorRun() + "\n\n" + blocks.DoctorVakedFit() }
+
+func handlePublicCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/public"))
+	n := 20
+	if len(parts) > 0 { fmt.Sscanf(parts[0], "%d", &n) }
+	return blocks.PublicHistory(n) + "\n\n" + blocks.PublicLedgerVakedFit()
+}

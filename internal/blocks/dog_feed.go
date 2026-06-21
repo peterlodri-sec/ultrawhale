@@ -211,6 +211,9 @@ func (df *DogFeed) feed() {
 	}
 	df.samples = append(df.samples, sample)
 
+	// PUBLIC LEDGER: record this interaction
+	RecordPublicDogFeed(df.config.FreeModel, prompt, freeResponse)
+
 	// Ralph: learn from this dogfeed interaction
 	if ralph := GetRalph(); ralph != nil {
 		ralph.Observe(fmt.Sprintf("dogfeed:%s", df.config.FreeModel[:20]),
