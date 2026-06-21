@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a14"/>
+      <stop offset="100%" style="stop-color:#141420"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="200" height="200" fill="url(#bg)" rx="20"/>
+  
+  <!-- Recursion rings -->
+  <circle cx="100" cy="95" r="70" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.15"/>
+  <circle cx="100" cy="95" r="55" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.25"/>
+  <circle cx="100" cy="95" r="40" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.4"/>
+  
+  <!-- Vaked Triangle -->
+  <polygon points="100,30 160,130 40,130" fill="none" stroke="#00d4ff" stroke-width="2.5"/>
+  
+  <!-- SACRED center -->
+  <rect x="88" y="105" width="24" height="24" fill="none" stroke="#00e660" stroke-width="1.5" transform="rotate(45,100,117)"/>
+  
+  <!-- Pulse dot -->
+  <circle cx="100" cy="117" r="3" fill="#00e660"/>
+</svg>

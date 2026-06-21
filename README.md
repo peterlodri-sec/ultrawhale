@@ -1,5 +1,7 @@
 # 🐋 ultrawhale
 
+<p align="center"><img src="site/logo.svg" width="100" alt="ultrawhale logo"></p>
+
 > <span style="color:#b44dff">⚡ CYBERPUNK THEME · ASCII-live demo coming soon ⚡</span>
 
 A coding agent that builds itself. **149 blocks. 7 recursions. 14 protocols.** v100.1.0.
