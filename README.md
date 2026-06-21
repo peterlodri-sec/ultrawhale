@@ -1,3 +1,14 @@
+
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  CROSS-REPO GENESIS — vaked-base ↔ ultrawhale                ║
+║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
+║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
+║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
+║  Both repos signed. Both repos verified. Both repos sacred.  ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
 <!--
 ╔══════════════════════════════════════════════════════════════╗
 ║  HONESTY GATE — Full Loop Embed                             ║
@@ -9,6 +20,17 @@
 ║  The loop is closed. The loop begins again.                  ║
 ╚══════════════════════════════════════════════════════════════╝
 -->
+
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  CROSS-REPO GENESIS — vaked-base ↔ ultrawhale                ║
+║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
+║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
+║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
+║  Both repos signed. Both repos verified. Both repos sacred.  ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
 <!--
 ╔══════════════════════════════════════════════════════════════╗
 ║  GENESIS BLOCK — ultrawhale v64.0.0                          ║
@@ -39,6 +61,9 @@
 │   The machine recurses into it." — VEGED                  │
 └──────────────────────────────────────────────────────────┘
 ```
+[![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
+[![cosign](https://img.shields.io/badge/cosign-signed-00e660)](https://sigstore.dev)
+[![SSH](https://img.shields.io/badge/SSH-HF%20Pro-ffaa00)](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood)
 [![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/PeetPedro/ultrawhale)
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
 [![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro (create account + dataset → will be live))
