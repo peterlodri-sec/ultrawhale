@@ -49,7 +49,10 @@ func (s *Surface) Start() {
 				"context": "POV + capabilities + brain",
 				"time":    "journal + sessions + Ralph versions",
 				"space":   TopologyStatus(),
-			"sacred": map[string]any{
+			"sacred_health": GetSacredSurface().Health,
+			"sacred_direct": fmt.Sprintf("%v", GetSacredSurface().Direct),
+			"sacred_lag_ms": fmt.Sprintf("%d", GetSacredSurface().InputLag),
+			"_sacred": map[string]any{
 				"status":   GetSacredSurface().Health,
 				"direct":   GetSacredSurface().Direct,
 				"input_lag_ms": GetSacredSurface().InputLag,
