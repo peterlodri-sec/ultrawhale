@@ -897,3 +897,5 @@ func handleHistoryCommand(line string) string {
 }
 
 func handleSafeSpaceCommand() string { return blocks.SafeSpaceStatus() + "\n\n" + blocks.SafeSpaceVakedFit() }
+
+func handleSurfaceAtomsCommand() string { return blocks.SurfaceAtomStatus() + "\n\n" + blocks.SurfaceAtomVakedFit() }
