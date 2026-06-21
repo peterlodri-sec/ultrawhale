@@ -130,6 +130,11 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/rss.xml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.Write([]byte(RSSRender()))
+	})
+
 	mux.HandleFunc("/webhook/hf", HFWebhookReceive)
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {

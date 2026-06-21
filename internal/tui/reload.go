@@ -864,3 +864,6 @@ func handleStateCommand(line string) string {
 	default: return "/state here|dream|live"
 	}
 }
+
+func handleRSSCommand() string { return blocks.RSSStatus() + "\n\n" + blocks.SignalPrimitiveVakedFit() }
+func handleSignalsCommand() string { return blocks.SignalPrimitiveStatus() }
