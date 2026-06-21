@@ -176,7 +176,7 @@ Not a metric. Not a dashboard. A self-portrait.
   Everything is hardened.
 ```
 
-## Surface Entropy (v95.0.0)
+## Surface Entropy (v96.0.0)
 
 ```
 /entropy →
