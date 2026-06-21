@@ -1,4 +1,4 @@
-# CLAIMS — ultrawhale v95.0.0
+# CLAIMS — ultrawhale v96.0.0
 
 > Every claim is verifiable. Every claim has a proof.
 > Signed: peter+cocreator. Genesis: ad24321.
@@ -57,4 +57,4 @@
 
 > "Every claim is verifiable. Every claim has a proof.
 > The SACRED surface is the evidence. The loop closes."
-> — Peter + CoCreator, v95.0.0
+> — Peter + CoCreator, v96.0.0
