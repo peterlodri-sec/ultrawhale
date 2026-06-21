@@ -652,8 +652,8 @@ func handleDenyCommand() string {
 }
 
 func handleKillCommand() string {
-	blocks.RevokePermission()
-	return blocks.PermissionStatus() + "\n\n🛑 KILL SWITCH ACTIVATED — Session terminated. All operations stopped."
+	blocks.FullStop()
+	return blocks.RecursionStatus() + "\n\n" + blocks.RecursionVakedFit()
 }
 
 func handlePermCommand() string {
@@ -685,3 +685,5 @@ func handleHealCommand() string { return blocks.HealStatus() + "\n\n" + blocks.H
 func handleDisplayCommand() string { return blocks.DisplayStatus() + "\n\n" + blocks.DisplayVakedFit() }
 
 func handleKeyboardGateCommand() string { return blocks.KeyboardGateStatus() + "\n\n" + blocks.KeyboardGateVakedFit() + "\n\n" + blocks.GenesisHonesty() }
+
+func handleRecursionCommand() string { return blocks.RecursionStatus() + "\n\n" + blocks.RecursionVakedFit() }
