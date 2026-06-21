@@ -527,3 +527,40 @@ func handleVakedTriangleCommand() string {
 func handleSacredCommand() string {
 	return blocks.SacredStatus() + "\n\n" + blocks.SacredIsRevealsLayer()
 }
+
+func handleBrainstormCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/brainstorm"))
+	if len(parts) == 0 {
+		return "/brainstorm start <topic> | /brainstorm list | /brainstorm resume <id> | /brainstorm complete <id>"
+	}
+
+	switch parts[0] {
+	case "start":
+		if len(parts) < 2 { return "usage: /brainstorm start <topic>" }
+		topic := strings.Join(parts[1:], " ")
+		s := blocks.StartBrainstorm(topic, "freeform")
+		return fmt.Sprintf("brainstorm started: %s (%s)", s.ID[:12], topic)
+	case "list":
+		sessions := blocks.ListBrainstorms()
+		if len(sessions) == 0 { return "no active brainstorm sessions" }
+		var lines []string
+		for _, s := range sessions {
+			lines = append(lines, fmt.Sprintf("  [%s] %s (%d turns, %s)", s.ID[:12], s.Topic, len(s.Turns), s.Status))
+		}
+		return strings.Join(lines, "\n")
+	case "resume":
+		if len(parts) < 2 { return "usage: /brainstorm resume <id>" }
+		s := blocks.GetBrainstorm(parts[1])
+		if s == nil { return "session not found" }
+		s.Resume()
+		return fmt.Sprintf("brainstorm resumed: %s", s.Topic)
+	case "complete":
+		if len(parts) < 2 { return "usage: /brainstorm complete <id>" }
+		s := blocks.GetBrainstorm(parts[1])
+		if s == nil { return "session not found" }
+		s.Complete()
+		return fmt.Sprintf("brainstorm complete: %s · %d turns → brain", s.Topic, len(s.Turns))
+	default:
+		return "/brainstorm start|list|resume|complete"
+	}
+}

@@ -64,6 +64,19 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/api/v1/brainstorm", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var req struct { Topic string; Mode string }
+			json.NewDecoder(r.Body).Decode(&req)
+			s := StartBrainstorm(req.Topic, req.Mode)
+			json.NewEncoder(w).Encode(map[string]string{"id": s.ID, "topic": s.Topic})
+			return
+		}
+		sessions := ListBrainstorms()
+		json.NewEncoder(w).Encode(sessions)
+	})
+
 	mux.HandleFunc("/api/v1/mesh/topology", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
