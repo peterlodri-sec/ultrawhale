@@ -1,0 +1,22 @@
+{
+  "dataset": "ultrawhale-dogfood",
+  "version": "v1-initial",
+  "created": "2026-06-21T07:33:08Z",
+  "ultrawhale_version": "v62.0.0",
+  "license": "MIT + CC-BY-4.0",
+  "format": "JSONL",
+  "format_spec": "IEEE-754 float, UTF-8 strings, ISO 8601 timestamps",
+  "fields": [
+    "user_message",
+    "free_response",
+    "free_model",
+    "deepseek_response",
+    "timestamp",
+    "session_id"
+  ],
+  "pii_scrubbed": true,
+  "shadow_verified": true,
+  "clean_score_pct": 100.0,
+  "signed_by": "peter+cocreator",
+  "genesis_commit": "5cdb66e"
+}
