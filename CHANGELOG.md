@@ -152,4 +152,4 @@
 - Doctor: 9 self-examinations, first-class surface primitive
 - Public Ledger: READ-ONLY Ralph Loop + DogFeed history
 - Gap analysis: 7 gaps identified, 0 critical
-- 138 blocks, 157 releases
+- 138 blocks, 158 releases
