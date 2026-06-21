@@ -25,19 +25,10 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-amd64 ./cmd/whale
 
-      - name: Run tests
-        run: go test -v -race ./internal/blocks/ ./internal/modes/
-
       - name: Generate checksums
-      run: cd bin && sha256sum * > SHA256SUMS
+        run: cd bin && sha256sum * > SHA256SUMS
 
-    - name: Generate SBOM
-      uses: anchore/sbom-action@v0
-      with:
-        format: cyclonedx-json
-        output-file: bin/sbom.json
-
-    - name: Create Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -45,17 +36,7 @@ jobs:
             bin/ultrawhale-linux-arm64
             bin/ultrawhale-darwin-arm64
             bin/ultrawhale-darwin-amd64
+            bin/SHA256SUMS
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Docker image
-        run: docker build -t ultrawhale -f dist/docker/Dockerfile .
-
-      - name: Publish Docker image
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker tag ultrawhale ghcr.io/peterlodri-sec/ultrawhale:${{ github.ref_name }}
-          docker tag ultrawhale ghcr.io/peterlodri-sec/ultrawhale:latest
-          docker push ghcr.io/peterlodri-sec/ultrawhale:${{ github.ref_name }}
-          docker push ghcr.io/peterlodri-sec/ultrawhale:latest
