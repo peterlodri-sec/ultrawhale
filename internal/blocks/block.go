@@ -5,6 +5,7 @@ package blocks
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -187,3 +188,24 @@ func Batch(ops []BatchOp) error {
 }
 
 func (k BlockKind) String() string { return string(k) }
+
+// ReadRange reads a byte range from a file. Useful for large files.
+func ReadRange(path string, offset, length int64) (*Block, error) {
+	f, err := os.Open(path)
+	if err != nil { return nil, fmt.Errorf("readrange open: %w", err) }
+	defer f.Close()
+
+	if length <= 0 {
+		fi, _ := f.Stat()
+		length = fi.Size() - offset
+	}
+
+	content := make([]byte, length)
+	n, err := f.ReadAt(content, offset)
+	if err != nil && err != io.EOF { return nil, fmt.Errorf("readrange: %w", err) }
+
+	b := NewBlock(path, content[:n], KindFile)
+	Log(LogInfo, "blocks.ReadRange", fmt.Sprintf("%s [%d:%d]", path, offset, offset+length),
+		b.Ref, "", time.Since(time.Now()), nil)
+	return b, nil
+}
