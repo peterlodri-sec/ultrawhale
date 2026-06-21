@@ -1,10 +1,12 @@
 package blocks
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
+)
 
 // ── A2C Streaming — Agent-to-Client Output ───────────────────────────
 // Agents stream results to clients via SSE (Server-Sent Events).
@@ -49,10 +51,7 @@ func (s *A2CStream) Subscribe(clientID string) <-chan A2CEvent {
 }
 
 // Emit sends an event to all subscribed clients.
-// Notify VFS subscribers on space changes
-
-// original Emit preserved below
-func (s *A2CStream) _oldEmit(event A2CEvent) {
+func (s *A2CStream) Emit(event A2CEvent) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, ch := range s.clients {

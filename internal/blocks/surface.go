@@ -95,19 +95,7 @@ func (s *Surface) Start() {
 		})
 	})
 
-	mux.HandleFunc("/a2c/ws", WSA2CHandler) // WebSocket upgrade (replaces SSE)
-	mux.HandleFunc("/a2c/stream", A2CSSEHandler) // SSE fallback
-
-	mux.HandleFunc("/api/v1/protocols", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
-			"a2a":  A2AStatus(),
-			"a2c":  A2CStatus(),
-			"a2ui": A2UIStatus(),
-			"mcp":  MCPStatus(),
-			"http": "HTTP/1.1 + HTTP/2 upgrade + WebSocket",
-		})
-	})
+	mux.HandleFunc("/a2c/stream", A2CSSEHandler)
 
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -146,12 +134,7 @@ func (s *Surface) Start() {
 		w.Write([]byte(renderSurfaceHTML()))
 	})
 
-	s.server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.port),
-		Handler: mux,
-		// HTTP/2 is auto-negotiated by Go when TLS is configured.
-		// For localhost: HTTP/2 via h2c (HTTP/2 cleartext) upgrade.
-	}
+	s.server = &http.Server{Addr: fmt.Sprintf(":%d", s.port), Handler: mux}
 	s.running = true
 	go s.server.ListenAndServe()
 
