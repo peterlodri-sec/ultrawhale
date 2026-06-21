@@ -29,18 +29,16 @@ var maxLearn = &MaxLearnStats{
 func MaxLearnStatus() string {
 	elapsed := time.Since(maxLearn.StartTime).Round(time.Second)
 	feedsPerSec := float64(maxLearn.FeedsPerHour) / 3600.0
-
 	return ASCIIBox("MAX LEARN — Learning Rate", []string{
 		fmt.Sprintf("  Rate:      %d feeds/hour (%.1f/min)", maxLearn.FeedsPerHour, feedsPerSec*60),
 		fmt.Sprintf("  Models:    %d (parallel, no shared ctx)", maxLearn.ModelsActive),
-		fmt.Sprintf("  Interval:  30s (VakedDogFeedInterval)",
+		fmt.Sprintf("  Interval:  30s (VakedDogFeedInterval)"),
 		fmt.Sprintf("  Parallel:  %d feeds", maxLearn.ParallelFeeds),
 		fmt.Sprintf("  Tokens:    %d total", maxLearn.TotalTokens),
 		fmt.Sprintf("  Uptime:    %s", elapsed),
-		fmt.Sprintf("  Cost:      $0.00 (all free models)"),
+		fmt.Sprintf("  Cost:      \/bin/sh.00 (all free models)"),
 	}, 52)
 }
-
 func MaxLearnVakedFit() string {
 	return `MAX LEARN = LEARNING RATE AT MAXIMUM
 
