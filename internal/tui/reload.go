@@ -1053,3 +1053,6 @@ func handleDns() string { return blocks.PulsingDNSTree() }
 func handleHardware() string { return blocks.HardwareContextReport() }
 
 func handleTrust() string { return blocks.TrustStatus() }
+
+func handleBestPracticesCommand() string { return blocks.BestPracticesReport() }
+func handleSessionUpgradeCommand() string { return blocks.SessionUpgradeGraph() }
