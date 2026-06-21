@@ -28,3 +28,5 @@ func NegotiateProtocol(acceptHeader, connectionHeader, upgradeHeader string) Neg
 	}
 
 	// HTTP/2 (
+
+}
