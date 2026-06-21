@@ -1024,3 +1024,5 @@ func handlePOVRecoveryCommand(line string) string {
 	default: return "/pov away|back|cleanup"
 	}
 }
+
+func handleUIMediumCommand() string { return blocks.LiveExperiment() + "\n\n" + blocks.UIMediumVakedFit() }
