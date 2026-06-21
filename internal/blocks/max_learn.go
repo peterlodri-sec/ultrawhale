@@ -36,7 +36,7 @@ func MaxLearnStatus() string {
 		fmt.Sprintf("  Parallel:  %d feeds", maxLearn.ParallelFeeds),
 		fmt.Sprintf("  Tokens:    %d total", maxLearn.TotalTokens),
 		fmt.Sprintf("  Uptime:    %s", elapsed),
-		fmt.Sprintf("  Cost:      \/bin/sh.00 (all free models)"),
+		fmt.Sprintf("  Cost:      $0.00 (all free models)"),
 	}, 52)
 }
 func MaxLearnVakedFit() string {
