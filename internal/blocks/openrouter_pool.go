@@ -41,6 +41,7 @@ type FreeModelStats struct {
 }
 
 var freeModelPool = &FreeModelPool{
+	// MAX GROWTH — Peter allowed it. All available free models.
 	Models: []*FreeModel{
 		{ID: "google/gemma-3-4b-it:free", Provider: "Google"},
 		{ID: "mistralai/mistral-7b-instruct:free", Provider: "Mistral"},

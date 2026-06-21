@@ -22,7 +22,7 @@ func GrowRateStatus() string {
 
 	return ASCIIBox("GROW RATE — Dataset", []string{
 		fmt.Sprintf("  Samples:   %d", samples),
-		fmt.Sprintf("  Rate:      %.0f/hour (MAX learn)", 960.0),
+		fmt.Sprintf("  Rate:      %.0f/hour (MAX learn)", 2880.0  // 8 models × 6/min × 60min = 2880/hour at 10s interval),
 		fmt.Sprintf("  HF:        PeetPedro/ultrawhale-dogfood ✅"),
 		fmt.Sprintf("  License:   MIT + CC-BY-4.0"),
 		fmt.Sprintf("  Format:    JSONL (flat strings)"),
