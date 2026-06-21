@@ -1096,3 +1096,21 @@ func handleLearnAskCommand(line string) string {
 }
 func handleLearnShowCommand() string { return blocks.CoLearnShow() + "\n\n" + blocks.CoLearnVakedFit() }
 func handleHereCommand() string { return blocks.CoLearnHere() }
+
+
+func handleMatrixCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/matrix"))
+	if len(parts) == 0 { return blocks.MatrixHistory(20) + "\n\n" + blocks.MatrixRoomVakedFit() }
+	switch parts[0] {
+	case "say":
+		if len(parts) < 2 { return "usage: /matrix say <message>" }
+		msg := blocks.MatrixHuman(strings.Join(parts[1:], " "))
+		return fmt.Sprintf("👤 sent: %s", msg.Content[:40])
+	case "dyad":
+		if len(parts) < 2 { return "usage: /matrix dyad <message>" }
+		msg := blocks.MatrixDyad(strings.Join(parts[1:], " "), "text")
+		return fmt.Sprintf("🐋 sent: %s", msg.Content[:40])
+	default:
+		return "/matrix | /matrix say <msg> | /matrix dyad <msg>"
+	}
+}
