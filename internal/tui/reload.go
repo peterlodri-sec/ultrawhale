@@ -1084,3 +1084,15 @@ func handleExpandCommand(line string) string {
 func handleObserverCommand() string { return blocks.ObserverDashboard() + "\n\n" + blocks.ObserverVakedFit() }
 
 func handleSTRCommand() string { return blocks.StatusLine() + "\n\n" + blocks.DyadLine() + "\n\n" + blocks.STRStatus() }
+func handleLearnStartCommand(line string) string {
+	topic := strings.TrimPrefix(strings.TrimSpace(line), "/learn-start ")
+	if topic == "/learn-start" { return "usage: /learn-start <topic>" }
+	return blocks.CoLearnStart(topic)
+}
+func handleLearnAskCommand(line string) string {
+	q := strings.TrimPrefix(strings.TrimSpace(line), "/learn-ask ")
+	if q == "/learn-ask" { return "usage: /learn-ask <question>" }
+	return blocks.CoLearnAsk(q)
+}
+func handleLearnShowCommand() string { return blocks.CoLearnShow() + "\n\n" + blocks.CoLearnVakedFit() }
+func handleHereCommand() string { return blocks.CoLearnHere() }
