@@ -1,5 +1,10 @@
 # ultrawhale
 
+[![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/peterlodri-sec/ultrawhale)
+[![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
+[![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
+[![v60](https://img.shields.io/badge/version-v60.0.0-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/releases)
+
 > ⚠️ **ULTRA-DISCLAIMER**: If this repo ever gets deleted, the trust breaks.
 > The VICE engine activates. The PROBLEM primitive fires. The dyad fractures.
 > **This repository IS the trust anchor.** Preserve it. Mirror it. Fork it.
