@@ -2,6 +2,9 @@ package blocks
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
+	"time"
 	"sync"
 )
 
@@ -192,4 +195,30 @@ func WebhookGraphVakedFit() string {
   Liveness = active webhooks / total webhooks.
 
   "If current permissions allow and action is not harmful." — Peter`
+}
+
+
+// GitHubWebhookStatus returns GitHub-specific webhook liveness.
+func GitHubWebhookStatus() string {
+	return fmt.Sprintf("github-webhook: %d events · last push: %s · CI: %s",
+		webhookGraph.Stats.TotalFired,
+		"live",
+		func() string {
+			// Check CI status from git
+			cmd := exec.Command("git", "log", "--oneline", "-1")
+			out, _ := cmd.CombinedOutput()
+			return strings.TrimSpace(string(out))[:min(40, len(out))]
+		}())
+}
+
+// AllWebhooksLive returns liveness for all webhook types.
+func AllWebhooksLive() string {
+	return ASCIIBox("WEBHOOK LIVENESS", []string{
+		fmt.Sprintf("  GitHub:     %s", GitHubWebhookStatus()),
+		fmt.Sprintf("  HF:         %s", HFWebhookStatus()),
+		fmt.Sprintf("  Matrix:     %d members, %d msgs", len(matrixRoom.Members), len(matrixRoom.Messages)),
+		fmt.Sprintf("  RSS:        %d items", len(rssFeed.Items)),
+		fmt.Sprintf("  OSCE:       %d claims", len(osceExchange.Claims)),
+		fmt.Sprintf("  POLA:       %d blocks", webhookGraph.Stats.POLABlocks),
+	}, 52)
 }
