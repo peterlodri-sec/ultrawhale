@@ -960,3 +960,13 @@ func handleRecordPOVCommand() string {
 }
 
 func handleFold3DCommand() string { return blocks.Fold3DProof() + "\n\n" + blocks.Fold3DVakedFit() }
+
+func handleOneFoldCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/onefold"))
+	if len(parts) == 0 { return blocks.OneFoldStatus() + "\n\n" + blocks.OneFoldProveLive() + "\n\n" + blocks.OneFoldOptimize() }
+	switch parts[0] {
+	case "prove": return blocks.OneFoldProveLive()
+	case "optimize": return blocks.OneFoldOptimize()
+	default: return "/onefold | /onefold prove | /onefold optimize"
+	}
+}

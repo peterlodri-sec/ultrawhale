@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/onefold") { m.setEphemeralInfo(handleOneFoldCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/fold3d") { m.setEphemeralInfo(handleFold3DCommand()); return nil }
 	if strings.TrimSpace(value) == "/record-pov" { m.setEphemeralInfo(handleRecordPOVCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/proof") { m.setEphemeralInfo(handleProofCommand(value)); return nil }
@@ -328,6 +329,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/onefold") { m.setEphemeralInfo(handleOneFoldCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/fold3d") { m.setEphemeralInfo(handleFold3DCommand()); return nil }
 	if strings.TrimSpace(value) == "/record-pov" { m.setEphemeralInfo(handleRecordPOVCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/proof") { m.setEphemeralInfo(handleProofCommand(value)); return nil }
@@ -607,6 +609,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/onefold") { m.setEphemeralInfo(handleOneFoldCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/fold3d") { m.setEphemeralInfo(handleFold3DCommand()); return nil }
 	if strings.TrimSpace(value) == "/record-pov" { m.setEphemeralInfo(handleRecordPOVCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/proof") { m.setEphemeralInfo(handleProofCommand(value)); return nil }
