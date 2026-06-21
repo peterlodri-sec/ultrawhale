@@ -703,3 +703,5 @@ func handleRenderCommand(line string) string {
 func handleEvolveCommand() string { return blocks.EvolveStatus() + "\n\n" + blocks.EvolveVakedFit() }
 func handleFuzzCommand() string { return blocks.FuzzStatus() + "\n\n" + blocks.FuzzVakedFit() }
 func handleMeshCommand() string { return blocks.GlobalMeshStatus() + "\n\n" + blocks.GlobalMeshVakedFit() }
+
+func handleTranslateCommand() string { return blocks.TranslateStatus() + "\n\n" + blocks.TranslateVakedFit() }
