@@ -120,7 +120,7 @@ func GetOrchestrator() *Orchestrator {
 // The orchestrator NEVER calls the LLM directly — always delegates.
 func (o *Orchestrator) DelegatePrompt(prompt string) (string, string) {
 	// Classify the prompt to pick the right agent
-	def = o.classifyByCapability(prompt)
+	def := o.classifyByCapability(prompt)
 
 	// Ralph: observe delegation
 	ralph := GetRalph()
