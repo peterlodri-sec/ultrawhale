@@ -113,6 +113,12 @@ func SpawnSwarm(name, parent string, complexity int) *Swarm {
 	// Start nested AgentField
 	s.startAgentField()
 
+	// Port collision check
+	for _, existing := range swarmStore.swarms {
+		if existing.AFPorthttp == s.AFPorthttp {
+			return nil, fmt.Errorf("swarm: port %d already in use by %s", s.AFPorthttp, existing.ID[:8])
+		}
+	}
 	swarmStore.swarms[s.ID] = s
 
 	// Place swarm in space topology

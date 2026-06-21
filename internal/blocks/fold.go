@@ -138,3 +138,10 @@ Tool calls execute in parent context.
 Output flows up through the recursion tree.
 Context wraps agent. Recursion continues.`
 }
+
+
+func FoldCleanup(agentID string) {
+	FoldUnwind(agentID)
+	CancelTask(agentID)
+	Log(LogInfo, "fold.cleanup", fmt.Sprintf("%s fully cleaned", agentID[:8]), "", "", 0, nil)
+}
