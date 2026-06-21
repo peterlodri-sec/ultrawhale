@@ -47,7 +47,7 @@ func DyadSpaceAGUI() string {
 	if d.PeerAlive {
 
 	return fmt.Sprintf("[AG-UI ▸ dyad] %s %s↔%s (%s)",
-		d.Self.Machine, d.Peer.Machine, d.Status)
+		d.Self.Machine, d.Peer.Machine, d.Status))
 }
 
 // Wire dyad into every status box
