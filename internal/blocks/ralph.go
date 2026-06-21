@@ -267,6 +267,15 @@ func (r *RalphLoop) bumpPattern(pattern string, delta float64) float64 {
 	if v < 0 { v = 0 }
 	if v > 1 { v = 1 }
 	r.Patterns[pattern] = v
+	// LRU eviction: cap at 256 patterns
+	if len(r.Patterns) > 256 {
+		var oldest string
+		var oldestV float64 = 2.0
+		for k, val := range r.Patterns {
+			if val < oldestV { oldest = k; oldestV = val }
+		}
+		delete(r.Patterns, oldest)
+	}
 	return v
 }
 

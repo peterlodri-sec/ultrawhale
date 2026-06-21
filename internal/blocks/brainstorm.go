@@ -190,3 +190,22 @@ func ListBrainstorms() []*BrainstormSession {
 	for _, s := range brainstormSessions.sessions { result = append(result, s) }
 	return result
 }
+
+
+// StartBrainstormGC auto-completes brainstorm sessions idle for >1 hour.
+func StartBrainstormGC() {
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			brainstormSessions.mu.Lock()
+			cutoff := time.Now().Add(-1 * time.Hour)
+			for id, s := range brainstormSessions.sessions {
+				if s.Status == "active" && s.UpdatedAt.Before(cutoff) {
+					s.Complete()
+				}
+			}
+			brainstormSessions.mu.Unlock()
+		}
+	}()
+}

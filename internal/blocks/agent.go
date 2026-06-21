@@ -185,3 +185,22 @@ func (a *Agent) EdgeURL() string {
 	if a.Edge == nil { return "" }
 	return fmt.Sprintf("https://%s.%s.workers.dev", a.Edge.ID, os.Getenv("CF_ACCOUNT_ID"))
 }
+
+
+// StartAgentGC runs a background goroutine that evicts completed agents after TTL.
+func StartAgentGC(ttl time.Duration) {
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			agentsStore.mu.Lock()
+			cutoff := time.Now().Add(-ttl)
+			for id, a := range agentsStore.agents {
+				if a.Status != "running" && a.SpawnedAt.Before(cutoff) {
+					delete(agentsStore.agents, id)
+				}
+			}
+			agentsStore.mu.Unlock()
+		}
+	}()
+}
