@@ -13,13 +13,13 @@
 ### Primary: HuggingFace Datasets
 
 ```
-huggingface.co/peterlodri-sec/ultrawhale-dogfood (create: hf repo create)
+huggingface.co/PeetPedro/ultrawhale-dogfood (create: hf repos create)
 ```
 
 ```python
 # Load directly from HuggingFace
 from datasets import load_dataset
-dataset = load_dataset("peterlodri-sec/ultrawhale-dogfood")
+dataset = load_dataset("PeetPedro/ultrawhale-dogfood")
 ```
 
 ### Mirror: GitHub LFS
@@ -42,7 +42,7 @@ vaked.dev/ultrawhale/dogfood-v1.jsonl  # Direct download
 1. **HuggingFace**:
    - Create account at huggingface.co
    - `hf login`
-   - `hf repo create ultrawhale-dogfood --type dataset`
+   - `hf repos create ultrawhale-dogfood --type dataset`
    - Push: `cp ~/.ultrawhale/dogfeed/*.jsonl . && git add . && git commit -m "v1" && git push`
 
 2. **Git LFS**:
