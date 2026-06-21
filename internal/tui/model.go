@@ -243,6 +243,7 @@ type model struct {
 	ultracode *modes.UltracodeMode
 	infraBar *widgets.InfraBarWidget
 	orchPanel *widgets.OrchestratorPanelWidget
+	vakedDashboard *widgets.VakedDashboardWidget
 }
 
 type modelViewCache struct {
@@ -365,6 +366,7 @@ func newModel(rt Runtime, modelName, effort, thinking string) model {
 		hud:                statusline.DefaultHUD(80),
 		infraBar:            widgets.NewInfraBar(),
 		orchPanel:           widgets.NewOrchestratorPanel(),
+		vakedDashboard:      widgets.NewVakedDashboard(),
 	}
 	if rt != nil {
 		m.dispatch = rt.Dispatch

@@ -1,5 +1,12 @@
 package tui
 
+func (m *model) renderVakedDashboard() string {
+	if m.vakedDashboard != nil && m.vakedDashboard.Visible {
+		return m.vakedDashboard.View()
+	}
+	return ""
+}
+
 func (m *model) renderInfraBar() string {
 	if m.infraBar == nil || !m.infraBar.Visible {
 		return ""

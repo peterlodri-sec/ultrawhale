@@ -628,3 +628,15 @@ func handleVFSCommand(line string) string {
 		return "/vfs ls|cat|tree|cd|echo"
 	}
 }
+
+func handleVakedUICommand() string {
+	var lines []string
+	lines = append(lines, "Declares:     "+blocks.SchemaStatus())
+	lines = append(lines, "Materializes: "+blocks.NixStatus())
+	lines = append(lines, "Supervises:   "+blocks.GetOrchestrator().OrchestratorStatus())
+	lines = append(lines, "Enforces:     "+blocks.SacredStatus())
+	lines = append(lines, "Testifies:    "+blocks.ProbeStatus())
+	lines = append(lines, "Indexes:      "+blocks.SpaceStatus())
+	lines = append(lines, "Reveals:      "+blocks.UIStatus())
+	return "Vaked Layers:\n" + strings.Join(lines, "\n")
+}
