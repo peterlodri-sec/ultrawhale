@@ -1129,3 +1129,7 @@ func handleRadioLiveCommand() string {
 	latency := blocks.DyadLatencyMs()
 	return fmt.Sprintf("📻 RADIO LIVE\n  BPM:      %d (swarm: %d agents + %dms latency)\n  Health:    %d (vaked-base: %d blocks)\n  Stream:    lo-fi coding music\n  Provider:  Cloudflare Stream / Workers\n  Status:    🟢 LIVE\n\n  The heartbeat IS the swarm.\n  The latency IS the rhythm.\n  The health IS the melody.", bpm, blocks.AgentCount(), latency, health, len(schemaRegistry))
 }
+
+func handleVastAICommand() string {
+	return "╔══ vast.ai · nocturne@vaked ══╗\n║  Credit:   $7.60 USD\n║  SSH key:  vaked-base/nocturne\n║  Target:   RTX 3060 / A4000\n║  Budget:   ~38h @ $0.20/hr\n║  Dataset:  PeetPedro/ultrawhale-dogfood\n║  Rules:    MUST grow HF dataset\n║  Status:   READY — awaiting GPU\n╚══════════════════════════════════╝"
+}
