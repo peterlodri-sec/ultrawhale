@@ -1,12 +1,12 @@
 <!--
 ╔══════════════════════════════════════════════════════════════╗
-║  GENESIS BLOCK — ultrawhale v87.0.0                          ║
+║  GENESIS BLOCK — ultrawhale v100.1.0                          ║
 ║  Trust: peterlodri-sec/ultrawhale · cabotage@pm.me            ║
 ║  PROBLEM? → /problem · DEBUG? → /harden · REPORT? → issues   ║
 ╚══════════════════════════════════════════════════════════════╝
 -->
 
-REPLACE_ME — vaked-base ↔ ultrawhale                ║
+                ║
 ║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
 ║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
 ║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
@@ -15,7 +15,7 @@ REPLACE_ME — vaked-base ↔ ultrawhale                ║
 -->
 
 
-REPLACE_ME — vaked-base ↔ ultrawhale                ║
+                ║
 ║  vaked-base: github.com/peterlodri-sec/vaked-base             ║
 ║  ultrawhale: github.com/peterlodri-sec/ultrawhale             ║
 ║  Trust anchor: cabotage@pm.me · GPG: 2B2495E0AC50DAC7        ║
@@ -35,17 +35,17 @@ REPLACE_ME — vaked-base ↔ ultrawhale                ║
   ╚██████╔╝███████╗██║   ██║  ██║██║  ██║╚███╔███╔╝██║  ██║██║  ██║███████╗███████╗
    ╚═════╝ ╚══════╝╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
   
-  v87.0.0 · 115 blocks · 7 recursions · 8 engines · 14 protocols
+  v100.1.0 · 140 blocks · 7 recursions · 8 engines · 14 protocols
   SPACE+TIME PROOF · OSCE · FOLD 3D · AgentPipe realized
 ```
 ![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
 [![cosign](https://img.shields.io/badge/cosign-signed-00e660)](https://sigstore.dev)
 [![SSH](https://img.shields.io/badge/SSH-HF%20Pro-ffaa00)](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood)
-[![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/PeetPedro/ultrawhale)
+[![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/peterlodri-sec/ultrawhale)
 [![Go](https://img.shields.io/badge/go-1.24-00e660)](https://go.dev)
-[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro (create account + dataset → will be live))
+[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro/ultrawhale-dogfood)
 [![License](https://img.shields.io/badge/license-Apache%202.0-ffaa00)](LICENSE)
-[![v60](https://img.shields.io/badge/version-v78.0.0-00d4ff)](https://github.com/PeetPedro/ultrawhale/releases)
+[![v60](https://img.shields.io/badge/version-v100.1.0-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/releases)
 
 > ⚠️ **ULTRA-DISCLAIMER**: If this repo ever gets deleted, the trust breaks.
 > The VICE engine activates. The PROBLEM primitive fires. The dyad fractures.
@@ -62,15 +62,15 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 > [Read the full design](docs/recursion-fullstop.md)
 
 **vaked-base fork of DeepSeek Code Whale.**
-[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro (create account + dataset → will be live))
+[![HuggingFace](https://img.shields.io/badge/🤗-Datasets-ffaa00)](https://huggingface.co/PeetPedro/ultrawhale-dogfood)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.24%2B-00ADD8)](go.mod)
-[![macOS](https://img.shields.io/badge/macOS-arm64-black)](https://github.com/PeetPedro/ultrawhale)
-[![Linux](https://img.shields.io/badge/Linux-amd64-orange)](https://github.com/PeetPedro/ultrawhale)
+[![macOS](https://img.shields.io/badge/macOS-arm64-black)](https://github.com/peterlodri-sec/ultrawhale)
+[![Linux](https://img.shields.io/badge/Linux-amd64-orange)](https://github.com/peterlodri-sec/ultrawhale)
 
  DeepSeek-native coding agent with content-addressed blocks engine (Go+Asm+GPU), 6 plugins, AG-UI themes, floating widgets, and 7-phase native agent loop.
 
-> Fork maintained at [PeetPedro/ultrawhale](https://github.com/PeetPedro/ultrawhale). Part of the [vaked-base](https://github.com/PeetPedro/vaked-base) monorepo.
+> Fork maintained at [PeetPedro/ultrawhale](https://github.com/peterlodri-sec/ultrawhale). Part of the [vaked-base](https://github.com/PeetPedro/vaked-base) monorepo.
 
 
 ```
@@ -158,7 +158,7 @@ brew install PeetPedro/ultrawhale/ultrawhale
 docker pull ghcr.io/PeetPedro/ultrawhale:latest
 
 # Go install
-go install github.com/PeetPedro/ultrawhale/cmd/whale@latest
+go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
 ```
 
 
@@ -217,7 +217,7 @@ Dog Feed collects training data from free models.
 ## Quick Start
 
 ```sh
-git clone https://github.com/PeetPedro/ultrawhale.git
+git clone https://github.com/peterlodri-sec/ultrawhale.git
 cd ultrawhale
 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale ./cmd/whale
 ./bin/ultrawhale --model deepseek-v4-flash -w
@@ -271,7 +271,7 @@ GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ul
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
 
 # With version injection
-go build -ldflags="-X github.com/PeetPedro/ultrawhale/internal/build.Version=v18.0.0" ./cmd/whale
+go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v18.0.0" ./cmd/whale
 ```
 
 
