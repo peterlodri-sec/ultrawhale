@@ -103,6 +103,7 @@ func (l *SACREDEventLoop) run() {
 			l.tick()
 			// Auto-transition SELF_MAIN_STATE
 			AutoTransition()
+			SelfLiveTick()
 		}
 	}
 }

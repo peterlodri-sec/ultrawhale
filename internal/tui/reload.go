@@ -887,3 +887,11 @@ func handleLiveCommand() string {
 }
 
 func handleFreeModelsCommand() string { return blocks.FreeModelStatsReport() + "\n\n" + blocks.FreeModelPoolVakedFit() }
+
+func handleSelfLiveCommand() string { return blocks.SelfLiveSnapshot() }
+func handleHistoryCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/history"))
+	page := 0
+	if len(parts) > 0 { fmt.Sscanf(parts[0], "%d", &page) }
+	return blocks.SelfLiveHistoryRender(page, 10)
+}
