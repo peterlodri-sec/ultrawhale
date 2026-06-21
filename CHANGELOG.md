@@ -133,3 +133,9 @@
 - Council of LLMs: DeepSeek + OpenRouter FREE + GitHub Copilot
 - 6 Recursions: Full-Stop, Fold, Heal, EVOLVE, TRANSLATE, VICE
 - 94 blocks, 119 releases
+## v86.0.0 (2026-06-21) — SPACE+TIME PROOF + OSCE Protocol
+- SPACE+TIME PROOF: novel cryptographic primitive for local verifiable recording
+- OSCE: Open Self-Certifying Exchange (NEW protocol)
+- Agent Room: fold-lowered multi-agent conversation space
+- Surface Atom: surface as fundamental atom (like Space)
+- 114 blocks, 143 releases, 13 protocols
