@@ -1,0 +1,23 @@
+{
+  "dataset": "ultrawhale-dogfood",
+  "version": "v2-science",
+  "samples": 60,
+  "topics": 20,
+  "format": "JSONL",
+  "fields": [
+    "id",
+    "user_message",
+    "free_response",
+    "free_model",
+    "deepseek_response",
+    "timestamp",
+    "session_id",
+    "topic",
+    "format"
+  ],
+  "pii_scrubbed": true,
+  "science_useful": true,
+  "produced_by": "dogfeed-loop-v62",
+  "signed": "peter+cocreator",
+  "genesis": "5cdb66e"
+}
