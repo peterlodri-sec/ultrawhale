@@ -76,22 +76,27 @@ func LandingHowToStart() string {
 // LandingWhoAmI returns the "who am I" section.
 func LandingWhoAmI() string {
 	pov := CurrentPOV()
-	return fmt.Sprintf(`╔══ WHO AM I ═══════╗
+	return STR(`╔══ WHO AM I ═══════╗
 ║                    ║
-║  %s           ║
-║  %s blocks        ║
+║  {version}           ║
+║  {blocks} blocks        ║
 ║  7 recursions      ║
 ║  8 engines         ║
 ║  14 protocols      ║
 ║                    ║
-║  %s/%s/%s    ║
-║  %s releases      ║
+║  {machine}/{arch}/{tier}    ║
+║  {releases} releases      ║
 ║  ONE SESSION       ║
 ║                    ║
 ║  Peter+CoCreator   ║
-╚════════════════════╝`,
-		CurrentVersion(), fmt.Sprint(len(schemaRegistry)),
-		pov.Machine, pov.Arch, pov.Tier, fmt.Sprint(157))
+╚════════════════════╝`).
+		With("version", CurrentVersion()).
+		With("blocks", len(schemaRegistry)).
+		With("machine", pov.Machine).
+		With("arch", pov.Arch).
+		With("tier", pov.Tier).
+		With("releases", 158).
+		Build()
 }
 
 // LandingLiveWidget renders the complete landing widget.
