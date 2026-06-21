@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/disaster") { m.setEphemeralInfo(handleDisasterCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/curator") { m.setEphemeralInfo(handleCuratorCommand()); return nil }
 	if strings.TrimSpace(value) == "/entropy-live" { m.setEphemeralInfo(handleEntropyLiveCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/entropy") { m.setEphemeralInfo(handleEntropyCommand()); return nil }
@@ -334,6 +335,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/disaster") { m.setEphemeralInfo(handleDisasterCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/curator") { m.setEphemeralInfo(handleCuratorCommand()); return nil }
 	if strings.TrimSpace(value) == "/entropy-live" { m.setEphemeralInfo(handleEntropyLiveCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/entropy") { m.setEphemeralInfo(handleEntropyCommand()); return nil }
@@ -619,6 +621,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/disaster") { m.setEphemeralInfo(handleDisasterCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/curator") { m.setEphemeralInfo(handleCuratorCommand()); return nil }
 	if strings.TrimSpace(value) == "/entropy-live" { m.setEphemeralInfo(handleEntropyLiveCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/entropy") { m.setEphemeralInfo(handleEntropyCommand()); return nil }

@@ -986,3 +986,8 @@ func handleCuratorCommand() string {
 	audit := blocks.AuditREADME()
 	return audit + "\n\n" + blocks.READMECuratorVakedFit()
 }
+
+func handleDisasterCommand() string {
+	report := blocks.DoctorCheckDocs()
+	return report + "\n\n" + blocks.DisasterStatus() + "\n\n" + blocks.DisasterVakedFit()
+}
