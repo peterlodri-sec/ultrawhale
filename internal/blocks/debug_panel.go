@@ -89,7 +89,7 @@ func getLogTail(n int) []string {
 	var logs []string
 	for i := 0; i < n && i < count; i++ {
 		idx := (start + i) % len(globalLogger.buffer)
-		logs = append(logs, globalLogger.buffer[idx].Message[:min(48, len(globalLogger.buffer[idx].Message))])
+		logs = append(logs, globalLogger.buffer[idx].Detail[:min(48, len(globalLogger.buffer[idx].Detail))])
 	}
 	return logs
 }
