@@ -1082,3 +1082,5 @@ func handleExpandCommand(line string) string {
 }
 
 func handleObserverCommand() string { return blocks.ObserverDashboard() + "\n\n" + blocks.ObserverVakedFit() }
+
+func handleSTRCommand() string { return blocks.StatusLine() + "\n\n" + blocks.DyadLine() + "\n\n" + blocks.STRStatus() }
