@@ -705,3 +705,25 @@ func handleFuzzCommand() string { return blocks.FuzzStatus() + "\n\n" + blocks.F
 func handleMeshCommand() string { return blocks.GlobalMeshStatus() + "\n\n" + blocks.GlobalMeshVakedFit() }
 
 func handleTranslateCommand() string { return blocks.TranslateStatus() + "\n\n" + blocks.TranslateVakedFit() }
+
+func handleTaskCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/task"))
+	if len(parts) == 0 { return blocks.TaskManagerStatus() }
+	switch parts[0] {
+	case "list":
+		tasks := blocks.ListTasks()
+		if len(tasks) == 0 { return "no tasks" }
+		var lines []string
+		for _, t := range tasks {
+			lines = append(lines, fmt.Sprintf("  [%s] %s → %s", t.Status[:4], t.ID[:12], t.Agent))
+		}
+		return strings.Join(lines, "\n")
+	case "cancel":
+		if len(parts) < 2 { return "usage: /task cancel <id>" }
+		err := blocks.CancelTask(parts[1])
+		if err != nil { return err.Error() }
+		return "task cancelled"
+	default:
+		return "/task | /task list | /task cancel <id>"
+	}
+}
