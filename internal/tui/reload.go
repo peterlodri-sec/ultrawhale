@@ -981,3 +981,8 @@ func handleEntropyLiveCommand() string {
 	blocks.CaptureFrame("manual-check")
 	return blocks.LivenessProofLoop()
 }
+
+func handleCuratorCommand() string {
+	audit := blocks.AuditREADME()
+	return audit + "\n\n" + blocks.READMECuratorVakedFit()
+}
