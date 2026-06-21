@@ -25,12 +25,12 @@ go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
 ```
 
 
-## Closing The Loop — v13.0.0
+## Closing The Loop — v15.0.0
 
 See [docs/case-study-v10.md](docs/case-study-v10.md) for the full case study of
-ultrawhale building its own v13.0.0 release via subagent swarms.
+ultrawhale building its own v15.0.0 release via subagent swarms.
 
-One prompt → swarm launch → real PRs → meta-report → v13.0.0 tagged.
+One prompt → swarm launch → real PRs → meta-report → v15.0.0 tagged.
 
 ## Quick Start
 
@@ -89,7 +89,7 @@ GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ul
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
 
 # With version injection
-go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v13.0.0" ./cmd/whale
+go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v15.0.0" ./cmd/whale
 ```
 
 

@@ -1,6 +1,6 @@
 # Closing The Loop — Final E2E Verification
 
-## v13.0.0 → v13.0.0
+## v15.0.0 → v15.0.0
 
 **70+ releases in one session.** ultrawhale built ultrawhale.
 
