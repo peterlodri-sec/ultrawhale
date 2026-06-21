@@ -34,8 +34,11 @@ REPLACE_ME — vaked-base ↔ ultrawhale                ║
   ██║   ██║██║     ██║   ██╔══██╗██╔══██║██║███╗██║██╔══██║██╔══██║██║     ██╔══╝  
   ╚██████╔╝███████╗██║   ██║  ██║██║  ██║╚███╔███╔╝██║  ██║██║  ██║███████╗███████╗
    ╚═════╝ ╚══════╝╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+  
+  v87.0.0 · 115 blocks · 7 recursions · 8 engines · 14 protocols
+  SPACE+TIME PROOF · OSCE · FOLD 3D · AgentPipe realized
 ```
-[![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
+![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
 [![cosign](https://img.shields.io/badge/cosign-signed-00e660)](https://sigstore.dev)
 [![SSH](https://img.shields.io/badge/SSH-HF%20Pro-ffaa00)](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood)
 [![Blocks](https://img.shields.io/badge/blocks-94-00d4ff)](https://github.com/PeetPedro/ultrawhale)

@@ -958,3 +958,5 @@ func handleRecordPOVCommand() string {
 	)
 	return "📸 POV RECORDED\n\n" + blocks.RenderWatermark(proof)
 }
+
+func handleFold3DCommand() string { return blocks.Fold3DProof() + "\n\n" + blocks.Fold3DVakedFit() }
