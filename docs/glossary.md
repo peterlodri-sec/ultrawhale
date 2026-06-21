@@ -63,6 +63,17 @@
 | **Dyad** | Two-machine pairing. NOT a multi-node cluster. |
 | **Genesis** | Session start event. NOT a blockchain genesis block. |
 
+
+| **HUMAN POV RECOVERY** | NEVER RESTART. NEVER EXIT. Human leaves → DREAM. Human returns → HERE. |
+| **ALWAYS-IN-DYAD-SPACE** | The dyad is always visible in every surface. UI, ASCII, TUI, AG-UI. |
+| **TIME CAPSULE** | Sealed snapshot of THIS moment. Signed. Immutable. |
+| **README Curator** | Sacred document guardian. Audits, fixes, verifies. |
+| **Disaster Recovery** | Doctor learns from PROBLEMS. Auto-recovers missing docs. |
+| **SPACE+TIME PROOF** | Cryptographic proof of local recording. SPACE + TIME + WATERMARK. |
+| **OSCE** | Open Self-Certifying Exchange. A NEW protocol. Born here. |
+| **Surface Entropy** | ASCII-stream drift detection. Noise IS the proof. |
+| **1MIN** | vaked hard constant. DogFeed interval = 1 minute. |
+
 ## Self-Referential Terms
 
 | Term | Meaning |
