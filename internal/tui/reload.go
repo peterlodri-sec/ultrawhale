@@ -930,3 +930,21 @@ func handleRoomCommand(line string) string {
 		return "/room create <topic> | /room list"
 	}
 }
+
+func handleProofCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/proof"))
+	if len(parts) == 0 { return blocks.SpaceTimeProofStatus() + "\n\n" + blocks.SpaceTimeProofVakedFit() }
+	switch parts[0] {
+	case "generate":
+		if len(parts) < 3 { return "usage: /proof generate <hash> <watermark>" }
+		p := blocks.GenerateProof(parts[1], strings.Join(parts[2:], " "), 0)
+		return blocks.RenderWatermark(p)
+	case "verify":
+		if len(parts) < 2 { return "usage: /proof verify <proof-ref>" }
+		ok, p := blocks.VerifyProof(parts[1])
+		if ok && p != nil { return blocks.RenderWatermark(*p) + "\n\n✅ VERIFIED" }
+		return "❌ proof not found"
+	default:
+		return "/proof generate <hash> <watermark> | /proof verify <ref>"
+	}
+}
