@@ -89,12 +89,12 @@ func SelfLiveTick() SelfLiveEvent {
 	selfLiveHistory.mu.Lock()
 	defer selfLiveHistory.mu.Unlock()
 
-	state := MainState(loopState.Load())
+	state := GetMainState()
 	stateName := "UNKNOWN"
 	switch state {
-	case LoopStopped: stateName = "DREAM"
-	case LoopRunning: stateName = "HERE"
-	case LoopPausing: stateName = "DREAM"
+	case StateDream: stateName = "DREAM"
+	case StateHere: stateName = "HERE"
+	case StateLive: stateName = "LIVE"
 	default: stateName = "UNKNOWN"
 	}
 
@@ -207,11 +207,11 @@ func SelfLiveStatus() string {
 	selfLiveHistory.mu.Lock()
 	defer selfLiveHistory.mu.Unlock()
 
-	state := MainState(loopState.Load())
+	state := GetMainState()
 	stateName := "UNKNOWN"
-	if CanBroadcast() { stateName = "LIVE" }
-	if state == LoopRunning { stateName = "HERE" }
-	if state == LoopStopped { stateName = "DREAM" }
+	if state == StateLive { stateName = "LIVE" }
+	if state == StateHere { stateName = "HERE" }
+	if state == StateDream { stateName = "DREAM" }
 
 	return fmt.Sprintf("self-live: %s · %d events · token: %s",
 		stateName, len(selfLiveHistory.Events), GetOnceToken()[:8])
