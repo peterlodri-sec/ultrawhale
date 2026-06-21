@@ -665,3 +665,16 @@ func handleEngineCommand() string { return blocks.EngineStatus() + "\n\n" + bloc
 
 
 func handleUIEngineCommand() string { return blocks.UIEngineStatus() + "\n\n" + blocks.UIEngineVakedFit() }
+
+
+func handleVakedPipelineCommand() string {
+	return `╔══════════════════════════════════════════════════════════════════════════╗
+║                          VAKED PIPELINE v30                                ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ ┌──────────┐   ┌────────┐   ┌──────────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐ ║
+║ │ DECLARE  │──→│ ENGINE │──→│SUPERVISE │──→│ENFORCE │──→│TESTIFY │──→│ INDEX  │──→│REVEAL  │ ║
+║ │ schema   │   │ 60 blk │   │ orch     │   │ prehook│   │ probe  │   │ space  │   │ TUI    │ ║
+║ │ contract │   │ write  │   │ ralph    │   │ sacred │   │predict │   │ vfs    │   │surface │ ║
+║ └──────────┘   └────────┘   └──────────┘   └────────┘   └────────┘   └────────┘   └────────┘ ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════╝`
+}

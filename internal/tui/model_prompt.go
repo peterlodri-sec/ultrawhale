@@ -71,6 +71,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-pipeline") {
+		m.setEphemeralInfo(handleVakedPipelineCommand())
+		return nil
+	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/engine") {
 		m.setEphemeralInfo(handleEngineCommand())
 		return nil
@@ -214,6 +218,10 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-pipeline") {
+		m.setEphemeralInfo(handleVakedPipelineCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/engine") {
@@ -381,6 +389,10 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/ui-engine") {
 		m.setEphemeralInfo(handleUIEngineCommand())
+		return nil
+	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/vaked-pipeline") {
+		m.setEphemeralInfo(handleVakedPipelineCommand())
 		return nil
 	}
 	if strings.HasPrefix(strings.TrimSpace(value), "/engine") {
