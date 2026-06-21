@@ -65,7 +65,7 @@ func init() {
 				SealingStatus()
 		}},
 		{Name: "dyad-space", Check: func() (bool, string) {
-			d := GetDyad()
+			GetDyad()
 			return true, DyadSpaceStatus()
 		}},
 		{Name: "docs-healthy", Check: func() (bool, string) {
