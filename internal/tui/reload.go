@@ -727,3 +727,17 @@ func handleTaskCommand(line string) string {
 		return "/task | /task list | /task cancel <id>"
 	}
 }
+func handleDogFeedCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/dog-feed"))
+	if len(parts) == 0 { return blocks.DogFeedStatus() }
+	switch parts[0] {
+	case "on": return blocks.StartDogFeed("", 0)
+	case "off": return blocks.StopDogFeed()
+	case "export":
+		result, err := blocks.ExportDogFeed()
+		if err != nil { return err.Error() }
+		return result
+	case "status": return blocks.DogFeedStatus()
+	default: return "/dog-feed on|off|status|export"
+	}
+}
