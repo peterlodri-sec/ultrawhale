@@ -21,8 +21,8 @@ type VerifyStats struct {
 
 var verifier = &Verifier{Engine: "builtin"}
 
-// VerifyContract formally verifies a contract using the configured engine.
-func VerifyContract(name, condition string) (bool, string) {
+// FormalVerify formally verifies a contract using the configured engine.
+func FormalVerify(name, condition string) (bool, string) {
 	verifier.Stats.ProofsAttempted++
 
 	switch verifier.Engine {
