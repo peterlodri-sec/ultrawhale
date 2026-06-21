@@ -158,7 +158,7 @@ func expandAudit(target ExpandTarget) ExpandResult {
 	backwardExpandStats.NodesTraced++
 
 	// Audit: check all guarantees for a node
-	checks := HardenAll()
+	HardenAll()
 	drift := SurfaceDrift()
 
 	content := fmt.Sprintf(`╔══ EXPAND: audit %s ══╗
