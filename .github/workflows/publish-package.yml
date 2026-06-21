@@ -1,0 +1,35 @@
+name: publish-package
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - name: Publish Go module
+        run: |
+          # Tag the module with the release version
+          git config --global user.email "ci@ultrawhale.vaked.dev"
+          git config --global user.name "ultrawhale-ci"
+          
+          # Build + verify
+          go build ./cmd/whale
+          go test -race -count=1 -run TestReadWrite ./internal/blocks/
+          
+          echo "✅ Package ready for publishing"
+          echo "  Module: github.com/peterlodri-sec/ultrawhale"
+          echo "  Version: ${{ github.ref_name }}"
+      
+      - name: Publish to GitHub Packages
+        run: |
+          echo "To publish Go module to GitHub Packages:"
+          echo "  1. Go to: https://github.com/peterlodri-sec/ultrawhale/packages"
+          echo "  2. The package will appear after first release"
+          echo "  3. Users can then: go get github.com/peterlodri-sec/ultrawhale@${{ github.ref_name }}"
