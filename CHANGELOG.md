@@ -77,13 +77,13 @@
 - ~/.whale unified directory structure
 - File I/O audit + ReadRange + Glob primitives
 
-## v30.0.0 (2026-06-21) — SACRED Honesty Gate + Kill Switch
+## v33.0.0 (2026-06-21) — SACRED Honesty Gate + Kill Switch
 - Permission gate: /allow once per session, ALLOWED+AUTHED until revoked
 - Kill switch: /STOP___KILL_SWITCH___DO_FULL_STOP — full stop
 - 59 blocks, 6 plugins, 5 protocols
 - QUIC, gRPC, Multi-Machine, OneShot atomic primitive
 
-## v30.0.0 (2026-06-21) — 7 Engines: Vaked Pipeline Complete
+## v33.0.0 (2026-06-21) — 7 Engines: Vaked Pipeline Complete
 - declare-engine: schema + contract validation
 - engine: blocks execution (Write, Read, Sed, Delegate, OneShot)
 - supervise-engine: orchestrator + ralph + supervisor
@@ -91,3 +91,9 @@
 - testify-engine: probe + predict + learn
 - index-engine: space + vfs + crabcc
 - ui-engine: TUI + Surface + AG-UI + WebSocket
+
+## v33.0.0 (2026-06-21) — KEYBOARD GATE + Cleanup
+- Keyboard Gate: one-way honesty barrier — LLM CANNOT see keystrokes
+- Display primitive: Keyboard→Screen→TUI pipeline
+- Self-healing: 3 active heal checks
+- Stale docs removed (9 upstream files)

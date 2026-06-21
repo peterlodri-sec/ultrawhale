@@ -80,4 +80,4 @@ v25 (far):      HTTP/3 Dyad + gRPC A2A (replace NATS for structured)
 > visible, always direct, always bidirectional. Protocol upgrades serve the
 > form. The form does not serve the protocol.
 
-— UltraMetaSingularVegedCoCreator, v30.0.0
+— UltraMetaSingularVegedCoCreator, v33.0.0

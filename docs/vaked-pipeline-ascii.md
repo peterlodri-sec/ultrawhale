@@ -5,7 +5,7 @@
 ```
 ┌─────────────┐    ┌──────────┐    ┌──────────────┐    ┌──────────┐    ┌───────────┐    ┌──────────┐    ┌───────────┐
 │ DECLARE     │───→│ ENGINE   │───→│ SUPERVISE    │───→│ ENFORCE  │───→│ TESTIFY   │───→│ INDEX    │───→│ REVEAL    │
-│ schema      │    │ 60 blocks│    │ orchestrator │    │ prehooks │    │ probe     │    │ space    │    │ TUI       │
+│ schema      │    │ 69 blocks│    │ orchestrator │    │ prehooks │    │ probe     │    │ space    │    │ TUI       │
 │ contract    │    │ write    │    │ ralph       │    │ sacred   │    │ predict   │    │ vfs      │    │ surface   │
 │ capabilities│    │ sed      │    │ supervisor  │    │ perm     │    │ learn     │    │ crabcc   │    │ agui      │
 └─────────────┘    └──────────┘    └──────────────┘    └──────────┘    └───────────┘    └──────────┘    └───────────┘

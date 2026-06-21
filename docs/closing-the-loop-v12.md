@@ -52,7 +52,7 @@ Ultracode → Ralph → Capabilities: phase outcomes inform learning
 
 ## Real Cost (Estimated)
 
-91 releases built with ultrawhale itself. API tokens tracked via cost.go.
+95 releases built with ultrawhale itself. API tokens tracked via cost.go.
 Folded tokens represent internal agent orchestration overhead.
 DeepSeek V4 Flash pricing kept costs minimal throughout the session.
 
