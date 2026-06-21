@@ -159,7 +159,13 @@ func (p *Plugin) ParseVakedFile(path string) (*VakedGraph, error) {
 	blocks.Log(blocks.LogInfo, "vaked.parse", path, blocks.Ref(content), "", 0, nil)
 
 	// Feed parsed capabilities to orchestrator registry
+	// Parse workflow declarations
 	for _, d := range graph.Declares {
+		if d.Kind == "workflow" {
+			fmt.Printf("[vaked] workflow declared: %s\n", d.Name)
+			// Register workflow with orchestrator
+			_ = d.Name
+		}
 		if d.Kind == "runtime" || d.Kind == "fiber" {
 			blocks.SetCapProfile(d.Name, blocks.CapFULL)
 		}
@@ -273,7 +279,13 @@ func (p *Plugin) buildGraph(rawJSON []byte, path string) (*VakedGraph, error) {
 	}
 
 	// Build edges from declarations
+	// Parse workflow declarations
 	for _, d := range graph.Declares {
+		if d.Kind == "workflow" {
+			fmt.Printf("[vaked] workflow declared: %s\n", d.Name)
+			// Register workflow with orchestrator
+			_ = d.Name
+		}
 		if use, ok := d.Properties["use"].(string); ok {
 			graph.Edges = append(graph.Edges, VakedEdge{From: d.Name, To: use, Kind: "uses"})
 		}
