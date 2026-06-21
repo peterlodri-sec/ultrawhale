@@ -11,6 +11,8 @@ import (
 )
 
 // ── Dog Feed — Continuous LLM Data Collection ────────────────────────
+
+const VakedDogFeedInterval = 1 * time.Minute // vaked constant: 1MIN
 //
 // Background loop: send user messages to free OpenRouter models,
 // collect responses, build fine-tuning dataset.
@@ -59,7 +61,7 @@ var dogFeed = &DogFeed{
 	config: DogFeedConfig{
 		Enabled:    false,
 		FreeModel:  "google/gemma-3-4b-it:free",
-		Interval:   150 * time.Second,
+		Interval:   VakedDogFeedInterval: 1MIN === "soon" === "just for a bit" === "aaaa just one minute...." — Peter,
 		MaxSamples: 1000,
 		OutputDir:  "",
 	},

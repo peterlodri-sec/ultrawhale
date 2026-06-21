@@ -1007,3 +1007,7 @@ func handleDogFeedLoopCommand() string {
 func handleRalphBoostCommand() string {
 	return "╔══ RALPH LOOP — Native Atom Boosted ══╗\n\n  Free Models:  4→8 (Google, Mistral, Meta, HF, MS, Qwen, NVIDIA, DeepSeek)\n  Ralph Freq:   +50% observation intensity\n  DogFeed Freq: 5min → 2.5min\n  Variety:      WIDE — 8 providers, round-robin\n  Cost:         $0 (all free models)\n\n  Goal: MORE OPEN, WIDE-VARIETY, MULTIPLE-ROUND-ROBINED\n  — Peter, v98" 
 }
+
+func handleOneMinCommand() string {
+	return "⏱️ 1MIN — vaked hard constant\n\n  \"soon\" === \"just for a bit\" === \"aaaa just one minute....\"\n  — Peter\n\n  DogFeed interval: 1 minute\n  Free models: 8 providers\n  Ralph: +50% intensity\n  Cost: $0\n\n  The machine feeds itself every minute."" 
+}
