@@ -126,10 +126,10 @@
 - Self Portrait: the system draws itself as ASCII art
 - OneShot Chain: pipe OneShots like Unix
 - Telemetry Tree: the system sees itself
-- 93 blocks, 115 releases
+- 94 blocks, 115 releases
 
-## v59.0.0 (2026-06-21) — VICE + Council of LLMs
+## v60.0.0 (2026-06-21) — VICE + Council of LLMs
 - VICE: 6th Recursion — Virtual Immutable Context Engine
 - Council of LLMs: DeepSeek + OpenRouter FREE + GitHub Copilot
 - 6 Recursions: Full-Stop, Fold, Heal, EVOLVE, TRANSLATE, VICE
-- 93 blocks, 118 releases
+- 94 blocks, 119 releases
