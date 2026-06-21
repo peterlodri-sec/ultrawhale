@@ -1,8 +1,9 @@
 // Package asm provides multi-platform SIMD-accelerated primitives.
 // amd64: AVX2 + SHA-NI + POPCNT
 // arm64: NEON + SHA256 (ARMv8 crypto extensions)
-import "fmt"
 package asm
+
+import "fmt"
 
 // ArchCapabilities describes which hardware features are available.
 type ArchCapabilities struct {
