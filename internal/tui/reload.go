@@ -915,3 +915,18 @@ func handleOSCECommand(line string) string {
 		return "/osce | /osce send <receiver> <claim> | /osce exchange <peer> <claim>"
 	}
 }
+
+func handleRoomCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/room"))
+	if len(parts) == 0 { return blocks.AgentRoomStatus() + "\n\n" + blocks.AgentRoomVakedFit() }
+	switch parts[0] {
+	case "create":
+		if len(parts) < 2 { return "usage: /room create <topic>" }
+		r := blocks.CreateRoom(strings.Join(parts[1:], " "))
+		return fmt.Sprintf("room created: %s (%s)", r.ID[:8], r.Topic)
+	case "list":
+		return blocks.AgentRoomStatus()
+	default:
+		return "/room create <topic> | /room list"
+	}
+}

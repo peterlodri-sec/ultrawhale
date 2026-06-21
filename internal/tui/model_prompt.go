@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/room") { m.setEphemeralInfo(handleRoomCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/osce") { m.setEphemeralInfo(handleOSCECommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/surface-atoms") { m.setEphemeralInfo(handleSurfaceAtomsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/safespace") { m.setEphemeralInfo(handleSafeSpaceCommand()); return nil }
@@ -324,6 +325,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/room") { m.setEphemeralInfo(handleRoomCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/osce") { m.setEphemeralInfo(handleOSCECommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/surface-atoms") { m.setEphemeralInfo(handleSurfaceAtomsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/safespace") { m.setEphemeralInfo(handleSafeSpaceCommand()); return nil }
@@ -599,6 +601,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/room") { m.setEphemeralInfo(handleRoomCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/osce") { m.setEphemeralInfo(handleOSCECommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/surface-atoms") { m.setEphemeralInfo(handleSurfaceAtomsCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/safespace") { m.setEphemeralInfo(handleSafeSpaceCommand()); return nil }
