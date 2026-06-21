@@ -799,3 +799,6 @@ func handleThemeCommand(line string) string {
 
 
 func handleVICECommand() string { return blocks.VICEStatus() + "\n\n" + blocks.VICEVakedFit() + "\n\n" + blocks.VICEWarning() }
+
+func handleHardenCommand() string { return blocks.HardenAll() }
+func handleHugCommand() string { return blocks.MetaDigitalHug() }
