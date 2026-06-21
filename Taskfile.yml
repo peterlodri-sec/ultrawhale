@@ -83,6 +83,8 @@ tasks:
       - cp -r rendered-docs/* deploy-out/ultrawhale/docs/ 2>/dev/null; true
       - cp -r docs-book/book/* deploy-out/ultrawhale/book/ 2>/dev/null; true
       - cp -r site/blog/* deploy-out/ultrawhale/blog/ 2>/dev/null; true
+      - mkdir -p deploy-out/ultrawhale/dogfood
+      - cp -r site/dogfood/* deploy-out/ultrawhale/dogfood/ 2>/dev/null; true
       - wrangler pages deploy deploy-out --project-name=vaked-dev --branch=main --commit-dirty=true
       - rm -rf deploy-out
 

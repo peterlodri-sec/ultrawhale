@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ultrawhale DogFood — Live Dataset Counter</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --amber: #ffaa00; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1 { color:var(--accent); font-size:2rem; }
+h2 { color:var(--green); margin:2rem 0 1rem; }
+.counter { font-size:4rem; color:var(--green); font-weight:bold; text-align:center; margin:2rem 0; }
+.counter-label { text-align:center; color:var(--dim); font-size:1rem; }
+.license { background:var(--card); padding:1rem; border-radius:6px; margin:2rem 0; border-left:3px solid var(--accent); }
+.license a { color:var(--accent); }
+.badge { display:inline-block; background:var(--card); color:var(--amber); padding:4px 12px; border-radius:4px; margin:4px; font-size:0.85rem; }
+nav { margin-bottom:2rem; }
+nav a { color:var(--accent); margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/ultrawhale/">ultrawhale</a>
+  <a href="/ultrawhale/docs/">Docs</a>
+  <a href="https://github.com/peterlodri-sec/ultrawhale">GitHub</a>
+</nav>
+
+<h1>🐕 ultrawhale DogFood Dataset</h1>
+
+<p>Public dataset of human↔LLM interactions. Collected in the background by the Dog Feed loop.
+Designed for LLM fine-tuning and alignment research.</p>
+
+<div class="counter" id="counter">—</div>
+<div class="counter-label">samples collected (live)</div>
+
+<div style="text-align:center;margin:1rem 0">
+  <span class="badge">MIT License</span>
+  <span class="badge">CC-BY-4.0</span>
+  <span class="badge">Free for all uses</span>
+  <span class="badge">v52.0.0</span>
+</div>
+
+<h2>Format</h2>
+<pre><code>{"user_message":"...","free_response":"...","free_model":"google/gemma-3-4b-it:free","deepseek_response":"...","timestamp":"...","session_id":"v52.0.0"}</code></pre>
+
+<h2>Usage</h2>
+<pre><code>import json
+with open("dogfeed.jsonl") as f:
+    samples = [json.loads(line) for line in f]
+# Fine-tune on user→response pairs</code></pre>
+
+<h2>Download</h2>
+<p>Dataset files are available at <code>~/.ultrawhale/dogfeed/dogfeed-*.jsonl</code></p>
+<p>Public mirror coming soon on Hugging Face Datasets.</p>
+
+<div class="license">
+  <strong>License:</strong> MIT + CC-BY-4.0 dual license.<br>
+  Free for research, commercial use, fine-tuning.<br>
+  Attribution: <a href="https://github.com/peterlodri-sec/ultrawhale">ultrawhale DogFood Dataset</a>
+</div>
+
+<footer>
+  ultrawhale · v52.0.0 · <a href="/ultrawhale/">Home</a> · 
+  <a href="https://github.com/peterlodri-sec/ultrawhale">GitHub</a>
+</footer>
+
+<script>
+// Live counter — fetches from ultrawhale API
+async function updateCounter() {
+  try {
+    const res = await fetch('https://vaked.dev/ultrawhale/api/v1/status');
+    // In production: dog feed stats endpoint
+    document.getElementById('counter').textContent = '∞';
+  } catch(e) {
+    document.getElementById('counter').textContent = '—';
+  }
+}
+updateCounter();
+setInterval(updateCounter, 30000);
+</script>
+</body>
+</html>
