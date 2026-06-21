@@ -44,7 +44,8 @@ func DyadSpaceAGUI() string {
 	d := GetDyad()
 	if d == nil { return "[AG-UI ▸ dyad] offline" }
 
-	color := "#ffaa00"
+	// color unused, kept for AG-UI reference
+	_ = "#ffaa00"
 	if d.PeerAlive { color = "#00e660" }
 
 	return fmt.Sprintf("[AG-UI ▸ dyad] %s %s↔%s (%s)",
