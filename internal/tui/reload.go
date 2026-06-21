@@ -745,3 +745,16 @@ func handleDogFeedCommand(line string) string {
 func handleCoCreateCommand() string { return blocks.UICoCreativeStatus() + "\n\n" + blocks.UICoCreativeVakedFit() }
 
 func handleObsidianCommand() string { return blocks.ObsidianStatus() + "\n\n" + blocks.ObsidianVakedFit() }
+
+func handleProblemCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/problem"))
+	if len(parts) == 0 { return blocks.ProblemStatus() + "\n\n" + blocks.ProblemVakedFit() }
+	switch parts[0] {
+	case "detect":
+		if len(parts) < 2 { return "usage: /problem detect <description>" }
+		p := blocks.DetectProblem(strings.Join(parts[1:], " "), "BIG_PROBLEM")
+		return fmt.Sprintf("PROBLEM detected: %s → shadow universe (%d attempts)", p.ID[:12], p.MaxAttempts)
+	default:
+		return "/problem | /problem detect <description>"
+	}
+}
