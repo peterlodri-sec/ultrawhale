@@ -67,8 +67,8 @@ func PredictOutcome(prompt string, agentRole string) Prediction {
 		}
 	}
 
-	p.history = append(p.history, p)
-	if len(p.history) > 64 { p.history = p.history[len(p.history)-64:] }
+	predictor.history = append(predictor.history, p)
+	if len(predictor.history) > 64 { predictor.history = predictor.history[len(predictor.history)-64:] }
 
 	return p
 }
@@ -101,4 +101,3 @@ func PredictStatus() string {
 		last.Prompt[:min(30, len(last.Prompt))], last.Agent, last.Confidence*100, last.Reason)
 }
 
-func min(a, b int) int { if a < b { return a }; return b }
