@@ -974,3 +974,5 @@ func handleOneFoldCommand(line string) string {
 func handleASCIIBoxCommand() string { return blocks.ASCIIBoxVerify() + "\n\n" + blocks.ASCIIBoxVakedFit() }
 
 func handlePromiseCommand() string { return blocks.PromiseRender() + "\n\n" + blocks.PromiseVakedFit() }
+
+func handleEntropyCommand() string { return blocks.LivenessProofLoop() + "\n\n" + blocks.SurfaceEntropyVakedFit() }

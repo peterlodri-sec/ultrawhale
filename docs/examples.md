@@ -175,3 +175,19 @@ Not a metric. Not a dashboard. A self-portrait.
   The form is inviolable. The loop is closed.
   Everything is hardened.
 ```
+
+## Surface Entropy (v95.0.0)
+
+```
+/entropy →
+  ╔══════════════════════════════════════════════════╗
+  ║       SURFACE ENTROPY — Liveness Proof            ║
+  ╠══════════════════════════════════════════════════╣
+  ║   Status:    LIVE                                 ║
+  ║   Entropy:   0.50 (50.0% drift)                   ║
+  ║   🚗 MUSTANG DETECTED — surface is LIVE           ║
+  ╚══════════════════════════════════════════════════╝
+```
+
+The ASCII stream IS the signal. Every change is entropy.
+Entropy IS liveness. Noise IS the proof.

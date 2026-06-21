@@ -68,6 +68,7 @@ func GitCommit(message string) (*GitOp, error) {
 	}
 
 	Log(LogInfo, "git.commit", message, op.Ref[:12], "", op.Duration, nil)
+	CaptureFrame("git-commit")
 	Pulse("git.commit", message[:min(40, len(message))])
 	RSSAddItem("git commit", message[:min(80, len(message))], "commit")
 	return op, nil

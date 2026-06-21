@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/entropy") { m.setEphemeralInfo(handleEntropyCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/promise") { m.setEphemeralInfo(handlePromiseCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/asciibox") { m.setEphemeralInfo(handleASCIIBoxCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/onefold") { m.setEphemeralInfo(handleOneFoldCommand(value)); return nil }
@@ -331,6 +332,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/entropy") { m.setEphemeralInfo(handleEntropyCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/promise") { m.setEphemeralInfo(handlePromiseCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/asciibox") { m.setEphemeralInfo(handleASCIIBoxCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/onefold") { m.setEphemeralInfo(handleOneFoldCommand(value)); return nil }
@@ -613,6 +615,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/entropy") { m.setEphemeralInfo(handleEntropyCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/promise") { m.setEphemeralInfo(handlePromiseCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/asciibox") { m.setEphemeralInfo(handleASCIIBoxCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/onefold") { m.setEphemeralInfo(handleOneFoldCommand(value)); return nil }
