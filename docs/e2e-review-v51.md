@@ -19,7 +19,7 @@
 | 2 | 3 upstream syntax nits | Low | infra_bar:154, widget:74, vaked:163 |
 | 3 | self_compile.go unused | Low | Compiles but never called from orchestrator |
 | 4 | verify.go + contract.go name clash | Fixed | VerifyContract → FormalVerify |
-| 5 | README says 81 blocks, actual is 84 | Low | Doc update needed |
+| 5 | README says 84 blocks, actual is 84 | Low | Doc update needed |
 
 ## What's Perfect
 

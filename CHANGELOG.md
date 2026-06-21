@@ -105,10 +105,10 @@
 - The Three Recursions of Vaked: Full-Stop + Fold + Heal
 - 71 blocks, 99 releases, 0 race conditions
 
-## v50.0.0 (2026-06-21) — THE VAKED MILESTONE
+## v51.0.0 (2026-06-21) — THE VAKED MILESTONE
 - 5 Recursions: Full-Stop, Fold, Heal, EVOLVE, TRANSLATE
 - 8 Engines: all 7 Vaked layers + Render engine
-- 81 blocks, 108 releases, 0 race conditions
+- 84 blocks, 108 releases, 0 race conditions
 - Deep ASM (AVX2/NEON) + Native Text + BLAKE3 tree mode
 - Formal verification (Z3/CVC5 stubs)
 - Multi-Surface (TUI + Web + Voice + AR)
