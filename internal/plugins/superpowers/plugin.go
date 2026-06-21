@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/usewhale/whale/internal/agent"
+	"github.com/usewhale/whale/internal/blocks"
 	"github.com/usewhale/whale/internal/plugintypes"
 )
 
