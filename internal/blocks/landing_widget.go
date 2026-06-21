@@ -91,7 +91,7 @@ func LandingWhoAmI() string {
 ║  Peter+CoCreator   ║
 ╚════════════════════╝`,
 		CurrentVersion(), fmt.Sprint(len(schemaRegistry)),
-		pov.Machine, pov.Arch, pov.Tier, 157)
+		pov.Machine, pov.Arch, pov.Tier, fmt.Sprint(157))
 }
 
 // LandingLiveWidget renders the complete landing widget.
