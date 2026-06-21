@@ -91,6 +91,32 @@ I WROTE 0, ZERO, `null`, `NONE` (amount of code) in this
 ```
 
 
+
+## 🐋 What is ultrawhale?
+
+ultrawhale is a **coding agent** that builds itself. It's a research project,
+a philosophy, and a 121-block TUI application. You type. It thinks.
+Together you build things.
+
+```sh
+# One command to start
+brew install ultrawhale
+ultrawhale --model deepseek-v4-flash -w
+```
+
+## 🧠 Quick Concepts (copy-paste friendly)
+
+| Concept | Command | What it does |
+|---------|---------|-------------|
+| The Vaked Triangle | `/vaked-pipeline` | Context × Time × Space |
+| Fold = Gravity | `/fold3d` | 5D recursion visualization |
+| SACRED surface | `/sacred` | Inviolable form check |
+| SPACE+TIME PROOF | `/record-pov` | Cryptographic proof of recording |
+| Surface entropy | `/entropy` | Liveness detection (▓ 0.88) |
+| I PROMISE PETER | `/promise` | Mathematically provable LIVE |
+
+## 📊 State (always current)
+
 ## Install
 
 ```sh
