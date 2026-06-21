@@ -101,7 +101,7 @@ func (ut *UltraTriggerState) feed() {
 		ralph.Observe("ultra-honesty:"+e.Entity, e.Violation, e.Outcome, 0, 0)
 		ut.LessonsFed++
 	}
-	honestyLedger.mu.Unlock()
+	
 
 	Log(LogInfo, "ultra.feed",
 		fmt.Sprintf("fed %d patterns + %d problems + %d lessons",
@@ -117,7 +117,7 @@ func (ut *UltraTriggerState) learn() {
 	// Ralph synthesizes ALL patterns into long-term memory
 	ralph := GetRalph()
 	if ralph != nil {
-		ralph.Snapshot("ultra-trigger")
+		ralph.snapshot("ultra-trigger")
 	}
 
 	// Persist to brain
