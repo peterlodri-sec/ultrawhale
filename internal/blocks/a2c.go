@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"strings"
 	"time"
 )
 
@@ -51,7 +52,22 @@ func (s *A2CStream) Subscribe(clientID string) <-chan A2CEvent {
 }
 
 // Emit sends an event to all subscribed clients.
-func (s *A2CStream) Emit(event A2CEvent) {
+// Notify VFS subscribers on space changes
+	if event.Type == "layer_update" && strings.Contains(event.Content, "space") {
+		InitVFS() // rebuild VFS on space topology change
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, ch := range s.clients {
+		select {
+		case ch <- event:
+		default:
+		}
+	}
+}
+
+// original Emit preserved below
+func (s *A2CStream) _oldEmit(event A2CEvent) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, ch := range s.clients {

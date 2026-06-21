@@ -306,3 +306,12 @@ func SpaceReachable(from string, needCap Capability) []string {
 	}
 	return result
 }
+
+
+// PlaceFiberNode places an edge agent (fiber) in the space topology.
+func PlaceFiberNode(fiberID, machine string) {
+	PlaceNode(fiberID, "fiber",
+		SpacePosition{Depth: 2, Layer: "edge", Machine: machine, Region: "global"},
+		CapFULL)
+	ConnectNodes("orchestrator", fiberID, "contains", 0)
+}

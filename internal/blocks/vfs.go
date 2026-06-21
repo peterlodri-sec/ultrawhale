@@ -98,6 +98,17 @@ func InitVFS() {
 	vfsMkfile(blocks, "count", fmt.Sprintf("%d", len(schemaRegistry)))
 	vfsMkfile(blocks, "list", SchemaStatus())
 
+	// /ultrawhale/space/
+	spaceDir := vfsMkdir(uw, "space")
+	for id, node := range spaceTopology.Nodes {
+		nodeDir := vfsMkdir(spaceDir, id[:12])
+		vfsMkfile(nodeDir, "kind", node.Kind)
+		vfsMkfile(nodeDir, "layer", node.Position.Layer)
+		vfsMkfile(nodeDir, "machine", node.Position.Machine)
+		vfsMkfile(nodeDir, "caps", node.Capabilities.Name)
+	}
+	vfsMkfile(spaceDir, "total", fmt.Sprintf("%d nodes, %d edges", len(spaceTopology.Nodes), len(spaceTopology.Edges)))
+
 	// /ultrawhale/SACRED
 	vfsMkfile(uw, "SACRED", SacredStatus())
 
@@ -105,6 +116,11 @@ func InitVFS() {
 	vfsMkfile(uw, "vaked-triangle", VakedTriangle())
 
 	Log(LogInfo, "vfs.init", "built from space topology", "", "", 0, nil)
+
+	// Broadcast VFS change to all A2C streams
+	for _, stream := range a2cStreams {
+		stream.Emit(A2CEvent{AgentID: "vfs", Type: "layer_update", Content: "VFS rebuilt from space topology", Seq: 0})
+	}
 }
 
 func vfsMkdir(parent *VFSNode, name string) *VFSNode {

@@ -173,6 +173,11 @@ func (e *EdgeAgent) DeployEdgeAgent(cfg *CFConfig) error {
 
 	e.DeployedAt = time.Now()
 	e.Status = "active"
+
+	// Place edge agent in space topology
+	PlaceNode(e.ID, "edge",
+		SpacePosition{Depth: 1, Layer: "testifies", Machine: "edge", Region: "us"},
+		CapFULL)
 	return nil
 }
 
@@ -201,7 +206,18 @@ export default {
       return new Response(JSON.stringify({ resumed: true, from: lastSeq }));
     }
     
-    // Default: proxy to ultrawhale orchestrator
+    // WebSocket upgrade path
+	if (url.pathname === "/a2c/ws") {
+		const pair = new WebSocketPair();
+		const [client, server] = Object.values(pair);
+		server.accept();
+		server.addEventListener("message", (ev) => {
+			server.send(JSON.stringify({type: "echo", data: ev.data}));
+		});
+		return new Response(null, { status: 101, webSocket: client });
+	}
+
+	// Default: proxy to ultrawhale orchestrator
     return new Response(JSON.stringify({
       agent: "%s",
       message: "edge agent active — use /health or /fiber/resume"
