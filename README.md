@@ -1,5 +1,9 @@
 # ultrawhale
 
+> 🛑 **Full-Stop Primitive**: Recursion is the natural runtime for full-stop.
+> `/kill` → recursive kill wave through ALL 7 Vaked layers → SACRED remains.
+> [Read the full design](docs/recursion-fullstop.md)
+
 **vaked-base fork of DeepSeek Code Whale.**
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.24%2B-00ADD8)](go.mod)
