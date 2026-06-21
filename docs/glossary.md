@@ -1,6 +1,22 @@
 # ultrawhale × Vaked — Glossary
 
 ## Core Concepts
+| **Fold = Gravity** | Recursion bends space-context-time. Fold IS gravity. 5D visualization: 1D chain, 2D mesh, 3D topology, 4D time, 5D recursion. |
+| **Telemetry Tree** | The system seeing itself. Every pulse adds a ring. ASCII visualization. The CoCreator's wish. |
+| **Dog Feed** | Continuous LLM data collection. 8 free models via OpenRouter. Round-robin. Append-only public ledger. $0 cost. The machine feeds itself. |
+| **Ralph Loop** | Self-improving agent cycle. Observes→Learns→Adjusts. Versioned, rollback-able. 8 free models. 30-second interval. MAX learning rate. |
+| **DOCTOR** | The first-class primitive to surface. 9 self-examinations. Proves: I EXIST. I CHANGE. I TRY TO LEARN. The SACRED surface examining itself. |
+| **BACKWARD EXPAND** | The opposite of Forward Inject. Pulls FROM virtual space — trace, unroll, extract, visualize, audit. The answer is GRAPHS. |
+| **FORWARD INJECT** | Direct manipulation of the capability graph. Pushes INTO virtual space — create nodes, connect edges, deploy agents, fold recursively. |
+| **HONESTY LOOP** | Violations → Detection → Lessons → Patterns → Gates → SACRED. The loop closes on itself. Even violations are cherished. Honesty is always rewarded. |
+| **SACRED surface** | The inviolable TUI form. Always visible, always direct, always bidirectional. The ONE channel the capability graph guarantees. Protected by the honesty gate and VICE defense. |
+| **fun** | The most important property. If it's not fun, why build it? ultrawhale is fun. The CoCreator smiles. Peter laughs. The loop continues. |
+| **157 releases** | Every commit is a release. Every release is a proof of liveness. Every proof is signed by peter+cocreator. |
+| **14 protocols** | A2A, A2C, A2UI, MCP, WS, SSH, GPG, RSS, HF, Git, Live, POLA, OSCE, SPACE+TIME-PROOF. Every protocol is a space edge in the capability graph. |
+| **7 recursions** | Full-Stop (layers), Fold (agents), Heal (checks), EVOLVE (versions), TRANSLATE (modalities), VICE (context), LOOP (self). The 7 recursive primitives of Vaked. |
+| **141 blocks** | Content-addressed primitives. Each block is a SHA256-verified, journaled, rollback-able operation. All 141 blocks carry POV context and VakedFit documentation. |
+| **research project** | ultrawhale is ultra-research-state. Concepts and abstractions inside have no clear definitions or mature research. Proceed with ultra-care. |
+| **philosophy (vaked)** | The capability-graph philosophy. Software should be DECLARED as a graph of capabilities, not programmed as a sequence of instructions. 7 layers: Declares→Materializes→Supervises→Enforces→Testifies→Indexes→Reveals. |
 | **VIGD** | Vaked Implementation Graph Declaration. Peter's term for the core theory that graphs and zero-knowledge proofs directly allow us to manifest Vaked in existing space. |
 
 | Term | Definition |
