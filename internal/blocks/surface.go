@@ -45,13 +45,12 @@ func (s *Surface) Start() {
 			"schema":  SchemaStatus(),
 			"dyad":    getDyadStatus(),
 			"uptime":  "since " + CurrentVersion(),
+			"sacred":  SacredStatus(),
 			"vaked_triangle": map[string]string{
 				"context": "POV + capabilities + brain",
 				"time":    "journal + sessions + Ralph versions",
 				"space":   TopologyStatus(),
-			"sacred_health": GetSacredSurface().Health,
-			"sacred_direct": fmt.Sprintf("%v", GetSacredSurface().Direct),
-			"sacred_lag_ms": fmt.Sprintf("%d", GetSacredSurface().InputLag),
+			},
 			"ring_overflow": OverflowCount(),
 			"a2c_streams": len(a2cStreams),
 		})
