@@ -94,7 +94,7 @@ func RadioNow() string {
 ├─ 🌫️  %s (%d space nodes)
 └─ 🎧 %s · lo-fi · unique`,
 		radio.Name, radio.Genre,
-		bpm, AgentCount(),
+		fmt.Sprintf("%d", bpm), AgentCount(),
 		key, layerHealthSummary(),
 		bassNote, currentFoldDepth(),
 		ambience, spaceNodeCount(),
