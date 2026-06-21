@@ -26,7 +26,7 @@
 - All 86 blocks compile clean
 - Zero race conditions
 - All /commands wired (30+ commands)
-- 5 recursions all have VakedFit
+- 6 recursions all have VakedFit
 - 8 engines all have status + VakedFit
 - 4 protocols (A2A, A2C, A2UI, MCP) all wired
 - 2 workflows in .ultrawhale/workflows/
