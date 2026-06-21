@@ -1,6 +1,6 @@
 # Changelog
 
-## v15.3.0 (2026-06-20) — Major Release: Pre-Hook Layer + Production Hardening
+## v18.0.0 (2026-06-20) — Major Release: Pre-Hook Layer + Production Hardening
 
 - **Pre-hook layer**: 7 pre-hooks (commit, write, sed, grep, git, deploy, commit)
 - **ADR 001**: Architecture Decision Record — Pre-Hook Layer
@@ -34,13 +34,13 @@
 ## v1.x (2026-06-20)
 - Semver, /reload, HUD, deep hooks, superpowers, repomap SIMD
 
-## v15.3.0 (2026-06-21) — Vaked Alignment + Internal Review
+## v18.0.0 (2026-06-21) — Vaked Alignment + Internal Review
 - POV wiring: 10/10 complete (added dyad, watcher)
 - 28 blocks, 7 plugins, 6 widgets, 5 CLIs
 - Dead code: 0 stale files
 - Vaked philosophy alignment documented
 
-## v15.3.0 (2026-06-21) — Vaked Layer Completion (4/7)
+## v18.0.0 (2026-06-21) — Vaked Layer Completion (4/7)
 - schema: formal block structure validation (Declares)
 - surface: web UI + REST API (Reveals)
 - supervisor: OTP-like agent restart tree (Supervises)
@@ -48,22 +48,31 @@
 - Deferred to v10.0: crabcc, enforce, ebpf
 - 32 blocks, 7 plugins, 6 widgets, 5 CLIs
 
-## v15.3.0 (2026-06-21) — Wire Gap Closure + Internal Review
+## v18.0.0 (2026-06-21) — Wire Gap Closure + Internal Review
 - All 40 blocks carry POV context (0 blocks with 0 wires)
 - SACRED surface: inviolable TUI form, always direct, always bidirectional
 - Space primitive: context-gated topology, Vaked Triangle complete
 - Liveness audit: 8/10 gaps closed
-- docs/README/CHANGELOG synced to v15.3.0
+- docs/README/CHANGELOG synced to v18.0.0
 
-## v15.3.0 (2026-06-21) — v14 Primitives Complete
+## v18.0.0 (2026-06-21) — v14 Primitives Complete
 - probe: active liveness checking (tests actual capabilities)
 - predict: Ralph foresight (pre-failure prediction)
 - learn: dedicated pattern learning engine
 - brainstorm: turn-based co-creation mode
-- All 44 blocks carry POV context
+- All 53 blocks carry POV context
 - v14 primitives: brainstorm + probe + predict + learn
 
-## v15.3.0 (2026-06-21) — Space Workflows + Superpowers SDD
+## v18.0.0 (2026-06-21) — Space Workflows + Superpowers SDD
 - Space-durable workflow store: space_id + POV in every run
 - Superpowers: auto-starts brainstorm session for subagent-driven development
 - Workflow → Brainstorm wire: outcomes logged to persistent session
+
+## v18.0.0 (2026-06-21) — VFS: Space as Virtual Filesystem
+- VFS primitive: ls, cd, cat, tree, echo on the capability graph
+- Space materialized as a navigable filesystem
+- 53 blocks, 7/7 Vaked layers, 3/3 dimensions
+- Contract, package, crabcc, state primitives added
+- O(N)+O(T) complexity hardened (AgentStore TTL, Ralph LRU, Brainstorm GC)
+- ~/.whale unified directory structure
+- File I/O audit + ReadRange + Glob primitives

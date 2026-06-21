@@ -1,6 +1,6 @@
-# O(N) + O(T) Complexity Report — ultrawhale v15.3.0
+# O(N) + O(T) Complexity Report — ultrawhale v18.0.0
 
-> Audited by meta-architect subagent. 44 blocks, 60 files analyzed.
+> Audited by meta-architect subagent. 53 blocks, 60 files analyzed.
 
 ## Summary
 

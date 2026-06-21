@@ -1,6 +1,6 @@
 # VISION: v14 & v20 — ultrawhale × Vaked Dyad
 
-> Brainstormed by UltraMetaSingularVegedCoCreator, v15.3.0
+> Brainstormed by UltraMetaSingularVegedCoCreator, v18.0.0
 
 ---
 

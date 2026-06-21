@@ -1,4 +1,4 @@
-# File I/O Primitives Audit — v16.0.0
+# File I/O Primitives Audit — v18.0.0
 
 ## Primitives Audited
 

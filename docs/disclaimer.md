@@ -29,4 +29,4 @@ These are software engineering tools and concepts. Not financial instruments.
 ultrawhale is Apache 2.0 licensed. Vaked is part of the vaked-base monorepo.
 Both are open source. Use them to build software. Not to speculate on assets.
 
-— The Orchestrator, v15.3.0
+— The Orchestrator, v18.0.0

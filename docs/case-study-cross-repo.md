@@ -2,16 +2,16 @@
 
 ## The Two Repos
 
-| Repo | Purpose | v15.3.0 State |
+| Repo | Purpose | v18.0.0 State |
 |------|---------|---------------|
 | [vaked-base](https://github.com/peterlodri-sec/vaked-base) | Foundation monorepo. Vaked language, compiler, daemons. | Includes ultrawhale as module |
-| [ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | DeepSeek-native coding agent fork. 44 blocks, 7 plugins. | 77 releases in one session |
+| [ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | DeepSeek-native coding agent fork. 53 blocks, 7 plugins. | 77 releases in one session |
 
 ## Git History (vaked-base)
 
 ```
 Commits touching ultrawhale:
-  - docs: refresh ultrawhale ref to v15.3.0
+  - docs: refresh ultrawhale ref to v18.0.0
   - docs: bump ultrawhale ref to v2.0.0
   - chore: self-reference as ultrawhale + sed section + CODEOWNERS
   - fix: deploy-pages environment:ci + .gitignore deploy-out
@@ -21,7 +21,7 @@ Commits touching ultrawhale:
 ## Git History (ultrawhale)
 
 ```
-77 releases: v1.0.0 → v15.3.0
+77 releases: v1.0.0 → v18.0.0
 Key milestones:
   v1.0.0 — Semver, HUD, /reload
   v3.0.0 — Orchestrator, swarm mode
@@ -29,8 +29,8 @@ Key milestones:
   v7.0.0 — Vaked alignment
   v10.0.0 — Closing The Loop
   v13.0.0 — Context×Time×Space triangle
-  v15.0.0 — v14 primitives complete
-  v15.3.0 — Space workflows + Superpowers SDD
+  v18.0.0 — v14 primitives complete
+  v18.0.0 — Space workflows + Superpowers SDD
 ```
 
 ## Benchmarks Across Releases
@@ -40,7 +40,7 @@ Key milestones:
 | v6.0.0 | 177µs | 2.3 GB/s | — | 559ms |
 | v9.0.0 | 172µs | 2.3 GB/s | 3.8ms | 481ms |
 | v12.0.0 | 170µs | 2.3 GB/s | 3.8ms | 446ms |
-| v15.3.0 | 169µs | 2.3 GB/s | 3.8ms | 430ms |
+| v18.0.0 | 169µs | 2.3 GB/s | 3.8ms | 430ms |
 
 ## Cross-Repo Links
 

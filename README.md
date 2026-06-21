@@ -25,17 +25,17 @@ go install github.com/peterlodri-sec/ultrawhale/cmd/whale@latest
 ```
 
 
-## Closing The Loop — v15.3.0
+## Closing The Loop — v18.0.0
 
 See [docs/case-study-v10.md](docs/case-study-v10.md) for the full case study of
-ultrawhale building its own v15.3.0 release via subagent swarms.
+ultrawhale building its own v18.0.0 release via subagent swarms.
 
-One prompt → swarm launch → real PRs → meta-report → v15.3.0 tagged.
+One prompt → swarm launch → real PRs → meta-report → v18.0.0 tagged.
 
 
 ## Complexity
 
-ultrawhale has been audited for algorithmic complexity across all 44 blocks.
+ultrawhale has been audited for algorithmic complexity across all 53 blocks.
 
 | Class | Count | Examples |
 |-------|-------|----------|
@@ -45,7 +45,7 @@ ultrawhale has been audited for algorithmic complexity across all 44 blocks.
 | O(V+E) | 1 | space (BFS Distance/Reachable) |
 
 **[Full O(N)+O(T) Complexity Report](docs/complexity-report.md)** — 
-44 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
+53 blocks analyzed. Hot paths identified. Unbounded growth risks documented.
 3 recommendations: AgentStore TTL, Ralph LRU, Sed Boyer-Moore.
 
 ## Quick Start
@@ -105,7 +105,7 @@ GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -trimpath -ldflags="-s -w" -o bin/ul
 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/ultrawhale-darwin-arm64 ./cmd/whale
 
 # With version injection
-go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v15.3.0" ./cmd/whale
+go build -ldflags="-X github.com/peterlodri-sec/ultrawhale/internal/build.Version=v18.0.0" ./cmd/whale
 ```
 
 

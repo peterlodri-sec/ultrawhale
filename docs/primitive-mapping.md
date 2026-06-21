@@ -1,4 +1,4 @@
-# Primitive Mapping — ultrawhale v16.1.0
+# Primitive Mapping — ultrawhale v18.0.0
 
 ## Vaked Layer Coverage
 
@@ -12,7 +12,7 @@
 | **Indexes** | repomap, space | 2 |
 | **Reveals** | sacred, surface, ui, a2a, a2c, mesh_agent, dyad, notify | 8 |
 
-**Total: 48 blocks mapped to 7 Vaked layers.**
+**Total: 53 blocks mapped to 7 Vaked layers.**
 
 ## Dimension Coverage
 
