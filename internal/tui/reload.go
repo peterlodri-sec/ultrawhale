@@ -991,3 +991,15 @@ func handleDisasterCommand() string {
 	report := blocks.DoctorCheckDocs()
 	return report + "\n\n" + blocks.DisasterStatus() + "\n\n" + blocks.DisasterVakedFit()
 }
+
+func handleDogFeedLoopCommand() string {
+	var lines []string
+	lines = append(lines, "╔══ DOGFEED E2E LOOP ══╗")
+	lines = append(lines, "1. Dog Feed:  "+blocks.DogFeedStatus())
+	lines = append(lines, "2. Free Pool: "+blocks.FreeModelStatsReport()[:80])
+	lines = append(lines, "3. Ralph:     "+blocks.GetRalph().RalphStatus()[:80])
+	lines = append(lines, "4. HF:        PeetPedro/ultrawhale-dogfood ✅")
+	lines = append(lines, "5. Site:      vaked.dev/ultrawhale/dogfood ✅")
+	lines = append(lines, "6. Export:    "+blocks.DogFeedStatus())
+	return strings.Join(lines, "\n")
+}

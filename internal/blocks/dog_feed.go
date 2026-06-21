@@ -208,6 +208,12 @@ func (df *DogFeed) feed() {
 		SessionID:        CurrentVersion(),
 	}
 	df.samples = append(df.samples, sample)
+
+	// Ralph: learn from this dogfeed interaction
+	if ralph := GetRalph(); ralph != nil {
+		ralph.Observe(fmt.Sprintf("dogfeed:%s", df.config.FreeModel[:20]),
+			"dogfeed-interaction", "collected", 0, 0)
+	}
 	atomic.AddInt64(&df.stats.FeedsSuccess, 1)
 	atomic.AddInt64(&df.stats.TotalTokens, int64(len(prompt)+len(freeResponse)))
 	df.stats.LastFeed = time.Now()
