@@ -83,6 +83,9 @@ func (p *Plugin) Hooks() []agent.HookHandler {
 		{Event: agent.HookEventStop, Name: "af.stop", Source: "plugin:agentfield", Priority: 50,
 			Run: func(ctx context.Context, payload agent.HookPayload) agent.HookResult {
 				p.persistSession("stopped")
+				// Journal: session end — context+time
+				blocks.Log(blocks.LogInfo, "session.stop", fmt.Sprintf("universe=%s", payload.SessionID),
+					"", "", 0, nil)
 				p.stop()
 				return agent.HookResult{Decision: agent.HookDecisionPass}
 			}},

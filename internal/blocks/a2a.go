@@ -17,6 +17,7 @@ type A2AMessage struct {
 	Action    string    `json:"action"`    // "ping", "delegate", "result", "status"
 	Payload   string    `json:"payload"`   // JSON-encoded task or result
 	Timestamp time.Time `json:"timestamp"`
+	Lamport   int64     `json:"lamport"` // cross-machine ordering
 	Ref       string    `json:"ref"`       // sha256 of payload
 }
 
@@ -29,6 +30,11 @@ type A2ARouter struct {
 
 // A2AHandler processes an A2A message.
 type A2AHandler func(msg A2AMessage) A2AMessage
+
+var lamportClock int64
+
+func TickLamport() int64 { lamportClock++; return lamportClock }
+func LamportTime() int64 { return lamportClock }
 
 var a2aRouter = &A2ARouter{
 	handlers: make(map[string]A2AHandler),
@@ -58,6 +64,7 @@ func RouteA2A(msg A2AMessage) (A2AMessage, error) {
 // SendA2A sends an agent-to-agent message.
 func SendA2A(from, to, action, payload string) A2AMessage {
 	msg := A2AMessage{
+		Lamport:   TickLamport(),
 		From:      from,
 		To:        to,
 		Action:    action,

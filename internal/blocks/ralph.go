@@ -115,6 +115,8 @@ func (r *RalphLoop) Observe(prompt, decision, outcome string, latency time.Durat
 		if profile := GetCapProfile(decision); profile.Can(CapWrite) {
 			SetCapProfile(decision, CapOBSERVE)
 			cycle.Adjustment = fmt.Sprintf("downgraded %s to OBSERVE after failure", decision)
+				cycle.Applied = true
+				Log(LogWarn, "ralph.caps", fmt.Sprintf("%s: FULL→OBSERVE (%d consecutive failures)", decision, r.ConsecutiveFailures), "", "", 0, nil)
 		}
 		r.ConsecutiveFailures++
 		cycle.Pattern = extractPattern(prompt, decision)
