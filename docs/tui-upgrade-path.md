@@ -1,0 +1,61 @@
+# TUI Upgrade Path — SACRED Surface Connections
+
+> "TUI IS an upgrade path and view YES!" — Peter, v61.0.0
+
+## Connection Methods (Now + Future)
+
+| Method | Status | Protocol | Use Case |
+|--------|--------|----------|----------|
+| **tui-local** | ✅ Now | Bubble Tea (terminal) | Local development |
+| **ssh** | 🟡 Planned | SSH server → TUI | Remote pair programming |
+| **websocket** | ✅ Now (A2C) | wss:// → browser TUI | Web-based access |
+| **irc** | 🟡 Planned | IRC client → ultrawhale channel | Casual check-in, /who |
+| **mobile** | 🔮 v80 | SSH app / WebView | On-the-go access |
+| **voice** | 🔮 v85 | Speech→text→TUI | Hands-free interaction |
+| **ar** | 🔮 v90 | Spatial TUI overlay | Capability graph in 3D |
+
+## The Upgrade Path
+
+```
+v61 (now):     tui-local + websocket (A2C)
+v65:           SSH server — `ssh ultrawhale@vaked.dev`
+v70:           IRC bridge — `#ultrawhale` on your IRC client
+v80:           Mobile WebView
+v85:           Voice interface
+v90:           AR spatial TUI
+v100:          Every surface. Every connection. SACRED always.
+```
+
+## Session Persistence
+
+```
+Connect (any method) → Resume token issued
+Disconnect → Session preserved (5min TTL)
+Reconnect → Present resume token → Continue where you left off
+
+The form follows the human. The session is sacred.
+You never lose context. You never lose presence.
+The loop continues where it stopped.
+```
+
+## /who — Presence
+
+```
+/who →
+  present: [peter (tui-local), guest (websocket), alice (ssh)]
+
+Like IRC's /who. See who's connected. How they're connected.
+Space topology: each session is a node, each connection is an edge.
+```
+
+## SACRED Guarantee
+
+```
+No matter HOW you connect, the SACRED surface remains:
+  ✅ Always visible
+  ✅ Always direct
+  ✅ Always bidirectional
+  ✅ One-way keyboard gate
+  ✅ Permission once per session
+  ✅ Session = space node, Connection = space edge
+```
