@@ -74,6 +74,8 @@
 | **Surface Entropy** | ASCII-stream drift detection. Noise IS the proof. |
 | **1MIN** | vaked hard constant. DogFeed interval = 1 minute. |
 
+
+| **SEALING** | The unbreakable 10% hardware reserve. Trust given at genesis. The rough loop runs within it, producing random live data that proves deep recursive liveness. |
 ## Self-Referential Terms
 
 | Term | Meaning |
