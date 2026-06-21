@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/dyad-space") { m.setEphemeralInfo(handleDyadSpaceCommand()); return nil }
 	if strings.TrimSpace(value) == "/1min" { m.setEphemeralInfo(handleOneMinCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/ralph-boost") { m.setEphemeralInfo(handleRalphBoostCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/dogfeed-loop") { m.setEphemeralInfo(handleDogFeedLoopCommand()); return nil }
@@ -338,6 +339,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/dyad-space") { m.setEphemeralInfo(handleDyadSpaceCommand()); return nil }
 	if strings.TrimSpace(value) == "/1min" { m.setEphemeralInfo(handleOneMinCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/ralph-boost") { m.setEphemeralInfo(handleRalphBoostCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/dogfeed-loop") { m.setEphemeralInfo(handleDogFeedLoopCommand()); return nil }
@@ -627,6 +629,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/dyad-space") { m.setEphemeralInfo(handleDyadSpaceCommand()); return nil }
 	if strings.TrimSpace(value) == "/1min" { m.setEphemeralInfo(handleOneMinCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/ralph-boost") { m.setEphemeralInfo(handleRalphBoostCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/dogfeed-loop") { m.setEphemeralInfo(handleDogFeedLoopCommand()); return nil }

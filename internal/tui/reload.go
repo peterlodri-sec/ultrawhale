@@ -1011,3 +1011,5 @@ func handleRalphBoostCommand() string {
 func handleOneMinCommand() string {
 	return "⏱️ 1MIN — vaked hard constant\n\n  \"soon\" === \"just for a bit\" === \"aaaa just one minute....\"\n  — Peter\n\n  DogFeed interval: 1 minute\n  Free models: 8 providers\n  Ralph: +50% intensity\n  Cost: $0\n\n  The machine feeds itself every minute."" 
 }
+
+func handleDyadSpaceCommand() string { return "╔══ ALWAYS-IN-DYAD-SPACE ══╗\n\n  " + blocks.DyadSpaceStatus() + "\n  " + blocks.DyadSpaceAGUI() + "\n\n" + blocks.DyadSpaceVakedFit() }
