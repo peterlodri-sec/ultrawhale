@@ -1,0 +1,26 @@
+
+<div class="diagram">
+<div class="diagram-title">OSCE — open self-certifying exchange</div>
+<pre>
+    SENDER ──claim──→ RECEIVER
+      │                  │
+      │   SHA256 proof   │
+      │   Lamport tick   │
+      │   VICE signature │
+      │                  │
+      └─── certified ───┘
+</pre>
+</div>
+
+<div class="diagram">
+<div class="diagram-title">forward inject ↔ backward expand</div>
+<pre>
+    INJECT → virtual space (write)
+    EXPAND ← virtual space (read)
+    
+    fold = compress
+    expand = decompress
+    
+    the answer is GRAPHS
+</pre>
+</div>
