@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/vice") { m.setEphemeralInfo(handleVICECommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/counter") { m.setEphemeralInfo(handleCounterCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/progress") { m.setEphemeralInfo(handleProgressCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/sparkline") { m.setEphemeralInfo(handleSparklineCommand(value)); return nil }
@@ -300,6 +301,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/vice") { m.setEphemeralInfo(handleVICECommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/counter") { m.setEphemeralInfo(handleCounterCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/progress") { m.setEphemeralInfo(handleProgressCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/sparkline") { m.setEphemeralInfo(handleSparklineCommand(value)); return nil }
@@ -551,6 +553,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/vice") { m.setEphemeralInfo(handleVICECommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/counter") { m.setEphemeralInfo(handleCounterCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/progress") { m.setEphemeralInfo(handleProgressCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/sparkline") { m.setEphemeralInfo(handleSparklineCommand(value)); return nil }

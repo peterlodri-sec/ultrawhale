@@ -796,3 +796,6 @@ func handleThemeCommand(line string) string {
 	if len(parts) == 0 { return blocks.ThemeStatus() }
 	return blocks.SetTheme(parts[0])
 }
+
+
+func handleVICECommand() string { return blocks.VICEStatus() + "\n\n" + blocks.VICEVakedFit() + "\n\n" + blocks.VICEWarning() }
