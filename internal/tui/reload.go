@@ -843,3 +843,13 @@ func handleGitCommand(line string) string {
 	default: return "/git log|diff|status|branch|sync|commit|push"
 	}
 }
+
+func handleLoopCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/loop"))
+	if len(parts) == 0 { return blocks.LoopStatus() + "\n\n" + blocks.LoopVakedFit() }
+	switch parts[0] {
+	case "start": return blocks.StartLoop()
+	case "stop": return blocks.StopLoop()
+	default: return "/loop start|stop"
+	}
+}
