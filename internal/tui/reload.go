@@ -515,3 +515,7 @@ func handleMeshCommand() string {
 func handleUICommand() string {
 	return blocks.UIStatus() + "\n" + blocks.VakedLayersRevealed()
 }
+
+func handleSpaceCommand() string {
+	return blocks.SpaceStatus() + "\n\n" + blocks.VakedTriangle()
+}
