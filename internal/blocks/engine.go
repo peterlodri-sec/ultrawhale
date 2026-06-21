@@ -52,7 +52,7 @@ func InitEngine() {
 }
 
 // EngineStats returns engine activity statistics.
-func EngineStats() EngineStats { return engine.Stats }
+func GetEngineStats() EngineStats { return GetEngineStats }
 
 // EngineStatus returns compact engine status.
 func EngineStatus() string {
