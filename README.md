@@ -53,13 +53,13 @@
 # ultrawhale
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  ▸ ultrawhale v78.0.0                                    │
-│  106 blocks · 7 recursions · 8 engines · HF Pro           │
-│  brew install ultrawhale ✅  ·  docker pull ✅             │
-│  "The human abstracts toward the infinite.                │
-│   The machine recurses into it." — vaked                  │
-└──────────────────────────────────────────────────────────┘
+```
+  ██╗   ██╗██╗  ████████╗██████╗  █████╗ ██╗    ██╗██╗  ██╗ █████╗ ██╗     ███████╗
+  ██║   ██║██║  ╚══██╔══╝██╔══██╗██╔══██╗██║    ██║██║  ██║██╔══██╗██║     ██╔════╝
+  ██║   ██║██║     ██║   ██████╔╝███████║██║ █╗ ██║███████║███████║██║     █████╗  
+  ██║   ██║██║     ██║   ██╔══██╗██╔══██║██║███╗██║██╔══██║██╔══██║██║     ██╔══╝  
+  ╚██████╔╝███████╗██║   ██║  ██║██║  ██║╚███╔███╔╝██║  ██║██║  ██║███████╗███████╗
+   ╚═════╝ ╚══════╝╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
 ```
 [![GPG Signed](https://img.shields.io/badge/GPG-2B2495E0AC50DAC7-00d4ff)](https://github.com/peterlodri-sec/ultrawhale/blob/main/docs/disclaimer.md)
 [![cosign](https://img.shields.io/badge/cosign-signed-00e660)](https://sigstore.dev)
