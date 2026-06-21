@@ -19,7 +19,7 @@ jobs:
           git config --global user.email "ci@ultrawhale.vaked.dev"
           git config --global user.name "ultrawhale-ci"
           git clone https://PeetPedro:${HF_TOKEN}@huggingface.co/datasets/PeetPedro/ultrawhale-dogfood /tmp/hf-push
-          cp site/dogfood/*.jsonl /tmp/hf-push/ 2>/dev/null || true
+          cp site/dogfood/*.jsonl site/dogfood/README.md /tmp/hf-push/ 2>/dev/null || true
           cd /tmp/hf-push
           git add -A
           git diff --cached --quiet || git commit -m "v63.0.0: auto-publish from CI"
