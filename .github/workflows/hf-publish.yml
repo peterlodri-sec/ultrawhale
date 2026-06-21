@@ -1,0 +1,21 @@
+name: hf-publish-dataset
+on:
+  push:
+    paths: ['site/dogfood/*.jsonl', '.ultrawhale/dogfeed/*.jsonl']
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Push to HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git clone https://PeetPedro:${HF_TOKEN}@huggingface.co/datasets/PeetPedro/ultrawhale-dogfood /tmp/hf-push
+          cp site/dogfood/*.jsonl /tmp/hf-push/ 2>/dev/null || true
+          cd /tmp/hf-push
+          git add -A && git commit -m "v62.0.0: auto-publish from CI" || true
+          git push origin main

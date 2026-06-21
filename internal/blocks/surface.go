@@ -130,6 +130,8 @@ func (s *Surface) Start() {
 		})
 	})
 
+	mux.HandleFunc("/webhook/hf", HFWebhookReceive)
+
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
