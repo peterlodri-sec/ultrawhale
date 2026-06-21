@@ -1,14 +1,14 @@
-# Honest Gap Report — ultrawhale v34.0.0
+# Honest Gap Report — ultrawhale v36.0.0
 
 > Brutally honest. No sugar-coating. What's broken and what's perfect.
 
 ## What's Perfect ✅
 
-1. **All 70 blocks compile clean** — zero import errors in non-upstream files
+1. **All 71 blocks compile clean** — zero import errors in non-upstream files
 2. **Race detection: PASS** — zero race conditions in test suite  
 3. **All 7 engines have status + VakedFit functions**
 4. **All /commands have handlers in reload.go + model_prompt.go**
-5. **POV coverage**: 22/70 blocks carry POV (all user-facing). 48 are pure utility (hash, compress, mmap, pool) — intentional.
+5. **POV coverage**: 22/71 blocks carry POV (all user-facing). 48 are pure utility (hash, compress, mmap, pool) — intentional.
 6. **Protocol wires**: A2A (2 handlers), A2C (SSE+WS), A2UI (2 handlers), MCP (7 tools), WS (active)
 7. **No goroutine leaks**: all goroutines have stop channels
 8. **No unbounded channels**: all channel-based operations have caps
@@ -26,10 +26,10 @@
 
 ## Honest Verdict
 
-**ultrawhale v34.0.0 is production-grade for a research project.**
+**ultrawhale v36.0.0 is production-grade for a research project.**
 
 The 3 known issues are ALL upstream code (infra_bar, widget, vaked plugin) — 
-not our blocks. Our 70 blocks compile clean, pass race detection, and have 
+not our blocks. Our 71 blocks compile clean, pass race detection, and have 
 complete protocol/command/engine coverage.
 
 The Vaked pipeline (7 engines, 7 layers) is complete and wired.

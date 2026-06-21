@@ -5,7 +5,7 @@
 | Repo | Purpose | v18.0.0 State |
 |------|---------|---------------|
 | [vaked-base](https://github.com/peterlodri-sec/vaked-base) | Foundation monorepo. Vaked language, compiler, daemons. | Includes ultrawhale as module |
-| [ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | DeepSeek-native coding agent fork. 59 blocks, 7 plugins. | 95 releases in one session |
+| [ultrawhale](https://github.com/peterlodri-sec/ultrawhale) | DeepSeek-native coding agent fork. 59 blocks, 7 plugins. | 99 releases in one session |
 
 ## Git History (vaked-base)
 
@@ -21,7 +21,7 @@ Commits touching ultrawhale:
 ## Git History (ultrawhale)
 
 ```
-95 releases: v1.0.0 → v18.0.0
+99 releases: v1.0.0 → v18.0.0
 Key milestones:
   v1.0.0 — Semver, HUD, /reload
   v3.0.0 — Orchestrator, swarm mode

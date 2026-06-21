@@ -1,7 +1,7 @@
 # Fold — Virtualized Subagent Runtime: Complete Design
 
 > "Can we virtualize a subagent's complete runtime? AKA 'fold'?"
-> — Peter, v34.0.0
+> — Peter, v36.0.0
 
 ## The Mind-Bending Question
 

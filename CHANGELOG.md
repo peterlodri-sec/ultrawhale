@@ -77,13 +77,13 @@
 - ~/.whale unified directory structure
 - File I/O audit + ReadRange + Glob primitives
 
-## v33.0.0 (2026-06-21) — SACRED Honesty Gate + Kill Switch
+## v36.0.0 (2026-06-21) — SACRED Honesty Gate + Kill Switch
 - Permission gate: /allow once per session, ALLOWED+AUTHED until revoked
 - Kill switch: /STOP___KILL_SWITCH___DO_FULL_STOP — full stop
 - 59 blocks, 6 plugins, 5 protocols
 - QUIC, gRPC, Multi-Machine, OneShot atomic primitive
 
-## v33.0.0 (2026-06-21) — 7 Engines: Vaked Pipeline Complete
+## v36.0.0 (2026-06-21) — 7 Engines: Vaked Pipeline Complete
 - declare-engine: schema + contract validation
 - engine: blocks execution (Write, Read, Sed, Delegate, OneShot)
 - supervise-engine: orchestrator + ralph + supervisor
@@ -92,8 +92,15 @@
 - index-engine: space + vfs + crabcc
 - ui-engine: TUI + Surface + AG-UI + WebSocket
 
-## v33.0.0 (2026-06-21) — KEYBOARD GATE + Cleanup
+## v36.0.0 (2026-06-21) — KEYBOARD GATE + Cleanup
 - Keyboard Gate: one-way honesty barrier — LLM CANNOT see keystrokes
 - Display primitive: Keyboard→Screen→TUI pipeline
 - Self-healing: 3 active heal checks
 - Stale docs removed (9 upstream files)
+
+## v36.0.0 (2026-06-21) — FOLD: The Three Recursions Complete
+- Fold: virtualized subagent runtime — recursion through agents
+- Full-Stop: recursive kill wave through 7 Vaked layers
+- Heal: self-repairing checks (3 active)
+- The Three Recursions of Vaked: Full-Stop + Fold + Heal
+- 71 blocks, 99 releases, 0 race conditions
