@@ -427,7 +427,7 @@ func (p *Plugin) startSupabase() {
 
 
 func (p *Plugin) discoverWorkflows() {
-	workflowDir := ".whale/workflows"
+	workflowDir := ".ultrawhale/workflows"
 	entries, err := os.ReadDir(workflowDir)
 	if err != nil { return }
 	

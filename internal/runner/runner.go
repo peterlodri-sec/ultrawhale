@@ -26,7 +26,7 @@ type Runner struct {
 type Config struct {
 	MaxConcurrency int           // max parallel workflows (default: 8)
 	DefaultTimeout time.Duration // per-workflow timeout (default: 5m)
-	WorkflowDir    string        // .whale/workflows/
+	WorkflowDir    string        // .ultrawhale/workflows/
 }
 
 // Run is an active workflow execution.
@@ -47,7 +47,7 @@ type Run struct {
 func NewRunner(cfg Config) *Runner {
 	if cfg.MaxConcurrency == 0 { cfg.MaxConcurrency = 8 }
 	if cfg.DefaultTimeout == 0 { cfg.DefaultTimeout = 5 * time.Minute }
-	if cfg.WorkflowDir == "" { cfg.WorkflowDir = ".whale/workflows" }
+	if cfg.WorkflowDir == "" { cfg.WorkflowDir = ".ultrawhale/workflows" }
 	return &Runner{
 		config:  cfg,
 		running: make(map[string]*Run),
