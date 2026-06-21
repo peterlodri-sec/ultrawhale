@@ -3,6 +3,7 @@ package blocks
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -83,7 +84,7 @@ func (ut *UltraTriggerState) feed() {
 
 	// Feed EVERY pattern at MAX intensity
 	for pattern, confidence := range ralph.Patterns {
-		ralph.Observe("ultra-trigger:"+pattern, pattern, "fed", 0, confidence*2)
+		ralph.Observe("ultra-trigger:"+pattern, pattern, "fed", 0, int64(confidence*100))
 		ut.PatternsFed++
 	}
 
@@ -96,7 +97,6 @@ func (ut *UltraTriggerState) feed() {
 	problemSolver.mu.Unlock()
 
 	// Feed every honesty lesson
-	honestyLedger.mu.Lock()
 	for _, e := range honestyLedger.Events {
 		ralph.Observe("ultra-honesty:"+e.Entity, e.Violation, e.Outcome, 0, 0)
 		ut.LessonsFed++
@@ -117,7 +117,7 @@ func (ut *UltraTriggerState) learn() {
 	// Ralph synthesizes ALL patterns into long-term memory
 	ralph := GetRalph()
 	if ralph != nil {
-		ralph.CommitToBrain()
+		ralph.Snapshot("ultra-trigger")
 	}
 
 	// Persist to brain
