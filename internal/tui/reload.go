@@ -818,3 +818,28 @@ func handleRadioCommand(line string) string {
 	default: return blocks.RadioNow()
 	}
 }
+func handleGitCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/git"))
+	if len(parts) == 0 { return blocks.GitPrimitiveStatus() + "\n\n" + blocks.GitPrimitiveVakedFit() }
+	switch parts[0] {
+	case "log": return blocks.GitLog(10)
+	case "diff": return blocks.GitDiff()
+	case "status": return blocks.GitStatus()
+	case "branch": return blocks.GitBranch()
+	case "sync":
+		msg := "ultrawhale auto-sync"
+		if len(parts) > 1 { msg = strings.Join(parts[1:], " ") }
+		return blocks.GitSync(msg)
+	case "commit":
+		msg := "ultrawhale commit"
+		if len(parts) > 1 { msg = strings.Join(parts[1:], " ") }
+		op, err := blocks.GitCommit(msg)
+		if err != nil { return "commit: ❌ " + err.Error() }
+		return "commit: ✅ " + op.Ref[:12]
+	case "push":
+		op, err := blocks.GitPush()
+		if err != nil { return "push: ❌ " + err.Error() }
+		return "push: ✅"
+	default: return "/git log|diff|status|branch|sync|commit|push"
+	}
+}

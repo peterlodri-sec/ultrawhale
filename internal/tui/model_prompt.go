@@ -71,6 +71,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/git") { m.setEphemeralInfo(handleGitCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/radio") { m.setEphemeralInfo(handleRadioCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/hf") { m.setEphemeralInfo(handleHFCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/debug") { m.setEphemeralInfo(handleDebugCommand()); return nil }
@@ -308,6 +309,7 @@ func (m *model) submitPromptWithBinding(value string, binding *protocol.SkillBin
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/git") { m.setEphemeralInfo(handleGitCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/radio") { m.setEphemeralInfo(handleRadioCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/hf") { m.setEphemeralInfo(handleHFCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/debug") { m.setEphemeralInfo(handleDebugCommand()); return nil }
@@ -567,6 +569,7 @@ func (m *model) submitPromptWithBindingAndAttachments(value string, binding *pro
 		m.setEphemeralInfo(handleUIEngineCommand())
 		return nil
 	}
+	if strings.HasPrefix(strings.TrimSpace(value), "/git") { m.setEphemeralInfo(handleGitCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/radio") { m.setEphemeralInfo(handleRadioCommand(value)); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/hf") { m.setEphemeralInfo(handleHFCommand()); return nil }
 	if strings.HasPrefix(strings.TrimSpace(value), "/debug") { m.setEphemeralInfo(handleDebugCommand()); return nil }
