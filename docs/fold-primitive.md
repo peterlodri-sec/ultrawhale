@@ -59,3 +59,6 @@ This is the Vaked philosophy applied to agent execution: **context wraps agent**
 > Peter says: proceed with **ultra-care**. This is ultra-research-state thinking.
 > The concept is mind-bending. The implementation is recursive.
 > The SACRED surface must remain inviolable — folding must not obscure the form.
+
+
+> **[Complete Design Document](fold-complete-design.md)** — The Three Recursions of Vaked, implementation details, recursive depth.

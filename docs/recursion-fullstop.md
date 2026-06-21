@@ -55,6 +55,18 @@ Surface    → STOPPED       connections closed
 SACRED     → REMAINS       the form is eternal
 ```
 
+## The Three Recursions of Vaked
+
+Full-Stop is one of three recursive primitives in ultrawhale:
+
+| Primitive | Recurses Through | Terminates At |
+|-----------|-----------------|---------------|
+| **Full-Stop** | Layers (7) | SACRED surface |
+| **Fold** | Agents (N) | Leaf agent |
+| **Heal** | Checks (M) | Fault resolved |
+
+See [Fold: Complete Design](fold-complete-design.md) for the sibling primitive.
+
 ## Vaked Fit
 
 ```
