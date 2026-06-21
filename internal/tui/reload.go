@@ -1041,3 +1041,5 @@ func handleUltraCommand(line string) string {
 	default: return "/ultra trigger ← BIG RED BUTTON"
 	}
 }
+
+func handleMinecraftCommand() string { return blocks.MinecraftMCPStart() + "\n\n" + blocks.MinecraftMCPVakedFit() }
