@@ -1,6 +1,6 @@
 package blocks
 
-import "fmt"
+import 
 
 // ── QUIC Transport — Dyad Protocol Upgrade ──────────────────────────
 // v23: HTTP/3 QUIC for dyad peer communication.
