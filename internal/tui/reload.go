@@ -1068,3 +1068,9 @@ func handlePublicCommand(line string) string {
 	if len(parts) > 0 { fmt.Sscanf(parts[0], "%d", &n) }
 	return blocks.PublicHistory(n) + "\n\n" + blocks.PublicLedgerVakedFit()
 }
+
+func handleInjectCommand(line string) string {
+	cmd := strings.TrimPrefix(strings.TrimSpace(line), "/inject ")
+	if cmd == "/inject" || cmd == "" { return blocks.ForwardInjectStatus() + "\n\n" + blocks.ForwardInjectVakedFit() }
+	return blocks.ForwardInjectCommand(cmd)
+}
