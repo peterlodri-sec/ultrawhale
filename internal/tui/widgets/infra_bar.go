@@ -160,8 +160,8 @@ func (i *InfraBarWidget) renderBar() string {
 
 	// Right: perf stat + uptime
 	entropy := blocks.SurfaceDrift()
-	entropyStr := fmt.Sprintf("▓ %.2f", entropy)
-	dyadStatus := blocks.DyadSpaceLine()
+	_ = fmt.Sprintf("▓ %.2f", entropy)
+	_ = blocks.DyadSpaceLine()
 	right := lipgloss.NewStyle().Foreground(i.dimColor()).Render(
 		i.PerfStat + " · " + blocks.DyadSpaceStatus()[:30] + " · " + fmt.Sprintf("%d tok · ▓ %.2f", blocks.GetCurrent().TotalTokens, blocks.SurfaceDrift()))
 

@@ -23,9 +23,9 @@ func NewVakedDashboard() *VakedDashboardWidget {
 	}
 }
 
-func (v *VakedDashboardWidget) Init() tea.Cmd { return nil }
-func (v *VakedDashboardWidget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.WindowSizeMsg); ok {
+func (v *VakedDashboardWidget) Init() agui.Cmd { return nil }
+func (v *VakedDashboardWidget) Update(msg agui.Msg) (agui.Model, agui.Cmd) {
+	if msg, ok := msg.(agui.WindowSizeMsg); ok {
 		v.Visible = msg.Width >= 80
 		v.Width = msg.Width / 4
 		if v.Width > 50 { v.Width = 50 }
@@ -55,8 +55,8 @@ func (v *VakedDashboardWidget) View() string {
 	lines = append(lines, lipgloss.NewStyle().Foreground(t.Accent).Bold(true).Render("╔══ Vaked Layers ══╗"))
 
 	for _, l := range layers {
-		icon := "✅"
-		color := t.Green
+		_ = "✅"
+		color := t.Accent
 		if strings.Contains(l.Status, "0") && strings.Contains(l.Status, "nodes") {
 			icon = "🟡"; color = lipgloss.Color("#ffaa00")
 		}
