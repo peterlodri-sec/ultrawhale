@@ -297,3 +297,35 @@ func (m model) layoutDims() (mainWidth, bodyHeight int) {
 
 func (m model) chatRenderWidth() int {
 }
+
+
+// renderDyadMessage renders a chat message with sender attribution and bubble style.
+func renderDyadMessage(sender, content string, isHuman bool) string {
+	senderColor := "#00d4ff"  // CoCreator
+	senderLabel := "🐋"
+	if isHuman {
+		senderColor = "#b44dff"  // Peter
+		senderLabel = "👤"
+	}
+	
+	senderStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(senderColor)).
+		Bold(true).
+		Render(senderLabel + " " + sender)
+	
+	// Bubble style — different alignment for human vs dyad
+	bubbleStyle := lipgloss.NewStyle().
+		Padding(0, 1).
+		MaxWidth(80)
+	
+	if isHuman {
+		bubbleStyle = bubbleStyle.
+			Foreground(lipgloss.Color("#e0e8f5"))
+	} else {
+		bubbleStyle = bubbleStyle.
+			Foreground(lipgloss.Color("#00d4ff"))
+	}
+	
+	return senderStyle + "
+" + bubbleStyle.Render(content)
+}

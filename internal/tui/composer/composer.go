@@ -52,7 +52,7 @@ type pendingPaste struct {
 
 func New(width int) Composer {
 	ta := textarea.New()
-	ta.Placeholder = "Type message or command"
+	ta.Placeholder = "Type message or /command — dyad is listening..."
 	ta.Prompt = "› " // visible prompt
 	ta.SetPromptFunc(2, func(lineIdx int) string {
 		if lineIdx == 0 {

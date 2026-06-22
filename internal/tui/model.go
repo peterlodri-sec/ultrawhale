@@ -365,6 +365,7 @@ func newModel(rt Runtime, modelName, effort, thinking string) model {
 		viewCache:         &modelViewCache{},
 		hud:                statusline.DefaultHUD(80),
 		infraBar:            widgets.NewInfraBar(),
+		dyadStatus:          "connecting...",
 		orchPanel:           widgets.NewOrchestratorPanel(),
 		vakedDashboard:      widgets.NewVakedDashboard(),
 	}
