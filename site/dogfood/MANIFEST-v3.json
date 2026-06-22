@@ -13,5 +13,11 @@
   "hash": "0cf2f6944e2f865c",
   "timestamp": "2026-06-21T07:49:53Z",
   "trust": 1.0,
-  "verified": true
+  "verified": true,
+  "thanks": "https://github.com/peterlodri-sec/ultrawhale/blob/main/THANKS.md",
+  "cross_references": {
+    "ultrawhale": "https://github.com/peterlodri-sec/ultrawhale",
+    "vaked_base": "https://github.com/peterlodri-sec/vaked-base",
+    "hf_dataset": "https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood"
+  }
 }

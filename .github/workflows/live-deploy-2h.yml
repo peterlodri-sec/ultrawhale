@@ -1,0 +1,24 @@
+name: live-deploy-2h
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Pull HF dataset
+        run: |
+          git clone https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood /tmp/hf-ds 2>/dev/null || true
+          if [ -d /tmp/hf-ds ]; then
+            SAMPLES=$(cat /tmp/hf-ds/dogfeed-v3-enriched.jsonl 2>/dev/null | wc -l)
+            echo "Samples: $SAMPLES"
+            echo "Updated: $(date -u)" > docs/dataset-growth.md
+            echo "Samples: $SAMPLES" >> docs/dataset-growth.md
+            git add docs/dataset-growth.md
+            git diff --cached --quiet || git commit -m "live: dataset growth $(date -u +%Y%m%d-%H%M)"
+            git push origin main
+          fi
