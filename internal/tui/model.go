@@ -18,7 +18,6 @@ import (
 	"github.com/usewhale/whale/internal/runtime/timeline"
 	"github.com/usewhale/whale/internal/tui/composer"
 	"github.com/usewhale/whale/internal/tui/statusline"
-	"github.com/usewhale/whale/internal/tui/widgets"
 	"github.com/usewhale/whale/internal/modes"
 	"github.com/usewhale/whale/internal/tui/agui"
 	tuirender "github.com/usewhale/whale/internal/tui/render"
@@ -364,10 +363,7 @@ func newModel(rt Runtime, modelName, effort, thinking string) model {
 		historyIndex:      -1,
 		viewCache:         &modelViewCache{},
 		hud:                statusline.DefaultHUD(80),
-		infraBar:            widgets.NewInfraBar(),
 		dyadStatus:          "connecting...",
-		orchPanel:           widgets.NewOrchestratorPanel(),
-		vakedDashboard:      widgets.NewVakedDashboard(),
 	}
 	if rt != nil {
 		m.dispatch = rt.Dispatch
