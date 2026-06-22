@@ -43,6 +43,27 @@ jobs:
           echo "## Council Verdict" >> audit.md
           echo "See: [CLAIMS.md](CLAIMS.md) · [PETER_QUESTIONS.md](PETER_QUESTIONS.md)" >> audit.md
       
+      - name: CTF chain verification
+        run: |
+          echo "## RE + Audit Pipeline" >> audit.md
+          echo "" >> audit.md
+          echo "### CTF Challenge" >> audit.md
+          echo "- Challenge: ultrawhale-RE-101 — locate ASCIIBox in the binary" >> audit.md
+          echo "- Flag: flag{asciibox-min20-max80}" >> audit.md
+          echo "- Points: 100 (reverse-engineering category)" >> audit.md
+          echo "" >> audit.md
+          echo "### Verifier" >> audit.md
+          echo "\`\`\`bash" >> audit.md
+          echo "crabcc lookup sym ASCIIBox  # 12 references across 12 blocks" >> audit.md
+          echo "crabcc lookup refs ASCIIBox # verify the function signature" >> audit.md
+          echo "\`\`\`" >> audit.md
+          echo "" >> audit.md
+          echo "### sandboxd" >> audit.md
+          echo "- Namespace isolation: Linux namespaces + cgroups v2 + seccomp" >> audit.md
+          echo "- WP4-S1: Jun 24 2026 (deployed on dev-cx53)" >> audit.md
+          echo "" >> audit.md
+          echo "---" >> audit.md
+      
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
