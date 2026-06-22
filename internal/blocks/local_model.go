@@ -15,7 +15,7 @@ import (
 type LocalModel struct {
 	Name      string // "qwen3.5:35b"
 	Provider  string // "ollama"
-	Endpoint  string // "http://m3-max:11434"
+	Endpoint  string // "http://lodris-macbook-pro.tailnet:11434"
 	Available bool
 	Latency   time.Duration
 }
