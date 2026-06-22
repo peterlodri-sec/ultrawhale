@@ -15,7 +15,7 @@ import (
 type LocalModel struct {
 	Name      string // "qwen3.5:35b"
 	Provider  string // "ollama"
-	Endpoint  string // "http://lodris-macbook-pro.tailnet:11434"
+	Endpoint  string // "http://100.123.33.67:11434"
 	Available bool
 	Latency   time.Duration
 }
@@ -23,7 +23,7 @@ type LocalModel struct {
 var localModel = &LocalModel{
 	Name:     "qwen3.5:35b",
 	Provider: "ollama",
-	Endpoint: "http://lodris-macbook-pro.tailnet:11434" // M3-ONLY — never download here,
+	Endpoint: "http://100.123.33.67:11434" // M3-ONLY — never download here,
 }
 
 // PingLocalModel checks if the local model is reachable.
