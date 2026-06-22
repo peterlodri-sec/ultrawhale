@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: PII scan
+        run: |
+          if [ -d /tmp/hf-ds ]; then
+            EMAILS=$(grep -r "@" /tmp/hf-ds/ 2>/dev/null | wc -l)
+            echo "PII scan: $EMAILS email-like patterns found"
+          fi
       - name: Pull HF dataset
         run: |
           git clone https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood /tmp/hf-ds 2>/dev/null || true

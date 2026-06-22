@@ -87,3 +87,8 @@ docker/supabase-data/
 *.test
 deploy-out/
 homebrew-ultrawhale/
+.env
+*.key
+*.pem
+*_token
+secrets/

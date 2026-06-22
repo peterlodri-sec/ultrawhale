@@ -1,4 +1,7 @@
 name: re-audit-pipeline
+permissions:
+  contents: read
+  actions: write
 on:
   push:
     tags:
