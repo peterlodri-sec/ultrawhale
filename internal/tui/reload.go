@@ -1137,3 +1137,9 @@ func handleVastAICommand() string {
 func handleVastAIGoCommand() string {
 	return "╔══ vastai-go — one-shot GPU training ══╗\n║  Fix: onstart SSH injection\n║  No more password prompts.\n║  No more connection refused.\n║  The key is written BEFORE sshd starts.\n║\n║  Run: .dev/vastai-go.sh\n║  GPU: RTX 3060 · $0.08/hr\n║  Budget: $7.60 · ~95h\n╚══════════════════════════════════════╝"
 }
+
+func handleModelCommand() string {
+	local := blocks.LocalModelStatus()
+	openrouter := blocks.FreeModelStatsReport()
+	return fmt.Sprintf("╔══ MODELS ══╗\n  %s\n  %s\n  \n  Local: qwen3.5:35b (first try)\n  Fallback: 8 free OpenRouter models\n  Tailnet: m3-max.tailnet:11434", local, openrouter)
+}
