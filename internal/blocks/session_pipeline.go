@@ -23,6 +23,15 @@ type SessionPipeline struct {
 
 var sessionPipe = &SessionPipeline{Interval: 5 * time.Minute}
 
+func init() {
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			SessionToHF("auto-session-pulse")
+		}
+	}()
+}
+
 // SessionToHF sends recent session data to qwen and records results.
 func SessionToHF(context string) string {
 	if !PingLocalModel() {
