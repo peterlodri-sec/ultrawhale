@@ -38,7 +38,8 @@ untrusted analysis.
    v2 + seccomp. Safe analysis of untrusted binaries.
 4. **SPACE+TIME PROOF** cryptographically signs every release —
    machine, timestamp, content hash, watermark.
-5. **Event Horizon** publishes everything. Public. Immutable. Honest.
+5. **sandboxd** (WP4-S1) deploys on dev-cx53 via tailnet. `--policy` + namespace isolation. 🟢 LIVE.
+6. **Event Horizon** publishes everything. Public. Immutable. Honest.
 
 ## Try It
 
@@ -52,3 +53,26 @@ The flag is everywhere. The proof is in the code.
 ---
 
 *"The builder becomes the built. The graph becomes the system."*
+
+
+## Deployment
+
+```bash
+# sandboxd on dev-cx53
+ssh dev-cx53 '~/sandboxd/sandboxd --policy ~/sandboxd/policy.json -- <command>'
+
+# Release trigger
+git tag v100.1.0 && git push origin v100.1.0
+```
+
+## Status
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| crabcc | ✅ | Available on PATH |
+| CTF Arena | ✅ | vaked-base/tools/ctf/ |
+| sandboxd | ✅ | dev-cx53:~/sandboxd/ |
+| SPACE+TIME PROOF | ✅ | ultrawhale/blocks |
+| Event Horizon | ✅ | vaked.dev/ultrawhale/event-horizon |
+| M3 qwen | ✅ | 100.123.33.67:11434 |
+| CI | ✅ | Builds clean |
