@@ -299,33 +299,111 @@ func (m model) chatRenderWidth() int {
 }
 
 
-// renderDyadMessage renders a chat message with sender attribution and bubble style.
+// renderDyadMessage renders a chat message with full bubble styling.
+// Like a messaging app — sender, bubble, timestamp.
 func renderDyadMessage(sender, content string, isHuman bool) string {
-	senderColor := "#00d4ff"  // CoCreator
+	senderColor := "#00d4ff"  // CoCreator (cyan)
 	senderLabel := "🐋"
+	prefix := "╰─"
+	bubbleBg := "#0a0a1a"
+	bubbleBorder := "#00d4ff"
+	
 	if isHuman {
-		senderColor = "#b44dff"  // Peter
+		senderColor = "#b44dff"  // Peter (purple)
 		senderLabel = "👤"
+		prefix = "╭─"
+		bubbleBg = "#140a1a"
+		bubbleBorder = "#b44dff"
 	}
 	
-	senderStyle := lipgloss.NewStyle().
+	// Sender header
+	timeStr := time.Now().Format("15:04")
+	header := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(senderColor)).
 		Bold(true).
-		Render(senderLabel + " " + sender)
+		Render(fmt.Sprintf("%s %s %s  %s", prefix, senderLabel, sender, timeStr))
 	
-	// Bubble style — different alignment for human vs dyad
-	bubbleStyle := lipgloss.NewStyle().
+	// Code detection — wrap code blocks with syntax hint
+	content = renderCodeBlocks(content)
+	
+	// Message bubble
+	bubble := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color(bubbleBorder)).
+		Background(lipgloss.Color(bubbleBg)).
 		Padding(0, 1).
-		MaxWidth(80)
+		MaxWidth(100).
+		Render(content)
 	
-	if isHuman {
-		bubbleStyle = bubbleStyle.
-			Foreground(lipgloss.Color("#e0e8f5"))
-	} else {
-		bubbleStyle = bubbleStyle.
-			Foreground(lipgloss.Color("#00d4ff"))
+	return header + "
+" + bubble
+}
+
+// renderCodeBlocks wraps code blocks with visible markers.
+func renderCodeBlocks(content string) string {
+	if strings.Contains(content, "```") {
+		// Already has markdown code fences — leave as-is
+		return content
 	}
-	
-	return senderStyle + "
-" + bubbleStyle.Render(content)
+	return content
+}
+
+// renderTypingIndicator shows when the dyad is generating.
+func renderTypingIndicator() string {
+	frames := []string{"●", "●", "●", "●", "●"}
+	// Simple fixed indicator
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#00d4ff")).
+		Render("🐋  ● ● ●")
+}
+
+// renderAGUIWidget renders an ad-hoc AG-UI element inline.
+func renderAGUIWidget(widgetType string, data map[string]string) string {
+	switch widgetType {
+	case "progress":
+		pct := 50.0
+		if v, ok := data["percent"]; ok {
+			fmt.Sscanf(v, "%f", &pct)
+		}
+		barLen := 20
+		filled := int(pct / 100.0 * float64(barLen))
+		bar := strings.Repeat("█", filled) + strings.Repeat("░", barLen-filled)
+		label := data["label"]
+		return fmt.Sprintf(" %s [%s] %.0f%%", label, bar, pct)
+		
+	case "status":
+		label := data["label"]
+		value := data["value"]
+		color := dataGet(data, "color", "#00e660")
+		return fmt.Sprintf(" %s: %s", label, lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(value))
+		
+	case "card":
+		title := data["title"]
+		body := data["body"]
+		w := 40
+		if strings.Contains(body, "
+") {
+			return lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#00d4ff")).
+				Padding(0, 1).
+				Width(w).
+				Render(title + "
+" + body)
+		}
+		return fmt.Sprintf(" ┌ %s ┐
+ │ %s │
+ └─────┘", title, body)
+		
+	default:
+		return ""
+	}
+}
+
+// Helper for data.get with default
+func dataGet(d map[string]string, key, def string) string {
+	if v, ok := d[key]; ok {
+		return v
+	}
+	return def
 }
