@@ -23,7 +23,7 @@ type LocalModel struct {
 var localModel = &LocalModel{
 	Name:     "qwen3.5:35b",
 	Provider: "ollama",
-	Endpoint: "http://100.123.33.67:11434" // M3-ONLY — never download here,
+	Endpoint: "http://100.123.33.67:11434",
 }
 
 // PingLocalModel checks if the local model is reachable.
