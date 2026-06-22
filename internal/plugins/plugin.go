@@ -955,7 +955,6 @@ func builtins() []Plugin {
 		memoryPlugin{},
 		adapter{superpowers.NewPlugin()},
 		adapter{agentfield.NewPlugin()},
-		adapter{vaked.NewPlugin()},
 		adapter{natsplugin.NewPlugin()},
 		adapter{langfuseplugin.NewPlugin()},
 		adapter{repomap.NewPlugin("")},
