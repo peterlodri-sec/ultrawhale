@@ -59,7 +59,7 @@ type DogFeedStats struct {
 
 var dogFeed = &DogFeed{
 	config: DogFeedConfig{
-		Enabled:    false,
+		Enabled:    true,  // ENABLED — Peter wants data
 		FreeModel:  "google/gemma-3-4b-it:free",
 		Interval:   VakedDogFeedInterval,
 		MaxSamples: 1000,
@@ -239,4 +239,24 @@ func DogFeedVakedFit() string {
 
   Purpose: build dataset for future fine-tuning.
   The machine feeds itself. The loop learns.`
+}
+
+
+// StartDogFeed initializes and starts the dogfeed loop.
+// Called from init to begin continuous data collection.
+func StartDogFeed() {
+	df.mu.Lock()
+	if df.config.Enabled && !df.running {
+		df.running = true
+		df.config.OutputDir = getDogFeedDir()
+		go df.collect()
+		Log(LogInfo, "dogfeed.start", "continuous data collection active — 2880 feeds/hour", "", "", 0, nil)
+		Pulse("dogfeed.start", fmt.Sprintf("%d models", len(df.config.Models)))
+	}
+	df.mu.Unlock()
+}
+
+func getDogFeedDir() string {
+	home, _ := os.UserHomeDir()
+	return home + "/.ultrawhale/dogfeed"
 }
