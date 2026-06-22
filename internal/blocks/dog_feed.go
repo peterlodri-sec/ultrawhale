@@ -75,12 +75,8 @@ func init() {
 	os.MkdirAll(dogFeed.config.OutputDir, 0o700)
 
 	// Start the continuous data collection loop
-	if dogFeed.config.Enabled {
-		go func() {
-			for _, m := range dogFeed.config.Models {
-				StartDogFeed(m, dogFeed.config.Interval)
-			}
-		}()
+	if dogFeed.config.Enabled && dogFeed.config.FreeModel != "" {
+		go StartDogFeed(dogFeed.config.FreeModel, dogFeed.config.Interval)
 		Log(LogInfo, "dogfeed.auto-start", "continuous data collection active", "", "", 0, nil)
 	}
 }
