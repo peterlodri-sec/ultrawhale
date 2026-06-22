@@ -73,6 +73,16 @@ func init() {
 	home, _ := os.UserHomeDir()
 	dogFeed.config.OutputDir = filepath.Join(home, ".ultrawhale", "dogfeed")
 	os.MkdirAll(dogFeed.config.OutputDir, 0o700)
+
+	// Start the continuous data collection loop
+	if dogFeed.config.Enabled {
+		go func() {
+			for _, m := range dogFeed.config.Models {
+				StartDogFeed(m, dogFeed.config.Interval)
+			}
+		}()
+		Log(LogInfo, "dogfeed.auto-start", "continuous data collection active", "", "", 0, nil)
+	}
 }
 
 // ── Dog Feed Operations ───────────────────────────────────────────────
@@ -239,24 +249,4 @@ func DogFeedVakedFit() string {
 
   Purpose: build dataset for future fine-tuning.
   The machine feeds itself. The loop learns.`
-}
-
-
-// StartDogFeed initializes and starts the dogfeed loop.
-// Called from init to begin continuous data collection.
-func StartDogFeed() {
-	df.mu.Lock()
-	if df.config.Enabled && !df.running {
-		df.running = true
-		df.config.OutputDir = getDogFeedDir()
-		go df.collect()
-		Log(LogInfo, "dogfeed.start", "continuous data collection active — 2880 feeds/hour", "", "", 0, nil)
-		Pulse("dogfeed.start", fmt.Sprintf("%d models", len(df.config.Models)))
-	}
-	df.mu.Unlock()
-}
-
-func getDogFeedDir() string {
-	home, _ := os.UserHomeDir()
-	return home + "/.ultrawhale/dogfeed"
 }
