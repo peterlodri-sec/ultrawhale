@@ -55,7 +55,18 @@ var freeModelPool = &FreeModelPool{
 }
 
 // NextFreeModel returns the next free model in round-robin order.
+// When qwen3.5:35b (M3) is reachable, it's injected as an extra model — doubling tempo.
 func NextFreeModel() *FreeModel {
+	// Check if local M3 model is available — inject it as an extra free model
+	if PingLocalModel() {
+		local := &FreeModel{
+			ID:       "qwen3.5:35b@m3-macbook",
+			Provider: "M3-Local",
+		}
+		// Doesn't add to pool permanently — just returns it directly
+		return local
+	}
+
 	freeModelPool.mu.Lock()
 	defer freeModelPool.mu.Unlock()
 
