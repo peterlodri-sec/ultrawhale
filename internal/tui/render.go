@@ -72,7 +72,31 @@ func (m model) View() string {
 		parts = append(parts, body)
 		parts = append(parts, "\n")
 	}
-	parts = append(parts, m.input.View(), footer)
+	// Prominent input area — thick separator + visible box + cursor indicator
+separator := lipgloss.NewStyle().
+    Foreground(lipgloss.Color("#00d4ff")).
+    Render(strings.Repeat("─", mainWidth))
+inputLabel := lipgloss.NewStyle().
+    Foreground(lipgloss.Color("#00d4ff")).
+    Bold(true).
+    Render(" ╭─ input ")
+inputStyle := lipgloss.NewStyle().
+    Border(lipgloss.NormalBorder()).
+    BorderForeground(lipgloss.Color("#00d4ff")).
+    Background(lipgloss.Color("#0d0d1a")).
+    Padding(0, 1).
+    Width(mainWidth)
+cursorHint := " " + lipgloss.NewStyle().
+    Foreground(lipgloss.Color("#00e660")).
+    Render("●")
+if !m.busy {
+    cursorHint = " " + lipgloss.NewStyle().
+        Foreground(lipgloss.Color("#00d4ff")).
+        Render("⌨")
+}
+parts = append(parts, separator)
+parts = append(parts, inputLabel + cursorHint)
+parts = append(parts, inputStyle.Render(m.input.View()), footer)
 	view := strings.Join(parts, "\n")
 	if m.mode == modeChat && m.hasSlashSuggestions() {
 		view += "\n" + m.renderSlashSuggestions()
