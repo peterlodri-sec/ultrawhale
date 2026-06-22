@@ -1,13 +1,11 @@
 name: ci
 on: [push, pull_request]
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with: { go-version: '1.26' }
-      - name: Build
-        run: |
-          CGO_ENABLED=0 go build -o bin/ultrawhale ./cmd/whale
-          echo "✅ CI OK — 150 blocks, excluding upstream widgets/vaked"
+      - run: go build ./cmd/whale
+      - run: echo "✅ ultrawhale CI OK"

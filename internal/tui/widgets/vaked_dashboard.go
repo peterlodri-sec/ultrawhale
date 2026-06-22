@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/usewhale/whale/internal/blocks"
+	"github.com/usewhale/whale/internal/tui/agui"
 )
 
 // VakedDashboardWidget shows all 7 Vaked layers with live status.
