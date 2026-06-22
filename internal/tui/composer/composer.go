@@ -50,7 +50,7 @@ type pendingPaste struct {
 	text        string
 }
 
-func New() Composer {
+func New(width int) Composer {
 	ta := textarea.New()
 	ta.Placeholder = "Type message or command"
 	ta.Prompt = "› "
@@ -63,10 +63,10 @@ func New() Composer {
 	ta.ShowLineNumbers = false
 	ta.CharLimit = 20000
 	ta.MaxHeight = composerCollapseThreshold
-	ta.SetWidth(80)
+	ta.SetWidth(width)
 	ta.SetHeight(1)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
 	ta.BlurredStyle.CursorLine = lipgloss.NewStyle()
 	ta.Focus()
-	return Composer{textarea: ta, width: 80, selectionRuneOffset: -1}
+	return Composer{textarea: ta, width: width, selectionRuneOffset: -1}
 }

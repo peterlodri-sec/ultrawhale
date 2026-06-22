@@ -17,6 +17,8 @@
 ## Open (v100+)
 
 | Q11 | "Can vakedc/vakedz handle reactive re-derivation from ultrawhale's live event loop?" | The live semantics (event loop, SELF_MAIN_STATE changes, entropy drift) need to feed back into the compiled capability graph. Currently one-way: .vaked → compiled. Two-way needed: live state → recompile graph. | v100+ |
+
+| Q13 | "When qwen3.5:35b finishes on M3, wire it as the default Ollama backend?" | Wire into crabcc serve --ollama + ultrawhale /model. M3-ONLY. | v101+ |
 | Q12 | "What is the real-time capability graph? Live topology that updates on every event loop tick?" | The Space topology is static. A LIVE topology would update on agent spawn/complete/state change. The event loop already has tick — it could rebuild the graph. | v101+ |
 
 

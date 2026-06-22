@@ -146,8 +146,6 @@ func (i *InfraBarWidget) renderBar() string {
 	bg := lipgloss.NewStyle().Background(t.Bg).Foreground(t.Fg)
 
 	// Left: ultrawhale branding	
-	// Shell nesting indicator
-	}
 
 	// Center: service indicators
 	var services []string
