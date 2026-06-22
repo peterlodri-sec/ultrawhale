@@ -381,19 +381,15 @@ func renderAGUIWidget(widgetType string, data map[string]string) string {
 		title := data["title"]
 		body := data["body"]
 		w := 40
-		if strings.Contains(body, "
-") {
+		if strings.Contains(body, "\n") {
 			return lipgloss.NewStyle().
 				Border(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("#00d4ff")).
 				Padding(0, 1).
 				Width(w).
-				Render(title + "
-" + body)
+				Render(title + "\n" + body)
 		}
-		return fmt.Sprintf(" ┌ %s ┐
- │ %s │
- └─────┘", title, body)
+		return fmt.Sprintf(" ┌ %s ┐\n │ %s │\n └─────┘", title, body)
 		
 	default:
 		return ""

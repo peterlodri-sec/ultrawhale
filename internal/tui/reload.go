@@ -702,7 +702,6 @@ func handleRenderCommand(line string) string {
 
 func handleEvolveCommand() string { return blocks.EvolveStatus() + "\n\n" + blocks.EvolveVakedFit() }
 func handleFuzzCommand() string { return blocks.FuzzStatus() + "\n\n" + blocks.FuzzVakedFit() }
-func handleMeshCommand() string { return blocks.GlobalMeshStatus() + "\n\n" + blocks.GlobalMeshVakedFit() }
 
 func handleTranslateCommand() string { return blocks.TranslateStatus() + "\n\n" + blocks.TranslateVakedFit() }
 
@@ -854,16 +853,6 @@ func handleLoopCommand(line string) string {
 	}
 }
 
-func handleStateCommand(line string) string {
-	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/state"))
-	if len(parts) == 0 { return blocks.SelfMainStateStatus() + "\n\n" + blocks.SelfMainStateVakedFit() }
-	switch parts[0] {
-	case "here": return blocks.SetMainState(blocks.StateHere)
-	case "dream": return blocks.SetMainState(blocks.StateDream)
-	case "live": return blocks.SetMainState(blocks.StateLive)
-	default: return "/state here|dream|live"
-	}
-}
 
 func handleRSSCommand() string { return blocks.RSSStatus() + "\n\n" + blocks.SignalPrimitiveVakedFit() }
 func handleSignalsCommand() string { return blocks.SignalPrimitiveStatus() }
