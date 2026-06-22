@@ -104,14 +104,14 @@ func (c *Composer) ensureInitialized() {
 	if c.width != 0 {
 		return
 	}
-	*c = New()
+	*c = New(80)
 }
 
 func (c Composer) initialized() Composer {
 	if c.width != 0 {
 		return c
 	}
-	return New()
+	return New(80)
 }
 
 func (c Composer) rawValue() string {
