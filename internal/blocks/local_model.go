@@ -53,3 +53,19 @@ func LocalModelStatus() string {
 
 	return fmt.Sprintf("%s %s · %s · %s", icon, localModel.Name, localModel.Endpoint, latency)
 }
+
+
+// BestModel returns the best available model endpoint.
+// Priority: 1) Local qwen3.5:35b (M3, tailnet) 2) OpenRouter free pool
+func BestModel() string {
+	if PingLocalModel() {
+		return fmt.Sprintf("qwen3.5:35b @ %s 🟢", localModel.Endpoint)
+	}
+	return "OpenRouter free pool (8 models) 🔵"
+}
+
+// LocalModelName returns the model name for the local model.
+func LocalModelName() string {
+	if localModel.Available { return "qwen3.5:35b" }
+	return "openrouter-free-pool"
+}

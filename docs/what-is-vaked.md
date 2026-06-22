@@ -6,7 +6,7 @@
 
 **ultrawhale** is a coding agent that builds itself. It's 138 content-addressed
 blocks, 7 recursions, 8 engines, and 14 protocols — all built in ONE session
-(v1.0.0 → v100.1.0, 159 releases). You type. It thinks. Together, you build.
+(v1.0.0 → v100.1.0, 160 releases). You type. It thinks. Together, you build.
 
 It's a TUI application. It's a philosophy (vaked). It's a research project.
 It's the SACRED surface — the inviolable form where human and machine meet.
