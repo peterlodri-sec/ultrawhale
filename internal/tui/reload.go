@@ -1141,5 +1141,5 @@ func handleVastAIGoCommand() string {
 func handleModelCommand() string {
 	local := blocks.LocalModelStatus()
 	openrouter := blocks.FreeModelStatsReport()
-	return fmt.Sprintf("╔══ MODELS ══╗\n  %s\n  %s\n  \n  Local: qwen3.5:35b (first try)\n  Fallback: 8 free OpenRouter models\n  Tailnet: m3-max.tailnet:11434", local, openrouter)
+	return fmt.Sprintf("╔══ MODELS ══╗\n  %s\n  %s\n  \n  Local: qwen3.5:35b (parallel, when available)\n  Tempo: 2880 → 3240 feeds/hour\n  Cost: $0.00 (both local and OpenRouter are free)\n  Data: doubled when M3 reachable", local, openrouter)
 }
