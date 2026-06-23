@@ -1132,3 +1132,17 @@ func handleModelCommand() string {
 	openrouter := blocks.FreeModelStatsReport()
 	return fmt.Sprintf("╔══ MODELS ══╗\n  %s\n  %s\n  \n  Local: qwen3.5:35b (parallel, when available)\n  Tempo: 2880 → 3240 feeds/hour\n  Cost: $0.00 (both local and OpenRouter are free)\n  Data: doubled when M3 reachable", local, openrouter)
 }
+
+func handleResearchCommand(line string) string {
+	parts := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "/research"))
+	if len(parts) == 0 { return blocks.DeepResearchStatus() }
+	switch parts[0] {
+	case "start":
+		if len(parts) < 2 { return "usage: /research start <topic>" }
+		return blocks.DeepResearchStart(strings.Join(parts[1:], " "))
+	case "publish":
+		return blocks.DeepResearchPublish()
+	default:
+		return "/research start <topic> | /research publish"
+	}
+}
