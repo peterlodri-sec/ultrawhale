@@ -66,12 +66,12 @@ jobs:
       
       - name: Toot release announcement
         env:
-          MASTODON_ACCESS_TOKEN: \${{ secrets.MASTODON_ACCESS_TOKEN }}
+          MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
         run: |
           curl -s -X POST "https://social.crabcc.app/api/v1/statuses" \
             -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"status": "🚀 ultrawhale \${{ github.ref_name }} released!\n\n148 blocks · 7 recursions · 14 protocols\nSPACE+TIME PROOF · RE+Audit Pipeline\n\nhttps://github.com/peterlodri-sec/ultrawhale/releases/tag/\${{ github.ref_name }}\n\n#ultrawhale #vaked #opensource"}'
+            -d '{"status": "🚀 ultrawhale ${{ github.ref_name }} released!\n\n148 blocks · 7 recursions · 14 protocols\nSPACE+TIME PROOF · RE+Audit Pipeline\n\nhttps://github.com/peterlodri-sec/ultrawhale/releases/tag/${{ github.ref_name }}\n\n#ultrawhale #vaked #opensource"}'
       
       - name: Create Release
         uses: softprops/action-gh-release@v2
