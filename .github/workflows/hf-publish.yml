@@ -60,7 +60,7 @@ jobs:
                 "events": ${TELEMETRY_EVENTS},
                 "batches": ${TELEMETRY_BATCHES},
                 "consolidated": "telemetry-consolidated.jsonl",
-                "sources": ["chat.vaked.dev", "protocol.vaked.dev", "music.vaked.dev", "beat.vaked.dev", "irc.vaked.dev", "vaked.dev/ultrawhale"]
+                "sources": ["chat.vaked.dev", "protocol.vaked.dev", "music.vaked.dev", "beat.vaked.dev", "irc.vaked.dev", "pocoo.vaked.dev", "vaked.dev/ultrawhale"]
               }
             },
             "total_records": $((DOGFEED_SAMPLES + TELEMETRY_EVENTS)),
@@ -71,7 +71,8 @@ jobs:
               "chat": "https://chat.vaked.dev",
               "music": "https://music.vaked.dev",
               "beat": "https://beat.vaked.dev",
-              "irc": "https://irc.vaked.dev"
+              "irc": "https://irc.vaked.dev",
+              "pocoo": "https://pocoo.vaked.dev"
             }
           }
           EOF

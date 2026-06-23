@@ -50,6 +50,7 @@ Sources:
 | [beat.vaked.dev](https://beat.vaked.dev) | Vaked-FM swarm avatar |
 | [protocol.vaked.dev](https://protocol.vaked.dev) | AG-UI protocol + genesis spec |
 | [irc.vaked.dev](https://irc.vaked.dev) | public IRC community (Ergo + Gamja) |
+| [pocoo.vaked.dev](https://pocoo.vaked.dev) | personal technical blog |
 
 ### `telemetry-consolidated.jsonl`
 All telemetry batches merged into a single file. Updated every 6 hours by CI.
