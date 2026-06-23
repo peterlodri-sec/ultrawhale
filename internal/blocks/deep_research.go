@@ -89,7 +89,7 @@ func DeepResearchPublish() string {
 
 `, deepResearch.Topic, deepResearch.CurrentRound, last.Timestamp.Format("2006-01-02 15:04 UTC"))
 
-	for i, f := range last.Findings[0]s {
+	for i, f := range last.Findings {
 		content += fmt.Sprintf("%d. %s\n", i+1, f)
 	}
 
