@@ -110,3 +110,5 @@ tasks:
     desc: Reset to pristine
     cmds:
       - rm -rf bin/ deploy-out/ coverage.txt .golangci-lint-cache.stamp
+
+
