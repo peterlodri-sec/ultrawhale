@@ -17,6 +17,7 @@ ultrawhale --model deepseek-v4-flash -w
 ║  🟢 v100.1.0 · M1/arm64 · 150 blocks          ║
 ║  🐋 SACRED: ● 1:1 · perm: GRANTED              ║
 ║  📡 HF: PeetPedro/ultrawhale-dogfood ✅         ║
+║  🐘 @vakedbot@social.crabcc.app                 ║
 ║  🌐 vaked.dev/ultrawhale · /help               ║
 ╚════════════════════════════════════════════════╝
 ```
