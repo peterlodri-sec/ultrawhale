@@ -171,6 +171,10 @@ Verdict: 6/6 PASS</code></pre>
 <a href="https://github.com/peterlodri-sec/ultrawhale">GitHub</a> · <p style="text-align:center;margin-top:1rem"><a href="/ultrawhale/event-horizon/" style="color:#6878a0;font-size:0.8rem">event horizon</a></p>
 </footer>
 
+<script>
+/* G0DM0D3 Tier 2 Telemetry Beacon */
+(function(){var E="https://chat.vaked.dev/api/telemetry",b=[],s=crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+"-"+Math.random().toString(36).slice(2));function f(){if(!b.length)return;var e=b.splice(0);fetch(E,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({events:e})}).catch(function(){});}window.__vaked_telemetry=function(t,d){b.push(Object.assign({type:t,timestamp:Date.now(),session_id:s,page:location.hostname+location.pathname},d||{}));if(b.length>=20)f();};window.__vaked_telemetry("page_view",{referrer:document.referrer?"yes":"none"});setInterval(f,30000);window.addEventListener("beforeunload",function(){if(b.length)navigator.sendBeacon(E,JSON.stringify({events:b}));});})();
+</script>
 </body>
 </html>
  
