@@ -1,7 +1,7 @@
 name: hf-publish-dataset
 on:
   push:
-    paths: ['site/dogfood/*.jsonl']
+    paths: ['site/dogfood/*.jsonl', 'site/hf-dataset-card.md']
   schedule:
     - cron: '0 */6 * * *'  # every 6h — consolidate telemetry batches
   workflow_dispatch:
@@ -23,6 +23,9 @@ jobs:
           git config --global user.name "ultrawhale-ci"
           git clone https://PeetPedro:${HF_TOKEN}@huggingface.co/datasets/PeetPedro/ultrawhale-dogfood /tmp/hf-push
           cd /tmp/hf-push
+
+          # 0. Dataset card
+          cp $GITHUB_WORKSPACE/site/hf-dataset-card.md README.md
 
           # 1. Copy new dogfeed files
           cp $GITHUB_WORKSPACE/site/dogfood/*.jsonl . 2>/dev/null || true
@@ -57,7 +60,7 @@ jobs:
                 "events": ${TELEMETRY_EVENTS},
                 "batches": ${TELEMETRY_BATCHES},
                 "consolidated": "telemetry-consolidated.jsonl",
-                "sources": ["chat.vaked.dev", "protocol.vaked.dev", "music.vaked.dev", "beat.vaked.dev", "vaked.dev/ultrawhale"]
+                "sources": ["chat.vaked.dev", "protocol.vaked.dev", "music.vaked.dev", "beat.vaked.dev", "irc.vaked.dev", "vaked.dev/ultrawhale"]
               }
             },
             "total_records": $((DOGFEED_SAMPLES + TELEMETRY_EVENTS)),
@@ -67,7 +70,8 @@ jobs:
               "protocol": "https://protocol.vaked.dev",
               "chat": "https://chat.vaked.dev",
               "music": "https://music.vaked.dev",
-              "beat": "https://beat.vaked.dev"
+              "beat": "https://beat.vaked.dev",
+              "irc": "https://irc.vaked.dev"
             }
           }
           EOF
