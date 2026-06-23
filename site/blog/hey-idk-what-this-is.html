@@ -2,16 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>I found this thing called ultrawhale</title>
+<title>Hey Idk What This Is — ultrawhale blog</title>
 <style>
-:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; }
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; --purple: #b44dff; }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:720px; margin:0 auto; line-height:1.8; }
-h1 { color:var(--accent); } a { color:var(--accent)); }
-pre { background:#141420; padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
-footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid #141420; padding-top:1rem; }
-</style></head><body>
-<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1 { color:var(--accent); } h2 { color:var(--green); } h3 { color:var(--purple); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; }
+blockquote { border-left:3px solid var(--accent); padding-left:1rem; margin:1rem 0; }
+table { border-collapse:collapse; width:100%; margin:1rem 0; }
+th,td { border:1px solid var(--dim); padding:.5rem; text-align:left; }
+th { background:var(--card); color:var(--accent); }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style>
+</head>
+<body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/blog/">Blog</a> <a href="/ultrawhale/docs/">Docs</a></nav>
 # I Found This Thing Called ultrawhale and You Can `ls` the Agents??
 
 ok so i was browsing github and found this project called ultrawhale. it's a coding agent, 52 blocks, 7 plugins, whatever. but then i saw this:
@@ -45,6 +53,6 @@ this is either the coolest or the most unhinged thing i've ever seen in a termin
 anyway here's the repo: github.com/peterlodri-sec/ultrawhale
 
 i'm going to go `cat /ultrawhale/brain/dump` now. wish me luck.
-</pre>
-<footer><a href="/ultrawhale/">ultrawhale</a> · v18.0.0</footer>
-</body></html>
+<footer>ultrawhale · v100.1.0 · <a href="/ultrawhale/blog/">Blog</a></footer>
+</body>
+</html>
