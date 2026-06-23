@@ -1146,3 +1146,9 @@ func handleResearchCommand(line string) string {
 		return "/research start <topic> | /research publish"
 	}
 }
+
+func handleTootCommand(line string) string {
+	msg := strings.TrimPrefix(strings.TrimSpace(line), "/toot ")
+	if msg == "/toot" || msg == "" { return blocks.TootStatus() + "\n\n  Use: /toot <message>  (max 470 chars)" }
+	return blocks.TootPost(msg)
+}
