@@ -2,25 +2,76 @@ name: hf-publish-dataset
 on:
   push:
     paths: ['site/dogfood/*.jsonl']
+  schedule:
+    - cron: '0 */6 * * *'  # every 6h — consolidate telemetry batches
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     environment: ci
     steps:
       - uses: actions/checkout@v6
-      - name: Push to HuggingFace
+
+      - name: Push dogfeed + consolidate telemetry
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git config --global user.email "ci@ultrawhale.vaked.dev"
           git config --global user.name "ultrawhale-ci"
           git clone https://PeetPedro:${HF_TOKEN}@huggingface.co/datasets/PeetPedro/ultrawhale-dogfood /tmp/hf-push
-          cp site/dogfood/*.jsonl site/dogfood/README.md /tmp/hf-push/ 2>/dev/null || true
           cd /tmp/hf-push
+
+          # 1. Copy new dogfeed files
+          cp $GITHUB_WORKSPACE/site/dogfood/*.jsonl . 2>/dev/null || true
+
+          # 2. Consolidate telemetry batches → telemetry-consolidated.jsonl
+          if [ -d telemetry ] && [ "$(ls -A telemetry/*.jsonl 2>/dev/null)" ]; then
+            cat telemetry/*.jsonl > telemetry-consolidated.jsonl.tmp
+            # Only update if changed
+            if [ ! -f telemetry-consolidated.jsonl ] || ! diff -q telemetry-consolidated.jsonl telemetry-consolidated.jsonl.tmp > /dev/null 2>&1; then
+              mv telemetry-consolidated.jsonl.tmp telemetry-consolidated.jsonl
+              echo "telemetry consolidated: $(wc -l < telemetry-consolidated.jsonl) events"
+            else
+              rm telemetry-consolidated.jsonl.tmp
+            fi
+          fi
+
+          # 3. Auto-update MANIFEST with current stats
+          DOGFEED_SAMPLES=$(cat dogfeed-*.jsonl 2>/dev/null | wc -l || echo 0)
+          TELEMETRY_EVENTS=$(cat telemetry-consolidated.jsonl 2>/dev/null | wc -l || echo 0)
+          TELEMETRY_BATCHES=$(ls telemetry/*.jsonl 2>/dev/null | wc -l || echo 0)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          cat > MANIFEST-live.json << EOF
+          {
+            "updated_at": "${TIMESTAMP}",
+            "streams": {
+              "dogfeed": {
+                "samples": ${DOGFEED_SAMPLES},
+                "files": ["dogfeed-v1-initial.jsonl", "dogfeed-v2-science.jsonl", "dogfeed-v3-enriched.jsonl"],
+                "source": "ultrawhale M3 loop (10s interval, free OpenRouter models)"
+              },
+              "telemetry": {
+                "events": ${TELEMETRY_EVENTS},
+                "batches": ${TELEMETRY_BATCHES},
+                "consolidated": "telemetry-consolidated.jsonl",
+                "sources": ["chat.vaked.dev", "protocol.vaked.dev", "music.vaked.dev", "beat.vaked.dev", "vaked.dev/ultrawhale"]
+              }
+            },
+            "total_records": $((DOGFEED_SAMPLES + TELEMETRY_EVENTS)),
+            "genesis_seal": "7c242080f5f821e5eaf563fe2208d60632c451687baf65f4fe8e4a0d226e3ecf",
+            "dataset": "PeetPedro/ultrawhale-dogfood",
+            "links": {
+              "protocol": "https://protocol.vaked.dev",
+              "chat": "https://chat.vaked.dev",
+              "music": "https://music.vaked.dev",
+              "beat": "https://beat.vaked.dev"
+            }
+          }
+          EOF
+
           git add -A
-          git diff --cached --quiet || git commit -m "v63.0.0: auto-publish from CI"
+          git diff --cached --quiet || git commit -m "auto: dogfeed=${DOGFEED_SAMPLES} telemetry=${TELEMETRY_EVENTS} [${TIMESTAMP}]"
           git push origin main
