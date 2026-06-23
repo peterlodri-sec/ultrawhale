@@ -7,98 +7,118 @@
 :root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; --purple: #b44dff; }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
-h1 { color:var(--accent); } h2 { color:var(--green); } h3 { color:var(--purple); }
-a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; }
+h1,h2,h3,h4 { color:var(--accent); margin-top:1.5rem; }
+h2 { color:var(--green); } h3 { color:var(--purple); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
 pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; }
-blockquote { border-left:3px solid var(--accent); padding-left:1rem; margin:1rem 0; }
+blockquote { border-left:3px solid var(--accent); padding-left:1rem; margin:1rem 0; color:var(--dim); }
 table { border-collapse:collapse; width:100%; margin:1rem 0; }
 th,td { border:1px solid var(--dim); padding:.5rem; text-align:left; }
 th { background:var(--card); color:var(--accent); }
-nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; color:var(--accent); text-decoration:none; }
 footer { margin-top:3rem; color:var(--dim); font-size:.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+img { max-width:100%; } ul,ol { padding-left:1.5rem; }
 </style>
 </head>
 <body>
 <nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/blog/">Blog</a> <a href="/ultrawhale/docs/">Docs</a></nav>
-# RE + Audit Pipeline
-
-June 22, 2026 · Peter + CoCreator
-
----
-
-**We built a complete end-to-end binary reverse engineering and audit pipeline.**
-Every release is a verifiable, auditable artifact.
-
-## The Pipeline
-
-```
-Release tag
+<h1>RE + Audit Pipeline</h1>
+<p>June 22, 2026 · Peter + CoCreator</p>
+<hr />
+<p><strong>We built a complete end-to-end binary reverse engineering and audit pipeline.</strong>
+Every release is a verifiable, auditable artifact.</p>
+<h2>The Pipeline</h2>
+<div class="codehilite"><pre><span></span><code>Release tag
   ↓
 crabcc index ──→ 12,530 symbols, 70,015 edges
-CTF Arena ─────→ "Locate ASCIIBox in the binary"
+CTF Arena ─────→ &quot;Locate ASCIIBox in the binary&quot;
 sandboxd ──────→ Namespace isolation (seccomp + cgroups)
 SPACE+TIME ────→ Cryptographic proof of code state
 Event Horizon ──→ Public, immutable, append-only
-```
+</code></pre></div>
 
-## Why This Matters
-
-Every commit is signed. Every release is audited. Every binary is
-reverse-engineerable. **Trust through transparency.**
-
-The CTF challenge proves you CAN understand the code. The audit trail
+<h2>Why This Matters</h2>
+<p>Every commit is signed. Every release is audited. Every binary is
+reverse-engineerable. <strong>Trust through transparency.</strong></p>
+<p>The CTF challenge proves you CAN understand the code. The audit trail
 proves you CAN verify the release. sandboxd proves you CAN contain
-untrusted analysis.
+untrusted analysis.</p>
+<h2>How It Works</h2>
+<ol>
+<li><strong>crabcc</strong> indexes every symbol in the codebase — 877 files, 12,530
+   symbols, 70,015 edges in the call graph.</li>
+<li><strong>CTF Arena</strong> challenges players to find specific functions in the
+   binary. Solve the challenge = prove understanding.</li>
+<li><strong>sandboxd</strong> contains the RE execution in Linux namespaces + cgroups
+   v2 + seccomp. Safe analysis of untrusted binaries.</li>
+<li><strong>SPACE+TIME PROOF</strong> cryptographically signs every release —
+   machine, timestamp, content hash, watermark.</li>
+<li><strong>sandboxd</strong> (WP4-S1) deploys on dev-cx53 via tailnet. <code>--policy</code> + namespace isolation. 🟢 LIVE.</li>
+<li><strong>Event Horizon</strong> publishes everything. Public. Immutable. Honest.</li>
+</ol>
+<h2>Try It</h2>
+<div class="codehilite"><pre><span></span><code>crabcc<span class="w"> </span>lookup<span class="w"> </span>sym<span class="w"> </span>ASCIIBox<span class="w">    </span><span class="c1"># 12 references</span>
+crabcc<span class="w"> </span>lookup<span class="w"> </span>refs<span class="w"> </span>ASCIIBox<span class="w">   </span><span class="c1"># verify the function signature</span>
+</code></pre></div>
 
-## How It Works
+<p>The flag is everywhere. The proof is in the code.</p>
+<hr />
+<p><em>"The builder becomes the built. The graph becomes the system."</em></p>
+<h2>Deployment</h2>
+<div class="codehilite"><pre><span></span><code><span class="c1"># sandboxd on dev-cx53</span>
+ssh<span class="w"> </span>dev-cx53<span class="w"> </span><span class="s1">&#39;~/sandboxd/sandboxd --policy ~/sandboxd/policy.json -- &lt;command&gt;&#39;</span>
 
-1. **crabcc** indexes every symbol in the codebase — 877 files, 12,530
-   symbols, 70,015 edges in the call graph.
-2. **CTF Arena** challenges players to find specific functions in the
-   binary. Solve the challenge = prove understanding.
-3. **sandboxd** contains the RE execution in Linux namespaces + cgroups
-   v2 + seccomp. Safe analysis of untrusted binaries.
-4. **SPACE+TIME PROOF** cryptographically signs every release —
-   machine, timestamp, content hash, watermark.
-5. **sandboxd** (WP4-S1) deploys on dev-cx53 via tailnet. `--policy` + namespace isolation. 🟢 LIVE.
-6. **Event Horizon** publishes everything. Public. Immutable. Honest.
+<span class="c1"># Release trigger</span>
+git<span class="w"> </span>tag<span class="w"> </span>v100.1.0<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v100.1.0
+</code></pre></div>
 
-## Try It
-
-```bash
-crabcc lookup sym ASCIIBox    # 12 references
-crabcc lookup refs ASCIIBox   # verify the function signature
-```
-
-The flag is everywhere. The proof is in the code.
-
----
-
-*"The builder becomes the built. The graph becomes the system."*
-
-
-## Deployment
-
-```bash
-# sandboxd on dev-cx53
-ssh dev-cx53 '~/sandboxd/sandboxd --policy ~/sandboxd/policy.json -- <command>'
-
-# Release trigger
-git tag v100.1.0 && git push origin v100.1.0
-```
-
-## Status
-
-| Component | Status | Location |
-|-----------|--------|----------|
-| crabcc | ✅ | Available on PATH |
-| CTF Arena | ✅ | vaked-base/tools/ctf/ |
-| sandboxd | ✅ | dev-cx53:~/sandboxd/ |
-| SPACE+TIME PROOF | ✅ | ultrawhale/blocks |
-| Event Horizon | ✅ | vaked.dev/ultrawhale/event-horizon |
-| M3 qwen | ✅ | 100.123.33.67:11434 |
-| CI | ✅ | Builds clean |
-
+<h2>Status</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Status</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>crabcc</td>
+<td>✅</td>
+<td>Available on PATH</td>
+</tr>
+<tr>
+<td>CTF Arena</td>
+<td>✅</td>
+<td>vaked-base/tools/ctf/</td>
+</tr>
+<tr>
+<td>sandboxd</td>
+<td>✅</td>
+<td>dev-cx53:~/sandboxd/</td>
+</tr>
+<tr>
+<td>SPACE+TIME PROOF</td>
+<td>✅</td>
+<td>ultrawhale/blocks</td>
+</tr>
+<tr>
+<td>Event Horizon</td>
+<td>✅</td>
+<td>vaked.dev/ultrawhale/event-horizon</td>
+</tr>
+<tr>
+<td>M3 qwen</td>
+<td>✅</td>
+<td>100.123.33.67:11434</td>
+</tr>
+<tr>
+<td>CI</td>
+<td>✅</td>
+<td>Builds clean</td>
+</tr>
+</tbody>
+</table>
 <footer>ultrawhale · v100.1.0 · <a href="/ultrawhale/blog/">Blog</a></footer>
 </body>
 </html>
