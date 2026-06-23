@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brainstorm Mode — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Brainstorm Mode — Turn-Based Co-Creation
+
+## What It Is
+
+A first-class UI mode for deep thinking sessions between human and LLM.
+Turn-based dialog. Multi-choice cards. SACRED surface protected.
+
+## Modes
+
+| Mode | Description |
+|------|-------------|
+| `qa` | Question → Answer → Follow-up |
+| `multichoice` | Question → Options → Selection → Next |
+| `freeform` | Open-ended dialog, no structure |
+| `debate` | Position → Counter-position → Resolution |
+
+## Commands
+
+```
+/brainstorm start "what is consciousness?"
+/brainstorm list
+/brainstorm resume <id>
+/brainstorm complete <id>
+```
+
+## API
+
+```
+POST /api/v1/brainstorm  {"topic": "...", "mode": "freeform"}
+GET  /api/v1/brainstorm  → all sessions
+```
+
+## SACRED Guarantees
+
+- Always visible: the brainstorm UI card cannot be obscured
+- Always direct: 1:1 human↔LLM, no proxy
+- Always bidirectional: human types, LLM responds, human sees
+- Persistence: completed sessions saved to brain long-term memory
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

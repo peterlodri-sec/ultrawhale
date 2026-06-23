@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Loop — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Native Agent Loop — ultracode
+
+The 7-phase autonomous coding loop: plan → implement → test → review → fix → verify → commit. All writes journaled via blocks, all traces to Langfuse, all events to NATS.
+
+## Phases
+
+| # | Phase | Failure behavior |
+|---|-------|-----------------|
+| 1 | plan | Retry with different approach |
+| 2 | implement | blocks.Rollback restores pre-write state |
+| 3 | test | Failure → rollback to pre-implement |
+| 4 | review | Issues → phase 5 (fix) |
+| 5 | fix | Apply review fixes |
+| 6 | verify | Re-test after fixes |
+| 7 | commit | Sign + commit |
+
+## TUI commands
+
+```
+/ultracode start   → begin loop
+/ultracode status  → ●→✓→✓→·→·→·→·
+/ultracode next    → advance phase
+/ultracode fail    → mark current failed
+```
+
+## Phase summary icons
+
+```
+● running  ✓ passed  ✗ failed  ◌ skipped  · pending
+```
+
+## Plugin reuse
+
+All 6 plugins participate:
+- **repomap**: context injection per phase
+- **blocks**: journaled writes, rollback on failure
+- **langfuse**: phase traces with POV metadata
+- **nats**: phase lifecycle events
+- **superpowers**: bao secrets for commit signing
+- **agentfield**: DID identity, workflow persistence
+
+## POV — Point of View
+
+Every phase carries a POV context:
+
+```go
+type POV struct {
+    Agent    string // "ultrawhale"
+    Version  string // "v18.0.0"
+    Machine  string // "M1" | "dev-cx53"
+    Arch     string // "arm64" | "amd64"
+    Tier     string // "go" | "asm" | "gpu"
+    Session  string
+    Mode     string // "agent" | "ultracode"
+}
+```
+
+POV is injected into: LogSink toasts, Langfuse trace metadata, AgentField API responses, HUD right section.
+
+## HUD statusline
+
+```
+[deepseek-v4-flash]  ⎇ main     ● 2:35 · 4821t · 85/s · ⎆98%   dev-cx53·amd64  342MB · ⚙6
+ ─── left ───────────     ────── center ────────────────────   ─── right ───────
+```
+
+Right section shows POV: `M1·arm64` or `dev-cx53·amd64`.
+
+
+## Self vs Current
+
+/self: who am I (ultrawhale v18.0.0, 6 plugins, DID).
+/current: what is happening now (idle/busy, tokens, cache, memory, cost).
+
+## Full TUI Commands
+
+/reload all|status|hooks|theme|doctor
+/ultracode start|status|next|fail
+/self /current
+Ctrl+Shift+T: cycle themes
+Ctrl+Shift+Z: zen mode
+Ctrl+Shift+B: shader toggle
+Ctrl+Shift+S: sidebar toggle
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

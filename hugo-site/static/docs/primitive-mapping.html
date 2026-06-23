@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Primitive Mapping — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Primitive Mapping — ultrawhale v18.0.0
+
+## Vaked Layer Coverage
+
+| Layer | Blocks | Count |
+|-------|--------|-------|
+| **Declares** | schema, capabilities, tool, prehook | 4 |
+| **Materializes** | nix, dotwhale, io, export | 4 |
+| **Supervises** | pov, self, current, cost, codewhale, agent, swarm, orchestrator, ralph, brainstorm, supervisor | 11 |
+| **Enforces** | block, journal, log, hash, sed, diff, compress, mmap, pool, glob, blake3, xxhash | 12 |
+| **Testifies** | probe, predict, learn, edge, ssh, tailscale, watch | 7 |
+| **Indexes** | repomap, space | 2 |
+| **Reveals** | sacred, surface, ui, a2a, a2c, mesh_agent, dyad, notify | 8 |
+
+**Total: 53 blocks mapped to 7 Vaked layers.**
+
+## Dimension Coverage
+
+| Dimension | Blocks | Count |
+|-----------|--------|-------|
+| **Context (WHAT)** | pov, self, current, cost, codewhale, capabilities, schema | 7 |
+| **Time (WHEN)** | journal, log, prehook, ralph, brainstorm, probe, predict, learn | 8 |
+| **Space (WHERE)** | space, dyad, ssh, tailscale, edge, mesh_agent, glob | 7 |
+
+**26 blocks carry a specific dimension. 22 are infrastructure (no single dimension).**
+
+## Gap Analysis
+
+| Gap | Detail |
+|-----|--------|
+| Declares layer | 4 blocks — could add `contract` block for formal verification |
+| Materializes layer | 4 blocks — could add `package` block for brew/docker/npm |
+| Indexes layer | 2 blocks — could add `crabcc` block for symbol indexing |
+| Context dimension | 7 blocks — could add `state` block for state machine |
+| Time dimension | 8 blocks — Lamport clock already covers cross-machine ordering |
+| Space dimension | 7 blocks — topology already covers graph structure |
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

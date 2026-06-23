@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Agents — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># AGENTS.md — ultrawhale orchestrator agent definitions
+
+## swe
+Role: Software engineer. Writes code, fixes bugs, implements features.
+Model: deepseek-v4-flash
+Tools: shell.run, workspace.read, workspace.write
+Budget: 256 tool calls, 128 iterations
+MemoScope: agents
+Brain: shared
+
+## explore
+Role: Codebase explorer. Searches, reads, analyzes, reports findings.
+Model: deepseek-v4-flash
+Tools: shell.run, workspace.read
+Budget: 128 tool calls, 64 iterations
+MemoScope: agents
+Brain: shared
+
+## review
+Role: Code reviewer. Reviews PRs, finds bugs, suggests improvements.
+Model: deepseek-v4-flash
+Tools: shell.run, workspace.read
+Budget: 64 tool calls, 32 iterations
+MemoScope: agents
+Brain: shared
+</pre><footer>ultrawhale · v97.0.0</footer></body></html>

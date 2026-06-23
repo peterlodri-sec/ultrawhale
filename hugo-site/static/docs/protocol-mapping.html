@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Protocol Mapping — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Protocol Mapping — ultrawhale v66.0.0
+
+All protocols, their status functions, VakedFit functions, and commands.
+
+| Protocol | Status Function | VakedFit Function | /cmd | Wired? |
+|----------|----------------|-------------------|------|--------|
+| SSH | `SSHStatus()` (ssh.go) | `SSHVakedFit()` | — | ✅ |
+| GPG | — (external) | — | — | ✅ key 2B2495 |
+| HF Webhook | `HFWebhookStatus()` | `HFWebhookVakedFit()` | `/hf` | ✅ |
+| RADIO | `RadioStatus()` | `RadioVakedFit()` | `/radio` | ✅ |
+| A2A | `A2AStatus()` | — | `/a2a` | ✅ |
+| A2C | `A2CStatus()` | — | `/a2c` | ✅ |
+| A2UI | `A2UIStatus()` | — | — | ✅ |
+| MCP | `MCPStatus()` | — | — | ✅ |
+| VFS | `VFSStatus()` | — | `/vfs` | ✅ |
+| Git | `GitPrimitiveStatus()` | `GitPrimitiveVakedFit()` | `/git` | ✅ |
+| Live Session | `LiveSessionStatus()` | `LiveSessionVakedFit()` | `/session`, `/who` | ✅ |
+| WebSocket | `WSStatus()` | — | — | ✅ |
+
+**12 protocols. All wired. All have status. All have commands.**
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>

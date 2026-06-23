@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Time Wiring — ultrawhale docs</title>
+<style>
+:root { --bg: #0a0a14; --fg: #e0e8f5; --accent: #00d4ff; --green: #00e660; --dim: #6878a0; --card: #141420; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family: system-ui, monospace; padding:2rem; max-width:800px; margin:0 auto; line-height:1.8; }
+h1,h2,h3 { color:var(--accent); margin:1.5rem 0 0.5rem; } h2 { color:var(--green); }
+a { color:var(--accent); } code { background:var(--card); padding:2px 6px; border-radius:3px; color:var(--green); }
+pre { background:var(--card); padding:1rem; border-radius:6px; overflow-x:auto; margin:1rem 0; }
+nav { margin-bottom:2rem; } nav a { margin-right:1rem; }
+footer { margin-top:3rem; color:var(--dim); font-size:0.8rem; border-top:1px solid var(--card); padding-top:1rem; }
+</style></head><body>
+<nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a> <a href="/ultrawhale/book/">Book</a></nav>
+<pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0">
+# Context × Time — ultrawhale Wire Map
+
+> Analysis by meta-architect agent, v18.0.0
+
+## Where Context and Time Meet
+
+The single point where context and time converge is `blocks.Log()`:
+```go
+Log(LogInfo, "blocks.Write", path, b.Ref, prevRef, time.Since(start), err)
+//   ↑ context (what, where)        ↑ time (duration)  ↑ outcome
+```
+
+Every operation in ultrawhale carries both context (POV, path, ref) and time
+(timestamp, duration, sequence). The journal IS the context×time ledger.
+
+## Context Flow (Now → This → Here)
+
+```
+CurrentPOV() — NOW — what machine, arch, tier am I running on?
+  ↓
+GetOrchestrator().DelegatePrompt() — THIS — what agent handles this task?
+  ↓
+classifyByCapability() — HERE — what capabilities does this task need?
+  ↓
+SpawnAgent() → Agent carries parent POV as inherited context
+  ↓
+Agent.Status → A2C SSE stream → client receives context+time events
+```
+
+## Time Flow (Before → During → After → Next)
+
+```
+Pre-hook.Validate() — BEFORE — is this operation valid?
+  ↓
+blocks.Write() — DURING — journal.Push(prev) + os.WriteFile + os.Rename
+  ↓
+blocks.Log() — AFTER — ref + duration + error recorded
+  ↓
+Ralph.Observe() — NEXT — learn from outcome, adjust capabilities
+```
+
+## Context × Time Gaps
+
+| Gap | Where | Fix |
+|-----|-------|-----|
+| **Session birth** | No formal "universe created" event | Add `SessionStart` log with full POV |
+| **Session death** | `persistSession("stopped")` exists but no journal entry | Log session end with total tokens + cost |
+| **Cross-machine time** | Dyad peers have independent clocks | Add Lamport clock to A2A messages |
+| **Pre-hook → Post-hook trace** | Pre-hook outcome not linked to post-hook | Add `hookID` to Log entries spanning operation |
+| **Capability change log** | Ralph adjusts caps but doesn't log why | Log capability changes with trigger reason |
+| **Widget state time** | UI blocks render current state only | Add state history (last N transitions) |
+
+## Recommended Next Wire
+
+**Session lifecycle journaling**: Log `SessionStart` + `SessionStop` with full
+POV + token count + cost. This closes the biggest context×time gap — we know
+what happened during a session but not its beginning or end in the journal.
+
+</pre>
+<footer>ultrawhale · v18.1.0 · <a href="/ultrawhale/">Home</a></footer>
+</body></html>

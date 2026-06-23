@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Multiarch Asm — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Multi-Platform ASM Layer — v66.0.0
+
+## Architecture Detection
+
+| Platform | SIMD | SHA | Detection |
+|----------|------|-----|-----------|
+| Apple Silicon (M1/M2/M3) | NEON | ARMv8 Crypto | Auto (arm64 build tag) |
+| AMD EPYC / Intel Xeon | AVX2 | SHA-NI | `cpu.X86.Has*` at runtime |
+| Generic amd64 | — | — | Pure Go fallback |
+| Generic arm64 | NEON | — | Pure Go fallback |
+
+## Dispatch Logic
+
+```
+HashDispatch(data)
+  ├── Apple Silicon → BLAKE3 (NEON + ARMv8 Crypto)
+  ├── Intel SHA-NI → BLAKE3 (AVX2 + SHA-NI)
+  ├── AMD AVX2 → BLAKE3 (AVX2)
+  └── Generic → SHA256 (pure Go)
+```
+
+## Files
+
+| File | Platform | Purpose |
+|------|----------|---------|
+| `asm/multiarch.go` | All | ArchCapabilities struct + DetectArch() |
+| `asm/multiarch_amd64.go` | amd64 | CPU feature detection via golang.org/x/sys/cpu |
+| `asm/multiarch_arm64.go` | arm64 | Apple Silicon (NEON + ARMv8 always) |
+| `hash_dispatch.go` | All | Route to fastest hash based on arch |
+| `asm/text_amd64.s` | amd64 | SIMD substring + line count |
+| `asm/text_arm64_go.go` | arm64 | Go fallback for text operations |
+
+## Benchmarks (M1 Max)
+
+| Operation | Throughput | Arch Features |
+|-----------|-----------|---------------|
+| BLAKE3 64KB | 2.3 GB/s | NEON + ARMv8 Crypto |
+| Write 64KB | ~170µs | Journaled |
+| Sed 1MB | 252 MB/s | SIMD bytes.Index |
+D O C E O F  # intentional
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>

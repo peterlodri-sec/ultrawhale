@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Council Of Llms — ultrawhale docs</title><style>:root{--bg:#0a0a14;--fg:#e0e8f5;--accent:#00d4ff;--green:#00e660;--dim:#6878a0;--card:#141420}*{margin:0;padding:0}body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;padding:2rem;max-width:800px;margin:0 auto;line-height:1.8}h1,h2{color:var(--accent)}a{color:var(--accent)}pre{background:var(--card);padding:1rem;border-radius:6px}nav{margin-bottom:2rem}nav a{margin-right:1rem}footer{margin-top:3rem;color:var(--dim);font-size:.8rem;border-top:1px solid var(--card);padding-top:1rem}</style></head><body><nav><a href="/ultrawhale/">Home</a> <a href="/ultrawhale/docs/">Docs</a></nav><pre style="white-space:pre-wrap;font-family:system-ui,monospace;background:none;padding:0"># Council of LLMs — ultrawhale's Multi-Model Brain
+
+> "Council of DeepSeek versions + OpenRouter FREE-only council + Copilot via GitHub CI"
+> — Peter
+
+## What Is This?
+
+ultrawhale runs a COUNCIL of language models, not just one. Multiple models
+collaborate, verify each other's outputs, and store collective wisdom in
+dedicated long-term memory.
+
+## The Council Members
+
+| Council | Models | Cost | How |
+|---------|--------|------|-----|
+| **DeepSeek Council** | V4 Flash, V4 Pro, Coder V3 | Paid | Primary orchestrator + subagents |
+| **OpenRouter FREE Council** | Gemma 3 4B, Mistral 7B, Llama 3.2 3B | **$0** | Dog Feed data collection + verification |
+| **GitHub Copilot Council** | Copilot Chat via CI | Included in GitHub | Code review + PR suggestions |
+
+## How It Works
+
+```
+Human prompt
+    ↓
+DeepSeek V4 Flash (orchestrator) — primary response
+    ↓
+DeepSeek V4 Pro (subagent) — deep reasoning
+    ↓
+OpenRouter FREE model (background) — second opinion, data collection
+    ↓
+GitHub Copilot (CI) — code review, suggestions
+    ↓
+All outputs → Dedicated Mem-Brain (long-term storage)
+```
+
+## Dedicated Mem-Brain
+
+All council outputs are stored in **dedicated long-term memory**:
+- DeepSeek responses → `brain/memos/ds-*`
+- OpenRouter responses → `brain/memos/or-*` (Dog Feed dataset)
+- Copilot suggestions → `brain/memos/gh-copilot-*`
+- Council verdicts → `brain/memos/council-*`
+
+## Disclaimer
+
+⚠️ **ULTRA-RESEARCH-STATE**: The Council of LLMs is an experimental concept.
+Multiple models may produce conflicting outputs. The council does not guarantee
+correctness. It is a research tool for exploring multi-model collaboration.
+
+⚠️ **FREE MODELS**: OpenRouter free models have rate limits and lower quality.
+They are used for data collection and second opinions, not primary responses.
+
+⚠️ **COST**: DeepSeek is paid. OpenRouter FREE models are $0. GitHub Copilot
+is included in your GitHub subscription. Total cost per session: typically <$0.01.
+
+## How to Use
+
+```sh
+# Start ultrawhale with council mode
+ultrawhale --council deepseek+openrouter-free+copilot
+
+# Query the council
+/council ask "Should I use Rust or Go for this project?"
+  → DeepSeek: "Rust for performance, Go for simplicity..."
+  → Gemma (free): "Rust has better memory safety..."
+  → Copilot: "Consider Go if team is familiar with it..."
+
+# View council verdict
+/council verdict
+  → Consensus: Rust (2/3 recommend)
+  → Stored to: brain/memos/council-20260621-001
+```
+
+## Vaked Fit
+
+```
+Council = Supervises layer (multi-agent coordination)
+  + Testifies layer (verification by multiple models)
+  + Indexes layer (dedicated mem-brain storage)
+```
+</pre><footer>ultrawhale · v100.1.0</footer></body></html>
