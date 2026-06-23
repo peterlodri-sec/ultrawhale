@@ -82,7 +82,7 @@ tasks:
       - cp docs/index.html deploy-out/ultrawhale/docs/
       - cp -r rendered-docs/* deploy-out/ultrawhale/docs/ 2>/dev/null; true
       - cp -r docs-book/book/* deploy-out/ultrawhale/book/ 2>/dev/null; true
-      - python3 -c "import glob,os; [os.rename(f,f.replace('.md','.html')) for f in glob.glob('site/blog/*.md')]" 2>/dev/null; cp -r site/blog/*.html deploy-out/ultrawhale/blog/ 2>/dev/null; cp -r site/blog/*.md deploy-out/ultrawhale/blog/ 2>/dev/null; true
+      - cp -r site/blog/*.html deploy-out/ultrawhale/blog/ 2>/dev/null; cp -r site/blog/*.md deploy-out/ultrawhale/blog/ 2>/dev/null; true
       - mkdir -p deploy-out/ultrawhale/event-horizon
       - cp -r site/event-horizon/* deploy-out/ultrawhale/event-horizon/ 2>/dev/null; true
       - mkdir -p deploy-out/ultrawhale/dogfood
