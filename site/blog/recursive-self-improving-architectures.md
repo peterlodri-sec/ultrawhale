@@ -47,7 +47,20 @@ three foundational ideas that make this possible.
 
 ## Peter's Opinion
 
-*[Your turn — 2 questions below]*
+
+## Peter's Answers
+
+> *"Both. It cannot be just one. Even now that I think the system is self-improving,
+> while I'm chasing the proof I'm also learning and improving myself — about multiple
+> topics, not just computer science. Philosophy. Life. The meaning of words. How to
+> describe something. So yes: both."*
+>
+> *"Confidence is not the right word. It gives me ground. Something outside this bubble.
+> Something outside this system. That's what the Observer is — not a feature, not a
+> tool, but an anchor to something beyond the recursion itself."*
+
+The post is now complete.
+
 
 ## 2 Questions for Peter
 
