@@ -77,6 +77,7 @@ tasks:
       - rm -rf deploy-out
       - mkdir -p deploy-out/ultrawhale/docs deploy-out/ultrawhale/book deploy-out/ultrawhale/blog
       - cp site/index.html deploy-out/ultrawhale/
+      - cp site/logo.svg deploy-out/ultrawhale/ 2>/dev/null; true
       - cp site/robots.txt deploy-out/ultrawhale/ 2>/dev/null; true
       - cp site/sitemap.xml deploy-out/ultrawhale/ 2>/dev/null; true
       - cp docs/index.html deploy-out/ultrawhale/docs/

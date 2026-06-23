@@ -1,0 +1,8 @@
+baseURL = "https://vaked.dev/ultrawhale/"
+languageCode = "en-us"
+title = "ultrawhale"
+theme = "ultrawhale"
+pygmentsUseClasses = true
+[params]
+  description = "Coding agent that builds itself"
+  version = "v100.1.0"

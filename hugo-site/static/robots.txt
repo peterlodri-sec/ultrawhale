@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ultrawhale.vaked.dev/sitemap.xml
