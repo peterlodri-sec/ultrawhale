@@ -89,7 +89,7 @@ func DeepResearchPublish() string {
 
 `, deepResearch.Topic, deepResearch.CurrentRound, last.Timestamp.Format("2006-01-02 15:04 UTC"))
 
-	for i, f := range last.Findings {
+	for i, f := range last.Findings[0]s {
 		content += fmt.Sprintf("%d. %s\n", i+1, f)
 	}
 
@@ -114,7 +114,7 @@ func DeepResearchPublish() string {
 		brain.RememberLongTerm(map[string]string{
 			"research_topic":   deepResearch.Topic,
 			"research_rounds":  fmt.Sprintf("%d", deepResearch.CurrentRound),
-			"research_finding": last.Finding,
+			"research_finding": last.Findings[0],
 		})
 		deepResearch.BrainRef = "ingested"
 	}
