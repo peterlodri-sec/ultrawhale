@@ -92,3 +92,5 @@ homebrew-ultrawhale/
 *.pem
 *_token
 secrets/
+hugo-site/public/
+hugo-site/.hugo_build.lock
