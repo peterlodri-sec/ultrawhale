@@ -106,6 +106,16 @@ tasks:
       - go test -bench=. -benchmem -benchtime=500ms ./internal/blocks/
       - bin/ultrawhale-bench-tui
 
+  hf-upload-local:
+    desc: Upload local dogfeed JSONL files to HF (read-only, skips active file)
+    cmds:
+      - uv run scripts/upload_local_dogfeed.py --dir {{.DIR | default "."}}
+
+  hf-upload-local-dry:
+    desc: Dry-run — show what would be uploaded without pushing
+    cmds:
+      - uv run scripts/upload_local_dogfeed.py --dir {{.DIR | default "."}} --dry-run
+
   hf-plot:
     desc: Regenerate dataset growth projection chart (site/dogfood/growth.png)
     cmds:
