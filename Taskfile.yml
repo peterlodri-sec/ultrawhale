@@ -106,6 +106,26 @@ tasks:
       - go test -bench=. -benchmem -benchtime=500ms ./internal/blocks/
       - bin/ultrawhale-bench-tui
 
+  hf-optimize:
+    desc: Merge JSONL → Parquet and push to HuggingFace (requires HF_TOKEN)
+    cmds:
+      - uv run scripts/hf_optimize.py
+
+  hf-optimize-dry:
+    desc: Merge JSONL → Parquet locally without pushing (no token needed)
+    cmds:
+      - uv run scripts/hf_optimize.py --dry-run
+
+  hf-optimize-dogfeed:
+    desc: Optimize dogfeed stream only
+    cmds:
+      - uv run scripts/hf_optimize.py --stream dogfeed
+
+  hf-optimize-telemetry:
+    desc: Optimize telemetry stream only
+    cmds:
+      - uv run scripts/hf_optimize.py --stream telemetry
+
   dev-clean:
     desc: Reset to pristine
     cmds:
