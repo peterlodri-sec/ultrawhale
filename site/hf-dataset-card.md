@@ -52,6 +52,47 @@ Sources:
 | [irc.vaked.dev](https://irc.vaked.dev) | public IRC community (Ergo + Gamja) |
 | [pocoo.vaked.dev](https://pocoo.vaked.dev) | personal technical blog |
 
+### Example dogfeed row
+
+```json
+{
+  "id": "dogfeed-gen-0001",
+  "user_message": "explain the Weierstrass elliptic function",
+  "free_response": "The Weierstrass ℘-function is a doubly-periodic meromorphic function built from a lattice in the complex plane...",
+  "free_model": "openai/gpt-oss-20b:free",
+  "deepseek_response": "The Weierstrass elliptic function is a fundamental object in the theory of elliptic functions...",
+  "timestamp": "2026-06-23T15:56:22Z",
+  "session_id": "v100.1.0-gen",
+  "topic": "mathematics",
+  "format": "qa-pair",
+  "pov": "M1/arm64/python",
+  "capabilities": "FULL",
+  "space_node": "ultrawhale/datasets/dogfeed-gen-0001",
+  "memory_ref": "c281bc957c10",
+  "pipeline": "dogfeed → scrub → HF"
+}
+```
+
+Fields: `id`, `user_message`, `free_response`, `free_model`, `deepseek_response`, `timestamp`, `session_id`, `topic`, `format`, `pov`, `capabilities`, `space_node`, `memory_ref`, `enriched_at`, `pipeline`
+
+### Example telemetry row
+
+```json
+{
+  "type": "substance_selected",
+  "timestamp": 1750692845123,
+  "session_id": "3f8a2c1d-...",
+  "page": "music.vaked.dev",
+  "substance_id": "lsd",
+  "substance_name": "LSD",
+  "klass": "classical psychedelic",
+  "mode_index": 0,
+  "palette": 2
+}
+```
+
+Event types vary by source site. Common across all: `page_view`, `session_end`. Site-specific: music.vaked.dev adds `substance_selected`, `mode_change`, `drop_triggered`, `post_read` (pocoo), etc.
+
 ### `telemetry-consolidated.jsonl`
 All telemetry batches merged into a single file. Updated every 6 hours by CI.
 
