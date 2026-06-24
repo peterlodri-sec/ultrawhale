@@ -147,3 +147,47 @@ tasks:
       - rm -rf bin/ deploy-out/ coverage.txt .golangci-lint-cache.stamp
 
 
+
+  kompress-data:
+    desc: Export ultrawhale dataset as Kompress training pairs
+    cmds:
+      - uv run python scripts/export_for_kompress.py --output data/kompress_train.jsonl
+    sources:
+      - scripts/export_for_kompress.py
+
+  kompress-train-local:
+    desc: Fine-tune Kompress locally (MPS/CPU, slow — for testing only)
+    cmds:
+      - uv run python scripts/train_kompress.py
+          --data data/kompress_train.jsonl
+          --epochs 1
+          --batch-size 8
+          --output kompress-v3-local-test
+
+  kompress-eval:
+    desc: Eval a Kompress checkpoint against the test split
+    vars:
+      MODEL: '{{.MODEL | default "kompress-v3-finetuned"}}'
+    cmds:
+      - uv run python scripts/eval_kompress.py
+          --model {{.MODEL}}
+          --data data/kompress_test.jsonl
+
+  kompress-vast-launch:
+    desc: Rent RTX 4090 on vast.ai and run full training ($0.356/hr, ~30min = $0.18)
+    vars:
+      OFFER_ID: '{{.OFFER_ID | default "37031007"}}'
+    cmds:
+      - vastai create instance {{.OFFER_ID}}
+          --image pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime
+          --disk 30
+          --env "-e HF_TOKEN=$HF_TOKEN -e HF_REPO=peterlodri-sec/kompress-v3"
+          --onstart "bash /workspace/ultrawhale/scripts/vast_setup.sh && bash /workspace/ultrawhale/scripts/run_training.sh"
+      - echo "Instance launched. Monitor at vast.ai dashboard."
+
+  kompress-vast-ssh:
+    desc: SSH into running vast.ai instance
+    vars:
+      INSTANCE_ID: '{{.INSTANCE_ID}}'
+    cmds:
+      - vastai ssh {{.INSTANCE_ID}}
