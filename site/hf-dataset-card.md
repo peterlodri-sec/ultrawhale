@@ -87,6 +87,23 @@ Cryptographic seal of the genesis block. See [protocol.vaked.dev](https://protoc
 
 ---
 
+## Projected growth
+
+![growth projection](https://raw.githubusercontent.com/peterlodri-sec/ultrawhale/main/site/dogfood/growth.png)
+
+Central projection assumes 3× YoY growth as the vaked ecosystem expands (new sites, continuous dogfeed loop, HF Pro inference). Conservative = 1.5×, optimistic = 5×. Log scale.
+
+| milestone | central (3× YoY) |
+|---|---|
+| 1K records | late 2026 |
+| 10K | 2028 |
+| 100K | 2030 |
+| 1M | 2033 |
+| 10M | 2035 |
+| 100M | 2037 |
+
+---
+
 ## Changelog
 
 | date | what |
