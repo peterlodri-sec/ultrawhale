@@ -82,7 +82,23 @@ Cryptographic seal of the genesis block. See [protocol.vaked.dev](https://protoc
 | visual synth | [music.vaked.dev](https://music.vaked.dev) |
 | IRC community | [irc.vaked.dev](https://irc.vaked.dev) |
 | protocol spec | [protocol.vaked.dev](https://protocol.vaked.dev) |
+| blog | [pocoo.vaked.dev](https://pocoo.vaked.dev) |
 | Mastodon | [@vakedbot@social.crabcc.app](https://social.crabcc.app/@vakedbot) |
+
+---
+
+## Changelog
+
+| date | what |
+|---|---|
+| 2026-06-24 | Parquet optimization — `dogfeed.parquet` + `telemetry.parquet` (snappy, deduped) generated each CI run |
+| 2026-06-24 | Added `pocoo.vaked.dev` (personal blog) as telemetry source |
+| 2026-06-23 | Added `irc.vaked.dev` (Ergo IRC) as telemetry source |
+| 2026-06-23 | 74 new dogfeed records (`dogfeed-v4-generated`) from OpenRouter free models |
+| 2026-06-23 | 13 telemetry event types across 6 vaked sites |
+| 2026-06-21 | Genesis — first dogfeed + telemetry streams live |
+
+**Context:** [The loop is already here](https://pocoo.vaked.dev/posts/2026-06-24-the-loop-is-already-here.html) — blog post about why this dataset exists and what these feedback loops mean.
 
 ---
 

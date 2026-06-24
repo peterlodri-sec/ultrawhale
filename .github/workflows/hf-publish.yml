@@ -42,7 +42,14 @@ jobs:
             fi
           fi
 
-          # 3. Auto-update MANIFEST with current stats
+          # 3. Merge JSONL → Parquet (snappy, deduped)
+          pip install pyarrow pandas --quiet
+          python3 $GITHUB_WORKSPACE/scripts/hf_optimize.py \
+            --output-dir /tmp/hf-push \
+            --telemetry-path /tmp/hf-push/telemetry-consolidated.jsonl
+          echo "parquet optimization done"
+
+          # 4. Auto-update MANIFEST with current stats
           DOGFEED_SAMPLES=$(cat dogfeed-*.jsonl 2>/dev/null | wc -l || echo 0)
           TELEMETRY_EVENTS=$(cat telemetry-consolidated.jsonl 2>/dev/null | wc -l || echo 0)
           TELEMETRY_BATCHES=$(ls telemetry/*.jsonl 2>/dev/null | wc -l || echo 0)
