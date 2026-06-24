@@ -18,6 +18,19 @@ Usage:
 
 import os, sys, re, json, time, random, hashlib, signal, argparse
 from datetime import datetime, timezone
+
+try:
+    import headroom as _headroom
+    def _compress(text: str) -> str:
+        result = _headroom.compress([{"role": "tool", "content": text}])
+        if hasattr(result, "messages"):
+            msgs = result.messages
+            return msgs[0]["content"] if isinstance(msgs, list) and msgs else str(msgs)
+        return text
+    HEADROOM_AVAILABLE = True
+except Exception:
+    _compress = lambda t: t
+    HEADROOM_AVAILABLE = False
 from typing import Optional
 
 import requests
@@ -257,6 +270,12 @@ def run_loop(batch_size: int = 10, interval: float = 5.0, use_hf_pro: bool = Tru
             print("[both failed]")
             time.sleep(interval)
             continue
+
+        # compress responses to keep context lean (Headroom: ~50-90% reduction)
+        if free_resp and HEADROOM_AVAILABLE:
+            free_resp = _compress(free_resp)
+        if deep_resp and HEADROOM_AVAILABLE:
+            deep_resp = _compress(deep_resp)
 
         # use whichever succeeded for missing slot
         free_resp = scrub_text(free_resp or deep_resp or "")
