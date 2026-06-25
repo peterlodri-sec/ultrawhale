@@ -44,7 +44,7 @@ python3 scripts/train_kompress.py \
     --output kompress-v8-finetuned \
     --epochs 3 \
     --batch-size 16 \
-    --learning-rate 2e-5
+    --lr 2e-5
 
 echo "=== 4/5 Heretic eval (32 prompts) ==="
 python3 scripts/eval_heretic.py \
