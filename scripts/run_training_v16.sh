@@ -31,8 +31,8 @@ def _sl(toks,ref):
     return l,w
 class KD(Dataset):
     def __init__(s,p,tk,ml=512): s.tk=tk; s.ml=ml; s.it=[]
-        with open(p)as f:
-            for l in f:
+                with open(p) as f:
+                        for l in f:
                 d=json.loads(l.strip())
                 if d.get("text")and d.get("reference"): s.it.append(d)
         log.info("Dataset: %d items",len(s.it))
