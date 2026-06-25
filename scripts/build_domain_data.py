@@ -77,6 +77,46 @@ _ALLCAPS = [
 
 _HTTP_CODES = [200, 201, 400, 401, 403, 404, 408, 422, 429, 500, 502, 503]
 
+_FILES = [
+    "main.py", "config.yaml", "Cargo.toml", "package.json", "Makefile",
+    "server.ts", "router.go", "schema.prisma", "docker-compose.yml", "README.md",
+    "auth.py", "middleware.ts", "db.rs", "api_test.py", "utils.js",
+]
+_EXTENSIONS = [".py", ".ts", ".rs", ".go", ".yaml", ".json", ".toml", ".sh", ".md"]
+_USERS = ["dev", "app", "root", "ci", "runner", "deploy", "service"]
+_SIZES = [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]
+_PERMS = ["drwxr-xr-x", "-rw-r--r--", "-rwxr-xr-x", "drwx------", "-rw-rw-r--"]
+_GIT_HASHES = [
+    "a3f2c91", "b7d0e45", "c9a1b23", "d4e5f67", "e8b3c12",
+    "f1a2b34", "90c4d56", "12e3f78", "34a5b90", "56c7d01",
+]
+_RUST_ERRORS = [
+    "cannot borrow `{}` as mutable", "mismatched types: expected `{}`",
+    "use of moved value: `{}`", "lifetime `'a` may not live long enough",
+    "trait `{}` is not implemented for `{}`",
+]
+_TS_ERRORS = [
+    "Type '{}' is not assignable to type '{}'",
+    "Property '{}' does not exist on type '{}'",
+    "Argument of type '{}' is not assignable",
+    "Cannot find module '{}' or its corresponding type declarations",
+]
+_PYTHON_ERRORS = [
+    "AttributeError: '{}' object has no attribute '{}'",
+    "TypeError: {} takes {} positional arguments but {} were given",
+    "KeyError: '{}'",
+    "ImportError: cannot import name '{}' from '{}'",
+]
+_GREP_CONTEXTS = [
+    "    def {}(self, request):",
+    "    return {}(data)",
+    "    raise {}(message)",
+    "    logger.{{'level'}}.info(msg)",
+    "    config = {}()",
+    "    assert {} is not None",
+    "    self.{} = value",
+]
+
 _CONTEXT_LINES = [
     "    # Validate the input before processing",
     "    logger.debug('entering handler')",
@@ -398,23 +438,401 @@ def gen_agent_error(rng: random.Random, n: int = 150) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Domain 5: bash_output
+# ---------------------------------------------------------------------------
+
+def _make_bash_output(rng: random.Random) -> tuple[str, str]:
+    cmd = rng.choice(["ls -la", "find . -name", "grep -rn", "git log --oneline", "cargo build"])
+    path = rng.choice(_PATHS)
+    flag = rng.choice(_FLAGS)
+    num1 = rng.randint(1, 999999)
+    num2 = rng.randint(100, 65536)
+    user = rng.choice(_USERS)
+    fname = rng.choice(_FILES)
+    perm = rng.choice(_PERMS)
+    error = rng.choice(_ALLCAPS)
+    size = rng.choice(_SIZES)
+    ext = rng.choice(_EXTENSIONS)
+    hashv = rng.choice(_GIT_HASHES)
+    mod = rng.choice(_MODULES)
+    camel = rng.choice(_CAMEL)
+
+    noise = [
+        f"The output below shows the directory listing after the recent changes were applied",
+        f"Command executed successfully and produced the following results for review",
+        f"Checking current state of files in the project directory",
+    ]
+    if "ls" in cmd:
+        text = (
+            f"{rng.choice(noise)}\n"
+            f"total {num1}\n"
+            f"{perm}  3 {user}  staff  {size} {fname}\n"
+            f"-rw-r--r--  1 {user}  staff  {num2} {fname}\n"
+            f"-rwxr-xr-x  1 {user}  staff  {size * 2} {path.split('/')[-1]}\n"
+            f"Note that permissions and ownership information above reflects current state"
+        )
+        ref_lines = [
+            f"total {num1}",
+            f"{perm}  3 {user}  staff  {size} {fname}",
+            f"-rw-r--r--  1 {user}  staff  {num2} {fname}",
+            f"-rwxr-xr-x  1 {user}  staff  {size * 2} {path.split('/')[-1]}",
+        ]
+    elif "find" in cmd:
+        text = (
+            f"{rng.choice(noise)}\n"
+            f"{path}/{fname}\n"
+            f"{path}/tests/test_{fname}\n"
+            f"{path}/build/output{ext}\n"
+            f"Found {num1} files matching the pattern {flag} in the repository"
+        )
+        ref_lines = [
+            f"{path}/{fname}",
+            f"{path}/tests/test_{fname}",
+            f"{path}/build/output{ext}",
+            f"Found {num1} files {flag}",
+        ]
+    elif "grep" in cmd:
+        line1 = rng.randint(1, 500)
+        line2 = line1 + rng.randint(5, 50)
+        text = (
+            f"{rng.choice(noise)}\n"
+            f"{path}/{fname}:{line1}:    def {mod.split('.')[-1]}(self):\n"
+            f"{path}/{fname}:{line2}:        raise {camel}(f'error at line {line1}')\n"
+            f"Matches found: {num1} occurrences across {num2} files in total"
+        )
+        ref_lines = [
+            f"{path}/{fname}:{line1}: def {mod.split('.')[-1]}(self):",
+            f"{path}/{fname}:{line2}: raise {camel}(error at line {line1})",
+            f"{num1} occurrences {num2} files",
+        ]
+    elif "git" in cmd:
+        text = (
+            f"{rng.choice(noise)}\n"
+            f"{hashv} fix({mod.split('.')[0]}): resolve {camel} on retry path\n"
+            f"{rng.choice(_GIT_HASHES)} chore: bump version to {num2 % 10}.{num1 % 100}.{num2 % 50}\n"
+            f"Showing last {num1 % 20 + 1} commits on the main branch for context"
+        )
+        ref_lines = [
+            f"{hashv} fix({mod.split('.')[0]}): {camel}",
+            f"{rng.choice(_GIT_HASHES)} bump {num2 % 10}.{num1 % 100}.{num2 % 50}",
+        ]
+    else:  # cargo
+        text = (
+            f"{rng.choice(noise)}\n"
+            f"   Compiling {mod.split('.')[0]} v{num2 % 10}.{num1 % 100}.0 ({path})\n"
+            f"error[E0{num2 % 1000:03d}]: {rng.choice(_RUST_ERRORS).format(camel, 'str')}\n"
+            f"  --> {path}/{fname}:{num2}:{num1 % 80}\n"
+            f"The build failed with {num1 % 10 + 1} errors and {num1 % 5} warnings"
+        )
+        ref_lines = [
+            f"Compiling {mod.split('.')[0]} v{num2 % 10}.{num1 % 100}.0 ({path})",
+            f"error[E0{num2 % 1000:03d}]: {camel}",
+            f"{path}/{fname}:{num2}:{num1 % 80}",
+            f"{num1 % 10 + 1} errors {num1 % 5} warnings",
+        ]
+
+    reference = "\n".join(ref_lines)
+    return text, reference
+
+
+def gen_bash_output(rng: random.Random, n: int = 150) -> list[dict]:
+    pairs = []
+    for _ in range(n * 4):
+        text, reference = _make_bash_output(rng)
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.3:
+            pairs.append({
+                "text": text, "reference": reference,
+                "role": "tool", "source": "bash_output", "topic": "compression",
+            })
+        if len(pairs) >= n:
+            break
+    return pairs[:n]
+
+
+# ---------------------------------------------------------------------------
+# Domain 6: file_read
+# ---------------------------------------------------------------------------
+
+def _make_file_read(rng: random.Random) -> tuple[str, str]:
+    fname = rng.choice(_FILES)
+    path = rng.choice(_PATHS)
+    func = rng.choice(_FUNCTIONS)
+    mod = rng.choice(_MODULES)
+    camel = rng.choice(_CAMEL)
+    flag = rng.choice(_FLAGS)
+    num1 = rng.randint(1, 500)
+    num2 = rng.randint(1, 200)
+    ext = fname.split(".")[-1] if "." in fname else "py"
+
+    noise_lines = [
+        f"# This module handles the core {mod.split('.')[0]} functionality",
+        f"# Written by the platform team, last reviewed during a recent refactor",
+        f"# See docs for full context",
+        f"# Note: refactor planned once the new interface stabilizes",
+    ]
+    code_lines = [
+        f"{num1}: import {mod}",
+        f"{num1 + 5}: from {mod} import {func}, {camel}",
+        f"{num1 + 12}: def {func}(self, request, timeout={num2}):",
+        f"{num1 + 13}:     if request.retries > {num2 % 10}:",
+        f"{num1 + 14}:         raise {camel}(f'max retries {num2 % 10} exceeded')",
+        f"{num1 + 20}:     return self.{func}(request, flag='{flag}')",
+    ]
+
+    total_lines = num1 + 50
+    text = (
+        f"Reading file {path}/{fname} to understand the current implementation\n"
+        + rng.choice(noise_lines) + "\n"
+        + "\n".join(code_lines) + "\n"
+        + f"The file contains {total_lines} lines total"
+    )
+    reference = f"{path}/{fname} ({total_lines} lines)\n" + "\n".join(code_lines)
+    return text, reference
+
+
+def gen_file_read(rng: random.Random, n: int = 150) -> list[dict]:
+    pairs = []
+    for _ in range(n * 4):
+        text, reference = _make_file_read(rng)
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.3:
+            pairs.append({
+                "text": text, "reference": reference,
+                "role": "tool", "source": "file_read", "topic": "compression",
+            })
+        if len(pairs) >= n:
+            break
+    return pairs[:n]
+
+
+# ---------------------------------------------------------------------------
+# Domain 7: error_trace
+# ---------------------------------------------------------------------------
+
+def _make_error_trace(rng: random.Random) -> tuple[str, str]:
+    lang = rng.choice(["python", "typescript", "rust"])
+    path = rng.choice(_PATHS)
+    fname = rng.choice(_FILES)
+    func = rng.choice(_FUNCTIONS)
+    camel = rng.choice(_CAMEL)
+    mod = rng.choice(_MODULES)
+    num1 = rng.randint(1, 500)
+    num2 = rng.randint(1, 200)
+    http = rng.choice(_HTTP_CODES)
+
+    noise = [
+        "The error occurred during the processing of the incoming request from the client",
+        "This exception was caught by the global error handler and logged for investigation",
+        "The following stack trace was captured at the time of the failure for debugging",
+    ]
+
+    if lang == "python":
+        tmpl = rng.choice(_PYTHON_ERRORS).format(camel, func, num2, num2+1)
+        trace_lines = [
+            f"Traceback (most recent call last):",
+            f"  File \"{path}/{fname}\", line {num1}, in {func}",
+            f"    result = self.{func}(request)",
+            f"  File \"{path}/{mod.replace('.','/')}.py\", line {num2}, in {func}",
+            f"    raise {camel}(f'HTTP {http}: {tmpl}')",
+            f"{camel}: HTTP {http} at {path}/{fname}:{num1}",
+        ]
+    elif lang == "typescript":
+        tmpl = rng.choice(_TS_ERRORS).format(camel, func)
+        trace_lines = [
+            f"error TS{num2 % 9000 + 1000}: {tmpl}",
+            f"  at {path}/{fname}:{num1}:{num2 % 80}",
+            f"  at {func} ({path}/{mod.replace('.','/')}.ts:{num2}:{num2 % 40})",
+            f"  at {camel}.handle ({path}/server.ts:{num1 + 10}:5)",
+        ]
+    else:
+        tmpl = rng.choice(_RUST_ERRORS).format(camel, "str")
+        trace_lines = [
+            f"error[E0{num2 % 1000:03d}]: {tmpl}",
+            f" --> {path}/{fname}:{num1}:{num2 % 80}",
+            f"  |",
+            f"{num1} | let mut {func.lower()} = {camel}::new();",
+            f"  | ^^^ {camel} moved here at line {num2}",
+        ]
+
+    text = rng.choice(noise) + "\n" + "\n".join(trace_lines)
+    reference = "\n".join(trace_lines)
+    return text, reference
+
+
+def gen_error_trace(rng: random.Random, n: int = 150) -> list[dict]:
+    pairs = []
+    for _ in range(n * 4):
+        text, reference = _make_error_trace(rng)
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.2:
+            pairs.append({
+                "text": text, "reference": reference,
+                "role": "tool", "source": "error_trace", "topic": "compression",
+            })
+        if len(pairs) >= n:
+            break
+    return pairs[:n]
+
+
+# ---------------------------------------------------------------------------
+# Domain 8: search_result
+# ---------------------------------------------------------------------------
+
+def _make_search_result(rng: random.Random) -> tuple[str, str]:
+    path = rng.choice(_PATHS)
+    fname = rng.choice(_FILES)
+    func = rng.choice(_FUNCTIONS)
+    camel = rng.choice(_CAMEL)
+    num1 = rng.randint(1, 999)
+    num2 = rng.randint(1, 100)
+    size = rng.choice(_SIZES)
+    flag = rng.choice(_FLAGS)
+
+    noise = [
+        f"Searching the codebase for references to understand impact before making changes",
+        f"Running ripgrep to find all usages of the function across the repository",
+        f"The search results below show all relevant matches that need to be updated",
+    ]
+    line1 = rng.randint(10, 300)
+    line2 = line1 + rng.randint(10, 80)
+    line3 = line2 + rng.randint(10, 50)
+
+    result_lines = [
+        f"{path}/{fname}:{line1}: def {func}(self, {flag.lstrip('-')}=None):",
+        f"{path}/tests/test_{fname}:{line2}:     result = {func}(data, timeout={num2})",
+        f"{path}/core/{fname}:{line3}:     raise {camel}(f'failed after {num1} attempts')",
+        f"{num1} matches in {num2} files ({size} bytes searched)",
+    ]
+
+    text = (
+        rng.choice(noise) + "\n"
+        + "\n".join(result_lines) + "\n"
+        + f"All {num1} matches are in production code paths and require careful review before {flag}"
+    )
+    result_lines.append(f"review required before {flag}")
+    reference = "\n".join(result_lines)
+    return text, reference
+
+
+def gen_search_result(rng: random.Random, n: int = 150) -> list[dict]:
+    pairs = []
+    for _ in range(n * 4):
+        text, reference = _make_search_result(rng)
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.25:
+            pairs.append({
+                "text": text, "reference": reference,
+                "role": "tool", "source": "search_result", "topic": "compression",
+            })
+        if len(pairs) >= n:
+            break
+    return pairs[:n]
+
+
+# ---------------------------------------------------------------------------
+# Domain 9: json_tool_result
+# ---------------------------------------------------------------------------
+
+def _make_json_tool_result(rng: random.Random) -> tuple[str, str]:
+    func = rng.choice(_FUNCTIONS)
+    camel = rng.choice(_CAMEL)
+    mod = rng.choice(_MODULES)
+    num1 = rng.randint(1, 9999)
+    num2 = rng.randint(1, 100)
+    http = rng.choice(_HTTP_CODES)
+    path = rng.choice(_PATHS)
+    flag = rng.choice(_FLAGS)
+
+    noise = [
+        f"The tool call returned the following structured response from the server",
+        f"Received structured output from the {mod.split('.')[0]} tool endpoint below",
+        f"Tool execution completed and returned the following structured data for processing",
+    ]
+
+    payload = {
+        "status": http,
+        "request_id": f"req_{num1:06d}",
+        "operation": func,
+        "resource": path,
+        "result": {
+            "count": num2,
+            "items": [
+                {"id": num1 + i, "type": camel, "flag": flag}
+                for i in range(min(3, num2 % 4 + 1))
+            ],
+            "metadata": {
+                "module": mod,
+                "version": f"{num2 % 10}.{num1 % 100}.0",
+                "max_retries": num2 % 5 + 1,
+            }
+        },
+        "error": None if http < 400 else f"{camel}: {flag} rejected at {path}",
+    }
+    import json as _json
+    payload_str = _json.dumps(payload, indent=2)
+
+    item_count = min(3, num2 % 4 + 1)
+    item_ids = [str(num1 + i) for i in range(item_count)]
+    max_retries_val = num2 % 5 + 1
+    key_lines = [
+        f'"status": {http}',
+        f'"request_id": "req_{num1:06d}"',
+        f'"operation": "{func}"',
+        f'"resource": "{path}"',
+        f'"count": {num2}',
+        f'"items": [{", ".join(item_ids)}]',
+        f'"flag": "{flag}"',
+        f'"module": "{mod}"',
+        f'"version": "{num2 % 10}.{num1 % 100}.0"',
+        f'"max_retries": {max_retries_val}',
+    ]
+    if http >= 400:
+        key_lines.append(f'"error": "{camel}: {flag}"')
+
+    text = rng.choice(noise) + "\n" + payload_str
+    reference = "{\n  " + ",\n  ".join(key_lines) + "\n}"
+    return text, reference
+
+
+def gen_json_tool_result(rng: random.Random, n: int = 150) -> list[dict]:
+    pairs = []
+    for _ in range(n * 4):
+        text, reference = _make_json_tool_result(rng)
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.3:
+            pairs.append({
+                "text": text, "reference": reference,
+                "role": "tool", "source": "json_tool_result", "topic": "compression",
+            })
+        if len(pairs) >= n:
+            break
+    return pairs[:n]
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Generate domain training data for Kompress v3.1")
+    ap = argparse.ArgumentParser(description="Generate domain training data for Kompress")
     ap.add_argument("--output", default="data/domain_train.jsonl")
     ap.add_argument("--per-domain", type=int, default=150)
+    ap.add_argument("--agent-only", action="store_true",
+                    help="Generate only the 5 agent-pattern domains (v6 data)")
     args = ap.parse_args()
 
     rng = random.Random(SEED)
 
-    generators = [
+    original_generators = [
         ("code_diff", gen_code_diff),
         ("log_stream", gen_log_stream),
         ("json_tool_output", gen_json_tool_output),
         ("agent_error", gen_agent_error),
     ]
+    agent_generators = [
+        ("bash_output", gen_bash_output),
+        ("file_read", gen_file_read),
+        ("error_trace", gen_error_trace),
+        ("search_result", gen_search_result),
+        ("json_tool_result", gen_json_tool_result),
+    ]
+    generators = agent_generators if args.agent_only else original_generators + agent_generators
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
