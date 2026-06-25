@@ -158,6 +158,11 @@ for epoch in range(5):
     avg_loss = total_loss / len(loader)
     log.info("Epoch %d avg loss=%.4f", epoch+1, avg_loss)
 
+# Merge LoRA into base model before saving (avoids key mismatches on load)
+if _PEFT:
+    model.encoder = model.encoder.merge_and_unload()
+    log.info("LoRA merged into encoder weights")
+
 # Save
 out_dir = "kompress-v11-finetuned"
 Path(out_dir).mkdir(exist_ok=True)
@@ -198,13 +203,6 @@ class HeadroomCompressorModel(torch.nn.Module):
 
 tok = AutoTokenizer.from_pretrained(ENCODER)
 model = HeadroomCompressorModel(ENCODER)
-try:
-    from peft import get_peft_model, LoraConfig
-    lora_config = LoraConfig(r=16, lora_alpha=32, target_modules=["Wo","Wqkv"],
-                             lora_dropout=0.05, bias="none")
-    model.encoder = get_peft_model(model.encoder, lora_config)
-except ImportError:
-    pass
 model.load_state_dict(torch.load("kompress-v11-finetuned/merged.pt", map_location="cpu"))
 model.eval()
 
