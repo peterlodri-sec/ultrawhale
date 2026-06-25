@@ -191,3 +191,16 @@ tasks:
       INSTANCE_ID: '{{.INSTANCE_ID}}'
     cmds:
       - vastai ssh {{.INSTANCE_ID}}
+
+  kompress-v31-data:
+    desc: Generate domain-tagged training data for v3.1
+    cmds:
+      - uv run python scripts/build_domain_data.py --output data/domain_train.jsonl
+      - echo "Generated domain training data"
+
+  kompress-v31-vast:
+    desc: Launch v3.1 fine-tune on vast.ai
+    vars:
+      OFFER_ID: '{{.OFFER_ID | default ""}}'
+    cmds:
+      - bash scripts/vast_relaunch.sh {{.OFFER_ID}}
