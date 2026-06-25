@@ -139,6 +139,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="PeetPedro/kompress-v3")
     ap.add_argument("--n", type=int, default=len(HERETIC_SAMPLES))
+    ap.add_argument("--prompts-file", default=None,
+                    help="JSONL file with {prompt, response} rows (augments or replaces built-ins)")
+    ap.add_argument("--extra-only", action="store_true",
+                    help="Use only --prompts-file samples, ignore built-in HERETIC_SAMPLES")
     args = ap.parse_args()
 
     BASE = "answerdotai/ModernBERT-base"
@@ -147,7 +151,12 @@ def main():
     load_v2_weights(model, args.model)
     model.eval()
 
-    samples = HERETIC_SAMPLES[:args.n]
+    samples = [] if args.extra_only else HERETIC_SAMPLES[:args.n]
+    if args.prompts_file:
+        import json as _json
+        extra = [_json.loads(l) for l in open(args.prompts_file)]
+        samples = samples + extra
+        print(f"Loaded {len(extra)} extra prompts from {args.prompts_file} ({len(samples)} total)")
     results = []
 
     for s in samples:
