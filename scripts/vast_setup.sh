@@ -7,8 +7,8 @@ set -euo pipefail
 echo "=== Kompress v3 fine-tune setup ==="
 
 pip install -q --upgrade pip
-# torch is already in pytorch/pytorch base image — only install missing deps
-pip install -q transformers peft accelerate huggingface_hub sentence-transformers
+# torch is already in pytorch/pytorch base image — pin versions compatible with torch 2.5+
+pip install -q "transformers>=4.45,<5" "peft>=0.12" accelerate huggingface_hub sentence-transformers
 
 # Clone ultrawhale scripts
 git clone --depth=1 https://github.com/peterlodri-sec/ultrawhale.git /workspace/ultrawhale 2>/dev/null \
