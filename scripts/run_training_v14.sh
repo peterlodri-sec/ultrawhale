@@ -87,6 +87,7 @@ class HeadroomCompressorModel(torch.nn.Module):
         return self.head1(h),torch.sigmoid(self.head2(h.transpose(1,2)).squeeze(1))
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+MAX_EPOCHS = 10
 log.info("Device: %s", device)
 
 tok=AutoTokenizer.from_pretrained(ENCODER)
@@ -94,14 +95,9 @@ ds=KompressDataset("data/kompress_v14_train.jsonl",tok)
 loader=DataLoader(ds,batch_size=16,shuffle=True,collate_fn=collate)
 model=HeadroomCompressorModel(ENCODER)
 
-# Load v2 weights as starting point
-log.info("Loading v2-base weights...")
-v2_state = torch.hub.load_state_dict_from_url(
-    "https://huggingface.co/chopratejas/kompress-v2-base/resolve/main/merged.pt",
-    map_location="cpu")
-# Map v2 keys to our model (same architecture)
-model.load_state_dict(v2_state, strict=False)
-log.info("v2 weights loaded")
+# Train from scratch — ModernBERT-base encoder already loaded by AutoModel
+# Classifier heads are randomly initialized
+log.info("Training from scratch — ModernBERT-base encoder + random heads")
 
 if _PEFT:
     lora=LoraConfig(r=16,lora_alpha=32,target_modules=["Wo","Wqkv"],lora_dropout=0.05,bias="none")
