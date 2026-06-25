@@ -52,3 +52,24 @@ The agent forgets. The repo does not. (Addy Osmani)*
 | **Total** | | **~$1.00** |
 
 Remaining budget: ~$5.90
+
+---
+
+## Session close — 2026-06-25
+
+**PRs opened today:**
+- headroom #1400 — kompress must-keep override (approved by JerrettDavis, governance pass)
+- headroom #1403 — RTK scope-mixing regression tests (documents the savings underreporting bug)
+- headroom #1408 — knowledge-worker memory audit integration proposal
+
+**RTK bug found:** `b70fccbe` changed default scope global → project avg_savings_pct (18.5%) underreports session savings (62.6%). Fix PR incoming from Discord.
+
+**knowledge-worker:** provenance-backed memory audit layer proposed for headroom learn subsystem. Integration surface documented in #1408.
+
+**Budget used today:** ~$1.00 of $7.92 available. Remaining: ~$6.92.
+
+**Next session should read:**
+1. This file
+2. `.agents/skills/kompress-finetune/SKILL.md` — training decision rules
+3. `headroom PR #1400` — approved, merge pending
+4. `LOOP_STATE.md` open hypotheses — domain routing (free), C3 self-distillation (needs headroom logging mode)
