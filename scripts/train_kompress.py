@@ -38,7 +38,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer
-from peft import get_peft_model, LoraConfig, TaskType
+try:
+    from peft import get_peft_model, LoraConfig
+    _PEFT_AVAILABLE = True
+except ImportError:
+    _PEFT_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -184,24 +188,41 @@ def load_v2_weights(model: HeadroomCompressorModel, model_id: str) -> None:
     ckpt = torch.load(path, map_location="cpu", weights_only=True)
     missing_enc, _ = model.encoder.load_state_dict(ckpt["encoder_state_dict"], strict=False)
     model.token_head.load_state_dict(ckpt["token_head_state_dict"])
-    model.span_conv.load_state_dict(ckpt["span_head_state_dict"])
+    span_key = "span_conv_state_dict" if "span_conv_state_dict" in ckpt else "span_head_state_dict"
+    model.span_conv.load_state_dict(ckpt[span_key])
     logger.info("Loaded v2 weights. Missing encoder keys: %d", len(missing_enc))
 
 
 def apply_lora(model: HeadroomCompressorModel) -> HeadroomCompressorModel:
-    """Apply LoRA to last 4 encoder layers only."""
-    n_layers = model.encoder.config.num_hidden_layers  # 22 for ModernBERT-base
-    layers_to_transform = list(range(n_layers - 4, n_layers))
-    config = LoraConfig(
-        r=16,
-        lora_alpha=32,
-        target_modules=["query", "key", "value"],
-        lora_dropout=0.05,
-        bias="none",
-        layers_to_transform=layers_to_transform,
-    )
-    model.encoder = get_peft_model(model.encoder, config)
-    model.encoder.print_trainable_parameters()
+    """Freeze encoder, train heads only. Falls back gracefully from LoRA failures."""
+    # Discover actual attention module names from the encoder
+    attn_names: set[str] = set()
+    for name, _ in model.encoder.named_modules():
+        leaf = name.split(".")[-1]
+        if leaf in ("Wqkv", "Wo", "query", "key", "value", "q_proj", "k_proj", "v_proj"):
+            attn_names.add(leaf)
+
+    if _PEFT_AVAILABLE and attn_names:
+        try:
+            config = LoraConfig(
+                r=16,
+                lora_alpha=32,
+                target_modules=list(attn_names),
+                lora_dropout=0.05,
+                bias="none",
+            )
+            model.encoder = get_peft_model(model.encoder, config)
+            model.encoder.print_trainable_parameters()
+            logger.info("LoRA applied to: %s", attn_names)
+            return model
+        except Exception as e:
+            logger.warning("LoRA failed (%s) — falling back to frozen encoder + heads only", e)
+
+    # Fallback: freeze encoder, train only token_head + span_conv (~2M params)
+    for param in model.encoder.parameters():
+        param.requires_grad = False
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info("Frozen encoder. Trainable params: %d (heads only)", trainable)
     return model
 
 
