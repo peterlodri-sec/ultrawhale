@@ -15,43 +15,9 @@ cd /workspace/ultrawhale
 HF_TOKEN=${HF_TOKEN:-}
 HF_REPO=${HF_REPO:-"PeetPedro/kompress-v12"}
 
-echo "=== 1/5 Convert Qwen3-Coder labels to training format ==="
-python3 - << 'PY'
-import json, random
+echo "=== 1/5 Training data: $(wc -l < data/kompress_v12_train.jsonl) pre-merged pairs ==="
 
-c3 = [json.loads(l) for l in open("data/c3_qwen3coder_labeled.jsonl")]
-good = [r for r in c3 if len(r.get("spans", [])) > 0]
-print(f"  Qwen3-Coder labeled: {len(c3)}, with-spans: {len(good)}")
-
-records = []
-for r in good:
-    text = r["text"]
-    spans = sorted(r["spans"], key=lambda x: x["start"])
-    parts = [text[s["start"]:s["end"]] for s in spans]
-    ref = " ".join(parts)
-    if len(ref) >= 20:
-        records.append({
-            "text": text, "reference": ref, "role": "tool",
-            "source": f"qwen3coder_c3_{r.get('domain','?')}", "topic": "compression",
-        })
-
-print(f"  Converted: {len(records)} pairs")
-
-# 33% C3 ratio (v8 sweet spot): need 2x generic
-generic = [json.loads(l) for l in open("data/kompress_multi_train.jsonl")]
-random.seed(42)
-generic_sample = random.sample(generic, min(len(records)*2, len(generic)))
-print(f"  Generic: {len(generic_sample)}")
-
-merged = records + generic_sample
-random.shuffle(merged)
-with open("data/kompress_v12_train.jsonl", "w") as f:
-    for r in merged:
-        f.write(json.dumps(r, ensure_ascii=False) + "\n")
-print(f"  Total: {len(merged)}")
-PY
-
-echo "=== 2/5 Fine-tune from v2-base ==="
+echo "=== 2/4 Fine-tune from v2-base ==="
 python3 scripts/train_kompress.py \
     --data data/kompress_v12_train.jsonl \
     --base-model chopratejas/kompress-v2-base \
@@ -60,12 +26,12 @@ python3 scripts/train_kompress.py \
     --batch-size 16 \
     --lr 2e-5
 
-echo "=== 3/5 Heretic eval (32 prompts) ==="
+echo "=== 3/4 Heretic eval (32 prompts) ==="
 python3 scripts/eval_heretic.py \
     --model kompress-v12-finetuned \
     --prompts-file data/heretic_expanded.jsonl || echo "WARN: eval non-fatal"
 
-echo "=== 4/5 ONNX export ==="
+echo "=== 4/4 ONNX export ==="
 pip install -q onnx onnxruntime 2>/dev/null || true
 python3 - << 'PY'
 import sys, os, torch
@@ -89,7 +55,7 @@ torch.onnx.export(W(model),(dummy["input_ids"],dummy["attention_mask"]),
 print("ONNX exported")
 PY
 
-echo "=== 5/5 HuggingFace upload ==="
+echo "=== 4/4 HuggingFace upload ==="
 if [ -n "$HF_TOKEN" ]; then
     HF_REPO="$HF_REPO" python3 - << 'PY'
 from huggingface_hub import HfApi; import os
