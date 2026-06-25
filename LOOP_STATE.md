@@ -15,7 +15,7 @@ The agent forgets. The repo does not. (Addy Osmani)*
 | v4 | 0.823 | 0.967 | 0.000 | ✓ **BREAKTHROUGH** — override redundant |
 | v5 | ~0.86 | 0.961 | 0.000 | loop converged, slight regression |
 | v6 | 1.000* | 0.962 | 0.000 | agent-distribution — keep_rate↑ 0.854, heretic holds > 0.96 |
-| v7 | TBD | TBD | TBD | sliding-window self-labeling fix — running |
+| v7 | ~0.87* | 0.949 / 0.956+ov | +0.007 | sliding-window fix — override returned, SSL regressed (0.789→0.684) |
 
 *domain_train.jsonl and kompress_agent_train.jsonl both have mk_in_ref=1.0 by construction
 **self-labeling skipped for agent data: v4 subword tokenizer drops paths/CamelCase/flags (fixed in v7)
@@ -39,12 +39,15 @@ The agent forgets. The repo does not. (Addy Osmani)*
 6. Agent-pattern training (v6) increases keep_rate (0.823→0.854): model more conservative, less aggressive compression
 7. Self-labeling degrades on agent data: single-subtoken check misses CamelCase/paths/flags (mk_in_ref 0.652)
 8. Sliding-window fix (1/2/3-subtoken windows): TokenExpiredError, /var/log/app.log, --verbose all force-kept correctly
+9. Agent-distribution direction is a dead end: each iteration (v6, v7) increases keep_rate and decreases heretic precision. More agent training → more conservative → worse adversarial accuracy. Stop here, pivot to domain routing.
 
 ## Next run decision
 
-**Running:** v7 — sliding-window self-labeling, fine-tune from v6 (~$0.20)
+**STOP fine-tuning agent-distribution direction.** v6 and v7 both increased keep_rate and reduced heretic precision. The trend is clear: more agent data → more conservative → worse adversarial accuracy.
 
-**After v7:** domain routing (free), then C3 if proxy logging shipped
+**v4 remains production recommendation.** heretic 0.967, override_delta=0, keep_rate=0.823.
+
+**Next (free, no GPU):** domain routing — per-domain thresholds in content_router.py. Lower threshold for code/logs (already dense must-keep), higher for prose. No training needed.
 
 ## Budget tracking
 
