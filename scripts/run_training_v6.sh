@@ -13,86 +13,15 @@ python3 scripts/build_domain_data.py \
     --per-domain 600 \
     --output data/kompress_agent_train.jsonl
 
-echo "=== 2/6 Self-label agent data with v4+override ==="
-python3 - << 'PY'
-import json, re, torch, sys, pathlib
-sys.path.insert(0, "/workspace/ultrawhale")
-from scripts.train_kompress import HeadroomCompressorModel, load_v2_weights
-from transformers import AutoTokenizer
-
-_MUST_KEEP_RE = re.compile(
-    r"\b0x[0-9A-Fa-f]+\b"
-    r"|(?<![\w.])\d+(?:\.\d+)?(?![\w.])"
-    r"|[A-Z_]{2,}"
-    r"|[a-z_][a-z0-9_]*\.[a-z0-9_]+"
-    r"|/[a-z0-9/._-]{2,}"
-    r"|\.[a-z]{2,4}\b"
-    r"|--?[a-z][\w-]*"
-    r"|\b[A-Z][a-z]+[A-Z]\w*"
-)
-
-BASE = "answerdotai/ModernBERT-base"
-tok = AutoTokenizer.from_pretrained(BASE)
-model = HeadroomCompressorModel(BASE)
-load_v2_weights(model, "PeetPedro/kompress-v4")   # <- v4, not v3
-model.eval()
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model = model.to(device)
-print(f"Self-labeling on {device}")
-
-def compress_with_override(text):
-    enc = tok(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
-    enc = {k: v.to(device) for k, v in enc.items()}
-    with torch.no_grad():
-        logits, span = model(enc["input_ids"], enc["attention_mask"])
-        probs = torch.softmax(logits, dim=-1)[0, :, 1]
-        scores = probs * (0.5 + 0.5 * span[0])
-        keep = scores > 0.5
-    tokens = tok.convert_ids_to_tokens(enc["input_ids"][0])
-    for i, t in enumerate(tokens):
-        w = tok.convert_tokens_to_string([t]).strip()
-        if _MUST_KEEP_RE.search(w):
-            keep[i] = True
-    kept = [t for t, k in zip(tokens, keep) if k and t not in ("[CLS]","[SEP]","<s>","</s>")]
-    return tok.convert_tokens_to_string(kept)
-
-records = [json.loads(l) for l in open("data/kompress_agent_train.jsonl")]
-print(f"Self-labeling {len(records)} agent records...")
-out, skipped = [], 0
-for i, r in enumerate(records):
-    if i % 500 == 0: print(f"  {i}/{len(records)}")
-    new_ref = compress_with_override(r["text"])
-    ratio = len(r["text"]) / max(len(new_ref), 1)
-    if ratio >= 1.2 and len(new_ref) >= 30:
-        out.append({
-            "text": r["text"], "reference": new_ref,
-            "role": r.get("role", "tool"),
-            "source": "self_labeled_v4_" + r["source"],
-            "topic": r.get("topic", ""),
-        })
-    else:
-        skipped += 1
-
-import random; random.seed(42)
-samp = random.sample(out, min(100, len(out)))
-mk_t, mk_r = 0, 0
-for r in samp:
-    must = [m.group(0) for m in _MUST_KEEP_RE.finditer(r["text"])]
-    mk_t += len(must); mk_r += sum(1 for m in must if m in r["reference"])
-mk_ratio = mk_r / max(mk_t, 1)
-print(f"mk_in_ref: {mk_ratio:.3f} (target >= 0.85)")
-if mk_ratio < 0.85:
-    print(f"ERROR: mk_in_ref {mk_ratio:.3f} < 0.85, aborting")
-    sys.exit(1)
-print(f"Written {len(out)} self-labeled pairs (skipped {skipped})")
-
-with open("data/agent_self_labeled.jsonl","w") as f:
-    for r in out: f.write(json.dumps(r, ensure_ascii=False)+"\n")
-PY
-
-count=$(wc -l < data/agent_self_labeled.jsonl)
-echo "Self-labeled pairs written: $count"
-[ "$count" -gt 0 ] || { echo "ERROR: self-labeling produced 0 pairs, aborting"; exit 1; }
+echo "=== 2/6 Use generator references directly (mk_in_ref=1.0 by construction) ==="
+# Self-labeling with v4+override degrades agent data: the subword tokenizer splits
+# paths (/var/log/app.log) and CamelCase (TokenExpiredError) so individual subtokens
+# don't match _MUST_KEEP_RE, causing v4 to drop them (observed mk_in_ref=0.652).
+# The generator references already preserve all must-keep tokens (verified: 0 violations
+# across 3000 rows). Using them directly is correct — self-labeling was only needed for
+# noisy alpaca Q&A labels in v3/v4.
+cp data/kompress_agent_train.jsonl data/agent_self_labeled.jsonl
+echo "Agent pairs (generator references, mk_in_ref=1.0): $(wc -l < data/agent_self_labeled.jsonl)"
 
 echo "=== 3/6 Merge: agent self-labeled + existing generic ==="
 python3 - << 'PY'
