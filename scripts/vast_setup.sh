@@ -7,14 +7,8 @@ set -euo pipefail
 echo "=== Kompress v3 fine-tune setup ==="
 
 pip install -q --upgrade pip
-pip install -q \
-    torch torchvision --index-url https://download.pytorch.org/whl/cu121 \
-    transformers \
-    peft \
-    accelerate \
-    huggingface_hub \
-    requests \
-    sentence-transformers
+# torch is already in pytorch/pytorch base image — only install missing deps
+pip install -q transformers peft accelerate huggingface_hub sentence-transformers
 
 # Clone ultrawhale scripts
 git clone --depth=1 https://github.com/peterlodri-sec/ultrawhale.git /workspace/ultrawhale 2>/dev/null \
