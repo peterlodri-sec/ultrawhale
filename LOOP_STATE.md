@@ -19,7 +19,7 @@ The agent forgets. The repo does not. (Addy Osmani)*
 
 ## Open hypotheses
 
-- [ ] Voting ensemble (v3+v4+v5, threshold=2/3) — may beat any single model
+- [x] Voting ensemble — NEGATIVE: v3 noisy votes degrade ensemble to 0.931 vs v4 alone 0.961
 - [ ] Domain routing — lower threshold for code/logs, higher for prose
 - [ ] Evaluator-optimizer on self-labeling — iterate relabeling until mk_in_ref >= 0.9
 - [ ] C3 self-distillation — use real headroom proxy logs as training data
