@@ -116,7 +116,7 @@ log.info("Device: %s", "cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 tok = AutoTokenizer.from_pretrained(ENCODER)
-ds = KompassDataset("data/kompress_v8_train.jsonl", tok)
+ds = KompressDataset("data/kompress_v8_train.jsonl", tok)
 loader = DataLoader(ds, batch_size=8, shuffle=True, collate_fn=collate_fn)
 
 model = HeadroomCompressorModel(ENCODER)
