@@ -29,6 +29,22 @@ The agent forgets. The repo does not. (Addy Osmani)*
 - [ ] Evaluator-optimizer on self-labeling — iterate relabeling until mk_in_ref >= 0.9
 - [ ] C3 self-distillation — use real headroom proxy logs as training data
 
+## Benchmark status
+
+**32-prompt expanded heretic (Qwen2.5-7B generated responses, 2026-06-25):**
+
+| Version | keep_rate | exact_pct (32) | exact_pct (8) | override_delta |
+|---|---|---|---|---|
+| v4 | 0.854 | 0.943 | 0.967 | 0.000 |
+| v6 | 0.746 | 0.942 | 0.962 | 0.000 |
+| v7 | 0.782 | 0.944 | 0.956 | +0.002 |
+
+8-prompt benchmark overstated differences. On 32 prompts all three models converge (~0.943).
+Critical gap: compiler flags prompt scores 0.516 across all models (--march, -O2, -fPIC not kept).
+
+**Standard eval going forward:** `python3 scripts/eval_heretic.py --model X --prompts-file data/heretic_expanded.jsonl`
+Target: exact_pct > 0.940, override_delta = 0.000
+
 ## What the loop has learned
 
 1. Q&A test set is the wrong benchmark (labels are noisy, ceiling at 0.882)
