@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Fine-tune Kompress v2 on ultrawhale Q&A pairs.
 
+# Disable torch.compile (inductor needs a C compiler not present in most GPU images)
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 Architecture:
   ModernBERT-base (frozen) + Head1 (token classifier) + Head2 (span CNN)
   LoRA r=16 applied to last 4 encoder layers (q/k/v projections)

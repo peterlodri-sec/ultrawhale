@@ -6,6 +6,7 @@ set -euo pipefail
 
 echo "=== Kompress v3 fine-tune setup ==="
 
+apt-get install -y -q gcc g++ 2>/dev/null || true
 pip install -q --upgrade pip
 # torch is already in pytorch/pytorch base image — pin versions compatible with torch 2.5+
 pip install -q "transformers>=4.45,<5" "peft>=0.12" accelerate huggingface_hub sentence-transformers
