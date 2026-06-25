@@ -3,20 +3,22 @@
 # available RTX 4090 with good network.
 #
 # Usage:
-#   bash scripts/vast_relaunch.sh [OLD_INSTANCE_ID]
+#   bash scripts/vast_relaunch.sh [OLD_INSTANCE_ID] [TRAINING_SCRIPT]
 #
+# TRAINING_SCRIPT defaults to run_training.sh. Use run_training_v31.sh for v3.1.
 # If OLD_INSTANCE_ID is omitted, skips the destroy step.
 set -euo pipefail
 
 OLD=${1:-}
+TRAIN_SCRIPT=${2:-"run_training.sh"}
 IMAGE="pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime"
 HF_REPO=${HF_REPO:-"peterlodri-sec/kompress-v3"}
 
-cat > /tmp/vast_onstart.sh << 'EOF'
+cat > /tmp/vast_onstart.sh << EOF
 #!/bin/bash
 git clone --depth=1 https://github.com/peterlodri-sec/ultrawhale.git /workspace/ultrawhale
 bash /workspace/ultrawhale/scripts/vast_setup.sh
-bash /workspace/ultrawhale/scripts/run_training.sh
+bash /workspace/ultrawhale/scripts/${TRAIN_SCRIPT}
 EOF
 
 if [ -n "$OLD" ]; then
@@ -44,4 +46,4 @@ echo "Started instance $NEW"
 echo ""
 echo "Monitor:  vastai logs $NEW"
 echo "Destroy:  vastai destroy instance $NEW"
-echo "Relaunch: bash scripts/vast_relaunch.sh $NEW"
+echo "Relaunch: bash scripts/vast_relaunch.sh $NEW $TRAIN_SCRIPT"
