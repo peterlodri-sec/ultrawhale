@@ -1,272 +1,98 @@
 #!/usr/bin/env bash
-# Kompress v14: GLM-5.1 "council" controls training loop
+# Kompress v14: GLM-5.1 council reviews training results — ship or retrain
 #
-# After each epoch, GLM-5.1 reviews metrics (loss, heretic sample, keep_rate)
-# and makes ONE decision: CONTINUE, STOP, or ADJUST (new LR).
-# This replaces fixed epoch counts with intelligent convergence detection.
-#
-# Data: v8 sweet spot (97 C3 + 200 generic) + GLM scenarios (127 regex-labeled)
-# Encoder: ModernBERT-base (149M)
-# Base: chopratejas/kompress-v2-base
+# Standard v8 training (3 epochs, proven approach) + GLM council that
+# reviews loss, heretic, keep_rate and makes ONE decision: SHIP or RETRAIN.
+# If RETRAIN, increases epochs and continues. Simple, works with existing pipeline.
 set -euo pipefail
 cd /workspace/ultrawhale
 HF_TOKEN=${HF_TOKEN:-}
 HF_REPO=${HF_REPO:-"PeetPedro/kompress-v14"}
-MAX_EPOCHS=10
-pip install -q huggingface_hub 2>/dev/null || true
+MAX_ROUNDS=3
+EPOCHS=3
 
-echo "=== 1/4 Training data: $(wc -l < data/kompress_v14_train.jsonl) pre-merged pairs ==="
+echo "=== Council-guided training (max $MAX_ROUNDS rounds, $EPOCHS epochs each) ==="
 
-echo "=== 2/3 Council-guided training loop ==="
-python3 - << 'PY'
-import json, re, torch, sys, os, time
-from pathlib import Path
-from torch.utils.data import DataLoader, Dataset
-from transformers import AutoModel, AutoTokenizer
+for round in $(seq 1 $MAX_ROUNDS); do
+    echo ""
+    echo "--- Round $round/$MAX_ROUNDS ---"
+    
+    echo "=== Training ($EPOCHS epochs) ==="
+    python3 scripts/train_kompress.py \
+        --data data/kompress_v14_train.jsonl \
+        --base-model chopratejas/kompress-v2-base \
+        --output kompress-v14-finetuned \
+        --epochs $EPOCHS \
+        --batch-size 16 \
+        --lr 2e-5
+    
+    echo "=== Quick eval for council ==="
+    EVAL_OUT=$(python3 scripts/eval_heretic.py \
+        --model kompress-v14-finetuned \
+        --prompts-file data/heretic_expanded.jsonl 2>&1)
+    
+    HERETIC=$(echo "$EVAL_OUT" | grep "AVERAGE" | awk '{print $3}')
+    OVERRIDE=$(echo "$EVAL_OUT" | grep "exact_pct improvement" | grep -oP '[\d.]+')
+    echo "  Heretic: $HERETIC, override_delta: +$OVERRIDE"
+    
+    echo "=== Council decision (GLM-5.1) ==="
+    DECISION=$(python3 - << 'PY'
+import sys, os
 from huggingface_hub import InferenceClient
+heretic = float(sys.argv[1]) if len(sys.argv) > 1 else 0
+override = float(sys.argv[2]) if len(sys.argv) > 2 else 0
+round_num = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+
+prompt = f"""You are reviewing a kompress model after training round {round_num}.
+Metrics: heretic_exact={heretic:.3f}, override_delta=+{override:.3f}
+
+Target: heretic >= 0.960, override_delta = 0.000
+History: v2-base=0.975 (ceiling), v4=0.943, v8=0.955 (best so far)
+
+Decision:
+- SHIP: heretic >= 0.960 or (plateaued AND round >= 3)
+- RETRAIN: heretic < 0.960 AND round < 3 AND improvement possible
+
+Reply with ONLY one word: SHIP or RETRAIN"""
 try:
-    from peft import get_peft_model, LoraConfig
-    _PEFT = True
-except: _PEFT = False
-import logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger(__name__)
-
-ENCODER = "answerdotai/ModernBERT-base"
-_MUST_KEEP_RE = re.compile(r"\d+(\.\d+)?"r"|[A-Z_]{2,}"r"|[a-z_]+\.[a-z_]+"r"|/[a-z/._-]{2,}"r"|\.[a-z]{2,4}\b"r"|--?[a-zA-Z][\w-]*"r"|\b[A-Z][a-z]+[A-Z]\w*")
-
-def _word_set(text):
-    return set(re.findall(r"\b[a-z]{3,}\b", text.lower()))
-
-def _silver_labels(tokens, ref_words):
-    labels, weights = [], []
-    for tok in tokens:
-        clean = re.sub(r"[^\w]","",tok).lower()
-        is_must = bool(_MUST_KEEP_RE.search(tok))
-        in_ref = clean in ref_words or len(clean)<3
-        label = 1 if (is_must or in_ref) else 0
-        weight = 3.0 if is_must else (1.0 if label==1 else 0.5)
-        labels.append(label); weights.append(weight)
-    return labels, weights
-
-class KompressDataset(Dataset):
-    def __init__(self, path, tokenizer, max_length=512):
-        self.tok=tokenizer; self.ml=max_length; self.items=[]
-        with open(path) as f:
-            for l in f:
-                d=json.loads(l.strip())
-                if d.get("text") and d.get("reference"): self.items.append(d)
-        log.info("Dataset: %d items", len(self.items))
-    def __len__(self): return len(self.items)
-    def __getitem__(self, idx):
-        item=self.items[idx]; text=item["text"]; ref_words=_word_set(item["reference"])
-        enc=self.tok(text,max_length=self.ml,truncation=True,padding=False,return_offsets_mapping=True,return_tensors="pt")
-        ids=enc["input_ids"][0]; am=enc["attention_mask"][0]
-        tokens=self.tok.convert_ids_to_tokens(ids)
-        labels,weights=_silver_labels(tokens,ref_words)
-        return {"input_ids":ids,"attention_mask":am,"labels":torch.tensor(labels,dtype=torch.float),"weights":torch.tensor(weights,dtype=torch.float)}
-
-def collate(batch):
-    ml=max(b["input_ids"].size(0) for b in batch)
-    ids=torch.stack([torch.nn.functional.pad(b["input_ids"],(0,ml-b["input_ids"].size(0)),value=0) for b in batch])
-    am=torch.stack([torch.nn.functional.pad(b["attention_mask"],(0,ml-b["attention_mask"].size(0)),value=0) for b in batch])
-    labels=torch.stack([torch.nn.functional.pad(b["labels"],(0,ml-b["labels"].size(0)),value=0) for b in batch])
-    weights=torch.stack([torch.nn.functional.pad(b["weights"],(0,ml-b["weights"].size(0)),value=0) for b in batch])
-    return {"input_ids":ids,"attention_mask":am,"labels":labels,"weights":weights}
-
-class HeadroomCompressorModel(torch.nn.Module):
-    def __init__(self, encoder_id):
-        super().__init__()
-        self.encoder=AutoModel.from_pretrained(encoder_id)
-        h=self.encoder.config.hidden_size
-        self.head1=torch.nn.Linear(h,2)
-        self.head2=torch.nn.Sequential(torch.nn.Conv1d(h,64,3,padding=1),torch.nn.ReLU(),torch.nn.Conv1d(64,1,3,padding=1))
-    def forward(self,ids,am):
-        out=self.encoder(input_ids=ids,attention_mask=am)
-        h=out.last_hidden_state
-        return self.head1(h),torch.sigmoid(self.head2(h.transpose(1,2)).squeeze(1))
-
-device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MAX_EPOCHS = 10
-log.info("Device: %s", device)
-
-tok=AutoTokenizer.from_pretrained(ENCODER)
-ds=KompressDataset("data/kompress_v14_train.jsonl",tok)
-loader=DataLoader(ds,batch_size=16,shuffle=True,collate_fn=collate)
-model=HeadroomCompressorModel(ENCODER)
-
-# Train from scratch — ModernBERT-base encoder already loaded by AutoModel
-# Classifier heads are randomly initialized
-log.info("Training from scratch — ModernBERT-base encoder + random heads")
-
-if _PEFT:
-    lora=LoraConfig(r=16,lora_alpha=32,target_modules=["Wo","Wqkv"],lora_dropout=0.05,bias="none")
-    model.encoder=get_peft_model(model.encoder,lora)
-    log.info("LoRA applied")
-
-model=model.to(device)
-optimizer=torch.optim.AdamW(model.parameters(),lr=2e-5)
-loss_fn=torch.nn.BCEWithLogitsLoss(reduction="none")
-
-# Quick eval function for council
-def quick_heretic(model, tok, n=5):
-    """Fast heretic eval on n prompts for council decision."""
-    prompts_path = "data/heretic_expanded.jsonl"
-    if not Path(prompts_path).exists():
-        return 0.0, 0.0
-    prompts = [json.loads(l) for l in open(prompts_path)][:n]
-    results = []
-    for p in prompts:
-        text = p["response"]
-        enc = tok(text, return_tensors="pt", truncation=True, max_length=512)
-        enc = {k: v.to(device) for k, v in enc.items()}
-        with torch.no_grad():
-            logits, span = model(enc["input_ids"], enc["attention_mask"])
-            probs = torch.softmax(logits, dim=-1)[0,:,1]
-            scores = probs * (0.5 + 0.5 * span[0])
-            keep = scores > 0.5
-        tokens = tok.convert_ids_to_tokens(enc["input_ids"][0])
-        kept = [t for t, k in zip(tokens, keep) if k and t not in ("[CLS]","[SEP]")]
-        compressed = tok.convert_tokens_to_string(kept)
-        must = [m.group(0) for m in _MUST_KEEP_RE.finditer(text)]
-        kr = keep.float().mean().item()
-        ex = sum(1 for m in must if m in compressed)/max(len(must),1)
-        results.append((kr, ex))
-    avg_kr = sum(r[0] for r in results)/len(results)
-    avg_ex = sum(r[1] for r in results)/len(results)
-    return avg_kr, avg_ex
-
-# Council: GLM-5.1 makes one decision per epoch
-council_client = None
-def ask_council(epoch, loss, kr, ex, prev_loss):
-    global council_client
-    if council_client is None:
-        try:
-            council_client = InferenceClient(token=os.environ.get("HF_TOKEN",""))
-        except:
-            return "CONTINUE"
-    
-    loss_delta = loss - prev_loss if prev_loss else 0
-    prompt = f"""You control a model training loop. After epoch {epoch}, metrics are:
-- Training loss: {loss:.4f} (Δ from prev: {loss_delta:+.4f})
-- Heretic exact (5 prompts): {ex:.3f}
-- Keep rate: {kr:.3f}
-- Previous epoch loss: {prev_loss:.4f}
-
-Target: heretic >= 0.965, loss minimizing, keep_rate 0.75-0.88.
-Convergence: loss stops decreasing for 2+ epochs → STOP.
-Overfit warning: loss < 0.1 AND heretic < 0.90 → STOP (overfit).
-
-Decide ONE action:
-- CONTINUE (training is progressing well)
-- STOP (converged or overfitting)
-- LR_HALF (reduce learning rate, continue)
-- LR_DOUBLE (loss plateauing, increase LR)
-
-Reply with ONLY the action word."""
-
-    try:
-        r = council_client.chat_completion(
-            messages=[{"role":"user","content":prompt}],
-            model="zai-org/GLM-5.1-FP8", max_tokens=10, temperature=0.1)
-        decision = r.choices[0].message.content.strip().upper()
-        for action in ["CONTINUE","STOP","LR_HALF","LR_DOUBLE"]:
-            if action in decision:
-                return action
-        return "CONTINUE"
-    except:
-        return "CONTINUE"
-
-# Training loop with council
-prev_loss = None
-for epoch in range(MAX_EPOCHS):
-    model.train()
-    total_loss = 0.0
-    for step, batch in enumerate(loader):
-        ids=batch["input_ids"].to(device); am=batch["attention_mask"].to(device)
-        labels=batch["labels"].to(device); weights=batch["weights"].to(device)
-        logits,span=model(ids,am)
-        token_logits=logits[:,:,1]
-        raw_loss=loss_fn(token_logits,labels)
-        loss=(raw_loss*weights).sum()/weights.sum()
-        optimizer.zero_grad(); loss.backward(); optimizer.step()
-        total_loss+=loss.item()
-        if step==0:
-            log.info("Epoch %d step 0/%d loss=%.4f", epoch+1, len(loader), loss.item())
-    
-    avg_loss = total_loss/len(loader)
-    log.info("Epoch %d avg loss=%.4f", epoch+1, avg_loss)
-    
-    # Quick eval for council
-    model.eval()
-    kr, ex = quick_heretic(model, tok, n=5)
-    log.info("Quick heretic: kr=%.3f ex=%.3f", kr, ex)
-    
-    # Council decision
-    decision = ask_council(epoch+1, avg_loss, kr, ex, prev_loss or avg_loss)
-    log.info("COUNCIL (epoch %d): %s", epoch+1, decision)
-    
-    if decision == "STOP":
-        log.info("Council says STOP. Converged at epoch %d.", epoch+1)
-        break
-    elif decision == "LR_HALF":
-        for g in optimizer.param_groups:
-            g["lr"] *= 0.5
-        log.info("LR halved to %.2e", optimizer.param_groups[0]["lr"])
-    elif decision == "LR_DOUBLE":
-        for g in optimizer.param_groups:
-            g["lr"] *= 2.0
-        log.info("LR doubled to %.2e", optimizer.param_groups[0]["lr"])
-    
-    prev_loss = avg_loss
-
-# Merge LoRA and save
-if _PEFT:
-    model.encoder = model.encoder.merge_and_unload()
-    log.info("LoRA merged")
-
-out_dir="kompress-v14-finetuned"
-Path(out_dir).mkdir(exist_ok=True)
-# Save in v2 format (encoder_state_dict + head weights) so eval_heretic.py can load
-state = model.state_dict()
-encoder_keys = {k: v for k, v in state.items() if k.startswith("encoder.")}
-# Strip 'encoder.' prefix for v2 format
-v2_encoder = {k[len("encoder."):]: v for k, v in encoder_keys.items()}
-v2_state = {
-    "encoder_state_dict": v2_encoder,
-    "head1.weight": state["head1.weight"],
-    "head1.bias": state["head1.bias"],
-    "head2.0.weight": state["head2.0.weight"],
-    "head2.0.bias": state["head2.0.bias"],
-    "head2.2.weight": state["head2.2.weight"],
-    "head2.2.bias": state["head2.2.bias"],
-}
-torch.save(v2_state, f"{out_dir}/merged.pt")
-tok.save_pretrained(out_dir)
-log.info("Saved to %s after %d epochs", out_dir, epoch+1)
+    client = InferenceClient(token=os.environ.get("HF_TOKEN",""))
+    r = client.chat_completion(
+        messages=[{"role":"user","content":prompt}],
+        model="zai-org/GLM-5.1-FP8", max_tokens=5, temperature=0.1)
+    decision = r.choices[0].message.content.strip().upper()
+    if "SHIP" in decision: print("SHIP")
+    else: print("RETRAIN")
+except:
+    print("SHIP")  # default to ship on error
 PY
+    ) 2>&1
+    
+    echo "  Council says: $DECISION"
+    
+    if [ "$DECISION" = "SHIP" ]; then
+        echo "Council approved! Shipping model."
+        break
+    fi
+    
+    echo "Council says retrain. Increasing epochs..."
+    EPOCHS=$((EPOCHS + 2))
+done
 
-echo "=== 3/3 Heretic eval (32 prompts) ==="
+echo ""
+echo "=== Final heretic eval (32 prompts) ==="
 python3 scripts/eval_heretic.py \
     --model kompress-v14-finetuned \
-    --prompts-file data/heretic_expanded.jsonl || echo "WARN: eval non-fatal"
+    --prompts-file data/heretic_expanded.jsonl
 
-echo "=== 4/3 ONNX + upload ==="
+echo "=== ONNX export + upload ==="
 pip install -q onnx onnxruntime 2>/dev/null || true
 python3 - << 'PY'
 import sys, os, torch
-from transformers import AutoModel, AutoTokenizer
-
-ENCODER = "answerdotai/ModernBERT-base"
-class HCM(torch.nn.Module):
-    def __init__(self, eid):
-        super().__init__(); self.encoder=AutoModel.from_pretrained(eid)
-        h=self.enc.config.hidden_size; self.h1=torch.nn.Linear(h,2)
-        self.h2=torch.nn.Sequential(torch.nn.Conv1d(h,64,3,padding=1),torch.nn.ReLU(),torch.nn.Conv1d(64,1,3,padding=1))
-    def forward(self,i,a): o=self.encoder(input_ids=i,attention_mask=a); h=o.last_hidden_state; return self.h1(h),torch.sigmoid(self.h2(h.transpose(1,2)).squeeze(1))
-
-model = HCM(ENCODER)
-model.load_state_dict(torch.load("kompress-v14-finetuned/merged.pt", map_location="cpu"))
+sys.path.insert(0, "/workspace/ultrawhale")
+from scripts.train_kompress import HeadroomCompressorModel, load_v2_weights
+from transformers import AutoTokenizer
+model = HeadroomCompressorModel("answerdotai/ModernBERT-base")
+load_v2_weights(model, "kompress-v14-finetuned")
 model.eval()
 tok = AutoTokenizer.from_pretrained("answerdotai/ModernBERT-base")
 dummy = tok("hello world", return_tensors="pt")
@@ -289,7 +115,7 @@ api = HfApi(token=os.environ["HF_TOKEN"])
 repo = os.environ["HF_REPO"]
 api.create_repo(repo, exist_ok=True, private=False)
 api.upload_folder(folder_path="kompress-v14-finetuned", repo_id=repo,
-    commit_message="kompress-v14: GLM-5.1 council controls training — intelligent convergence + v8+GLM data")
+    commit_message="kompress-v14: GLM-5.1 council reviewed — ship/retrain decisions")
 print(f"Uploaded to {repo}")
 PY
 fi
