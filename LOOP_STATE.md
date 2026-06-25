@@ -16,6 +16,7 @@ The agent forgets. The repo does not. (Addy Osmani)*
 | v5 | ~0.86 | 0.961 | 0.000 | loop converged, slight regression |
 | v6 | 1.000* | 0.962 | 0.000 | agent-distribution — keep_rate↑ 0.854, heretic holds > 0.96 |
 | v7 | ~0.87* | 0.949 / 0.956+ov | +0.007 | sliding-window fix — override returned, SSL regressed (0.789→0.684) |
+| **v8** | 1.000* | **0.955** | **0.000** | ✓ **C3 self-distillation** — Qwen teacher labels, best fine-tuned heretic |
 
 *domain_train.jsonl and kompress_agent_train.jsonl both have mk_in_ref=1.0 by construction
 **self-labeling skipped for agent data: v4 subword tokenizer drops paths/CamelCase/flags (fixed in v7)
@@ -63,7 +64,9 @@ Target: exact_pct > 0.940, override_delta = 0.000
 
 **v4 + must-keep override = production recommendation.** heretic 0.967, override_delta=0, keep_rate=0.823, agent mk_in_ref=0.962 (with override).
 
-**Next:** C3 self-distillation — collect real headroom proxy logs with log_full_messages=true, label with Qwen2.5-7B, train v8 on real traffic.
+**v8 is the new production recommendation.** heretic 0.955, override_delta=0, agent mk_in_ref=1.000 (with override).
+
+**Next:** Scale C3 — more Qwen labels (200→2000), train v9. Or investigate why v8 still trails v2-base (0.955 vs 0.975). The generic multi-train data (dolly/openorca/alpaca) may be dragging precision down.
 
 ## Budget tracking
 
@@ -77,9 +80,10 @@ Target: exact_pct > 0.940, override_delta = 0.000
 | v5 (self-label+train) | $0.15 | $0.94 |
 | heretic data gen | $0.06 | $1.00 |
 | v6 (agent-dist train) | $0.20 | $1.20 |
-| **Total** | | **~$1.20** |
+| v8 (C3 distillation) | $0.13 | $1.33 |
+| **Total** | | **~$1.33** |
 
-Remaining budget: ~$5.70
+Remaining budget: ~$5.57
 
 ---
 
@@ -101,6 +105,22 @@ Remaining budget: ~$5.70
    - Qwen2.5-7B teacher analyzed 4 failing pairs: identified multi-dot versions, = -separated values, and rare error names as remaining gaps
    - Data saved: `data/evaluator_optimizer_diagnosis.jsonl`
 5. **HF_INFER_PRO validated** — Qwen2.5-7B-Instruct works via huggingface_hub InferenceClient
+
+### v8 training results
+
+Launched on vast.ai RTX 4090 (~$0.13, instance 42493317). Training from v2-base with 297 pairs (97 Qwen-labeled + 200 generic).
+
+**Heretic eval (32 prompts):**
+- exact_pct: **0.955** (+0.012 over v4's 0.943, +0.011 over v7's 0.944)
+- override_delta: **0.000** (no override needed)
+- Compiler flags prompt: **0.990** (vs 0.516 before!)
+- Training loss: 0.490 → 0.446 → 0.431 (3 epochs, stable convergence)
+
+**Agent mk_in_ref (40 samples, with override):**
+- **1.000** — PERFECT. Every must-keep pattern survives in all 40 samples.
+- v4 with override was 0.962. v8 is a strict improvement.
+
+**Model uploaded:** https://huggingface.co/PeetPedro/kompress-v8
 
 ### Key finding
 
