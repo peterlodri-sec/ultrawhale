@@ -227,7 +227,21 @@ if _PEFT:
 
 out_dir="kompress-v14-finetuned"
 Path(out_dir).mkdir(exist_ok=True)
-torch.save(model.state_dict(),f"{out_dir}/merged.pt")
+# Save in v2 format (encoder_state_dict + head weights) so eval_heretic.py can load
+state = model.state_dict()
+encoder_keys = {k: v for k, v in state.items() if k.startswith("encoder.")}
+# Strip 'encoder.' prefix for v2 format
+v2_encoder = {k[len("encoder."):]: v for k, v in encoder_keys.items()}
+v2_state = {
+    "encoder_state_dict": v2_encoder,
+    "head1.weight": state["head1.weight"],
+    "head1.bias": state["head1.bias"],
+    "head2.0.weight": state["head2.0.weight"],
+    "head2.0.bias": state["head2.0.bias"],
+    "head2.2.weight": state["head2.2.weight"],
+    "head2.2.bias": state["head2.2.bias"],
+}
+torch.save(v2_state, f"{out_dir}/merged.pt")
 tok.save_pretrained(out_dir)
 log.info("Saved to %s after %d epochs", out_dir, epoch+1)
 PY
@@ -246,10 +260,10 @@ from transformers import AutoModel, AutoTokenizer
 ENCODER = "answerdotai/ModernBERT-base"
 class HCM(torch.nn.Module):
     def __init__(self, eid):
-        super().__init__(); self.enc=AutoModel.from_pretrained(eid)
+        super().__init__(); self.encoder=AutoModel.from_pretrained(eid)
         h=self.enc.config.hidden_size; self.h1=torch.nn.Linear(h,2)
         self.h2=torch.nn.Sequential(torch.nn.Conv1d(h,64,3,padding=1),torch.nn.ReLU(),torch.nn.Conv1d(64,1,3,padding=1))
-    def forward(self,i,a): o=self.enc(input_ids=i,attention_mask=a); h=o.last_hidden_state; return self.h1(h),torch.sigmoid(self.h2(h.transpose(1,2)).squeeze(1))
+    def forward(self,i,a): o=self.encoder(input_ids=i,attention_mask=a); h=o.last_hidden_state; return self.h1(h),torch.sigmoid(self.h2(h.transpose(1,2)).squeeze(1))
 
 model = HCM(ENCODER)
 model.load_state_dict(torch.load("kompress-v14-finetuned/merged.pt", map_location="cpu"))
