@@ -15,14 +15,16 @@ The agent forgets. The repo does not. (Addy Osmani)*
 | v4 | 0.823 | 0.967 | 0.000 | ✓ **BREAKTHROUGH** — override redundant |
 | v5 | ~0.86 | 0.961 | 0.000 | loop converged, slight regression |
 | v6 | 1.000* | 0.962 | 0.000 | agent-distribution — keep_rate↑ 0.854, heretic holds > 0.96 |
+| v7 | TBD | TBD | TBD | sliding-window self-labeling fix — running |
 
 *domain_train.jsonl and kompress_agent_train.jsonl both have mk_in_ref=1.0 by construction
-**self-labeling skipped for agent data: v4 subword tokenizer drops paths/CamelCase/flags
+**self-labeling skipped for agent data: v4 subword tokenizer drops paths/CamelCase/flags (fixed in v7)
 
 ## Open hypotheses
 
 - [x] Voting ensemble — NEGATIVE: v3 noisy votes degrade ensemble to 0.931 vs v4 alone 0.961
 - [x] v6 proxy eval — Mode A: v4=9.5% avg compression, v6=4.2% (more conservative keep_rate↑)
+- [x] Sliding-window self-labeling fix — test: TokenExpiredError, /var/log, --verbose all pass with 3-token window (run_training_v7.sh)
 - [ ] Domain routing — lower threshold for code/logs, higher for prose
 - [ ] Evaluator-optimizer on self-labeling — iterate relabeling until mk_in_ref >= 0.9
 - [ ] C3 self-distillation — use real headroom proxy logs as training data
@@ -35,13 +37,14 @@ The agent forgets. The repo does not. (Addy Osmani)*
 4. One self-labeling iteration (v3→v4) was sufficient to internalize override behavior
 5. Second iteration (v4→v5) added noise — convergence criterion met
 6. Agent-pattern training (v6) increases keep_rate (0.823→0.854): model more conservative, less aggressive compression
-7. Self-labeling degrades on agent data: v4 subword tokenizer breaks paths/CamelCase/flags (mk_in_ref collapsed to 0.652); use generator references directly
+7. Self-labeling degrades on agent data: single-subtoken check misses CamelCase/paths/flags (mk_in_ref 0.652)
+8. Sliding-window fix (1/2/3-subtoken windows): TokenExpiredError, /var/log/app.log, --verbose all force-kept correctly
 
 ## Next run decision
 
-**Recommended:** voting ensemble eval (free, CPU) + domain routing experiment ($0.20)
+**Running:** v7 — sliding-window self-labeling, fine-tune from v6 (~$0.20)
 
-**Skip:** more self-labeling iterations (converged), larger models (not the bottleneck)
+**After v7:** domain routing (free), then C3 if proxy logging shipped
 
 ## Budget tracking
 
