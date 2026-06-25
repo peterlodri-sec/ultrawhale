@@ -22,10 +22,10 @@ The agent forgets. The repo does not. (Addy Osmani)*
 ## Open hypotheses
 
 - [x] Voting ensemble — NEGATIVE: v3 noisy votes degrade ensemble to 0.931 vs v4 alone 0.961
+- [x] v6 proxy eval — Mode A: v4=9.5% avg compression, v6=4.2% (more conservative keep_rate↑)
 - [ ] Domain routing — lower threshold for code/logs, higher for prose
 - [ ] Evaluator-optimizer on self-labeling — iterate relabeling until mk_in_ref >= 0.9
 - [ ] C3 self-distillation — use real headroom proxy logs as training data
-- [ ] v6 real-world proxy eval — Mode A (normal) + Mode B (no-prefix-freeze) vs v4 baseline
 
 ## What the loop has learned
 
@@ -34,6 +34,8 @@ The agent forgets. The repo does not. (Addy Osmani)*
 3. Label quality (mk_in_ref) is the bottleneck, not model capacity
 4. One self-labeling iteration (v3→v4) was sufficient to internalize override behavior
 5. Second iteration (v4→v5) added noise — convergence criterion met
+6. Agent-pattern training (v6) increases keep_rate (0.823→0.854): model more conservative, less aggressive compression
+7. Self-labeling degrades on agent data: v4 subword tokenizer breaks paths/CamelCase/flags (mk_in_ref collapsed to 0.652); use generator references directly
 
 ## Next run decision
 
@@ -52,9 +54,10 @@ The agent forgets. The repo does not. (Addy Osmani)*
 | v4 (self-label+train) | $0.15 | $0.79 |
 | v5 (self-label+train) | $0.15 | $0.94 |
 | heretic data gen | $0.06 | $1.00 |
-| **Total** | | **~$1.00** |
+| v6 (agent-dist train) | $0.20 | $1.20 |
+| **Total** | | **~$1.20** |
 
-Remaining budget: ~$5.90
+Remaining budget: ~$5.70
 
 ---
 
