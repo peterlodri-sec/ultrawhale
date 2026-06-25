@@ -13,7 +13,7 @@ BASE = "answerdotai/ModernBERT-base"
 _MK = re.compile(
     r"\b0x[0-9A-Fa-f]+\b|(?<![\w.])\d+(?:\.\d+)?(?![\w.])|[A-Z_]{2,}"
     r"|[a-z_][a-z0-9_]*\.[a-z0-9_]+|/[a-z0-9/._-]{2,}"
-    r"|\.[a-z]{2,4}\b|--?[a-z][\w-]*|\b[A-Z][a-z]+[A-Z]\w*"
+    r"|\.[a-z]{2,4}\b|--?[a-zA-Z][\w-]*|\b[A-Z][a-z]+[A-Z]\w*"
 )
 
 ENSEMBLE = [

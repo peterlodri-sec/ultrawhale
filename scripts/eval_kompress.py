@@ -23,7 +23,7 @@ from transformers import AutoTokenizer
 BASE_ENCODER = "answerdotai/ModernBERT-base"
 
 _MUST_KEEP_RE = re.compile(
-    r"\d+(\.\d+)?|[A-Z_]{2,}|[a-z_]+\.[a-z_]+|/[a-z/._-]{2,}|\.[a-z]{2,4}\b|--?[a-z][\w-]*|\b[A-Z][a-z]+[A-Z]\w*"
+    r"\d+(\.\d+)?|[A-Z_]{2,}|[a-z_]+\.[a-z_]+|/[a-z/._-]{2,}|\.[a-z]{2,4}\b|--?[a-zA-Z][\w-]*|\b[A-Z][a-z]+[A-Z]\w*"
 )
 
 

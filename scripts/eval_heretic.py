@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 _MUST_KEEP_RE = re.compile(
     r"\d+(\.\d+)?|[A-Z_]{2,}|[a-z_]+\.[a-z_]+|/[a-z/._-]{2,}"
-    r"|\.[a-z]{2,4}\b|--?[a-z][\w-]*|\b[A-Z][a-z]+[A-Z]\w*"
+    r"|\.[a-z]{2,4}\b|--?[a-zA-Z][\w-]*|\b[A-Z][a-z]+[A-Z]\w*"
 )
 
 # Synthetic responses representing what an abliterated model would output

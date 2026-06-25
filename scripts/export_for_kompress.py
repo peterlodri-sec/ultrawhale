@@ -39,7 +39,7 @@ _MUST_KEEP = re.compile(
     | [a-z_]+\.[a-z_]+   # dotted.paths
     | /[a-z/._-]{2,}     # unix paths
     | \.[a-z]{2,4}\b      # file extensions
-    | --?[a-z][\w-]*      # CLI flags
+    | --?[a-zA-Z][\w-]*      # CLI flags
     | \b[A-Z][a-z]+[A-Z]\w*  # CamelCase identifiers
     """,
     re.VERBOSE,

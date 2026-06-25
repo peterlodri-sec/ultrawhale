@@ -26,7 +26,7 @@ _MUST_KEEP_RE = re.compile(
     r"|[a-z_]+\.[a-z_]+"      # dotted.paths
     r"|/[a-z/._-]{2,}"        # unix paths
     r"|\.[a-z]{2,4}\b"        # extensions
-    r"|--?[a-z][\w-]*"        # flags
+    r"|--?[a-zA-Z][\w-]*"        # flags
     r"|\b[A-Z][a-z]+[A-Z]\w*" # CamelCase
 )
 
