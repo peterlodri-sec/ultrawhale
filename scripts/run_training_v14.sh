@@ -15,24 +15,9 @@ HF_REPO=${HF_REPO:-"PeetPedro/kompress-v14"}
 MAX_EPOCHS=10
 pip install -q huggingface_hub 2>/dev/null || true
 
-echo "=== 1/4 Merge v8 + GLM scenario data ==="
-python3 - << 'PY'
-import json, random
-# v8 C3 data
-c3 = [json.loads(l) for l in open("data/kompress_v8_train.jsonl")]
-# GLM scenario data
-glm = [json.loads(l) for l in open("data/kompress_v13_train.jsonl") if "glm_regex" in l.get("source","")]
-print(f"  v8 C3: {len([r for r in c3 if 'qwen_c3' in r.get('source','')])} pairs")
-print(f"  GLM regex: {len(glm)} pairs")
-print(f"  Generic: {len([r for r in c3 if 'qwen_c3' not in r.get('source','')])} pairs")
-merged = c3 + glm
-random.seed(42); random.shuffle(merged)
-with open("data/kompress_v14_train.jsonl","w") as f:
-    for r in merged: f.write(json.dumps(r,ensure_ascii=False)+"\n")
-print(f"  Total: {len(merged)}")
-PY
+echo "=== 1/4 Training data: $(wc -l < data/kompress_v14_train.jsonl) pre-merged pairs ==="
 
-echo "=== 2/4 Council-guided training loop ==="
+echo "=== 2/3 Council-guided training loop ==="
 python3 - << 'PY'
 import json, re, torch, sys, os, time
 from pathlib import Path
@@ -251,12 +236,12 @@ tok.save_pretrained(out_dir)
 log.info("Saved to %s after %d epochs", out_dir, epoch+1)
 PY
 
-echo "=== 3/4 Heretic eval (32 prompts) ==="
+echo "=== 3/3 Heretic eval (32 prompts) ==="
 python3 scripts/eval_heretic.py \
     --model kompress-v14-finetuned \
     --prompts-file data/heretic_expanded.jsonl || echo "WARN: eval non-fatal"
 
-echo "=== 4/4 ONNX + upload ==="
+echo "=== 4/3 ONNX + upload ==="
 pip install -q onnx onnxruntime 2>/dev/null || true
 python3 - << 'PY'
 import sys, os, torch
