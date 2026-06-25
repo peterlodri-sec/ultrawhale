@@ -14,8 +14,10 @@ The agent forgets. The repo does not. (Addy Osmani)*
 | v3.3 | 1.00* | 0.942 | — | domain-only, overfit |
 | v4 | 0.823 | 0.967 | 0.000 | ✓ **BREAKTHROUGH** — override redundant |
 | v5 | ~0.86 | 0.961 | 0.000 | loop converged, slight regression |
+| v6 | 1.000* | 0.962 | 0.000 | agent-distribution — keep_rate↑ 0.854, heretic holds > 0.96 |
 
-*domain_train.jsonl has mk_in_ref=1.0 by construction
+*domain_train.jsonl and kompress_agent_train.jsonl both have mk_in_ref=1.0 by construction
+**self-labeling skipped for agent data: v4 subword tokenizer drops paths/CamelCase/flags
 
 ## Open hypotheses
 
@@ -23,6 +25,7 @@ The agent forgets. The repo does not. (Addy Osmani)*
 - [ ] Domain routing — lower threshold for code/logs, higher for prose
 - [ ] Evaluator-optimizer on self-labeling — iterate relabeling until mk_in_ref >= 0.9
 - [ ] C3 self-distillation — use real headroom proxy logs as training data
+- [ ] v6 real-world proxy eval — Mode A (normal) + Mode B (no-prefix-freeze) vs v4 baseline
 
 ## What the loop has learned
 
