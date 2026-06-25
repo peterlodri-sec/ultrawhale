@@ -25,7 +25,7 @@ The agent forgets. The repo does not. (Addy Osmani)*
 - [x] Voting ensemble — NEGATIVE: v3 noisy votes degrade ensemble to 0.931 vs v4 alone 0.961
 - [x] v6 proxy eval — Mode A: v4=9.5% avg compression, v6=4.2% (more conservative keep_rate↑)
 - [x] Sliding-window self-labeling fix — test: TokenExpiredError, /var/log, --verbose all pass with 3-token window (run_training_v7.sh)
-- [ ] Domain routing — lower threshold for code/logs, higher for prose
+- [x] Domain routing — IMPLEMENTED: BUILD_OUTPUT/SOURCE_CODE bias=0.50 (2x compression), SEARCH bias=0.70 (1.45x). headroom PR #1418
 - [ ] Evaluator-optimizer on self-labeling — iterate relabeling until mk_in_ref >= 0.9
 - [ ] C3 self-distillation — use real headroom proxy logs as training data
 
