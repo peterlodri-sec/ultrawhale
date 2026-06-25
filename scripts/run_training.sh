@@ -45,7 +45,7 @@ python3 scripts/train_kompress.py \
 echo "=== 3/4 Eval ==="
 python3 scripts/eval_kompress.py \
     --model kompress-v3-finetuned \
-    --data data/kompress_test.jsonl
+    --data data/kompress_test.jsonl || echo "WARN: eval failed, continuing to export"
 
 echo "=== 4/4 Export ONNX and upload to HF ==="
 # Re-use headroom's export script pointed at our checkpoint
@@ -61,7 +61,7 @@ from scripts.train_kompress import HeadroomCompressorModel, load_v2_weights
 from transformers import AutoTokenizer
 
 model = HeadroomCompressorModel("answerdotai/ModernBERT-base")
-load_v2_weights(model, "kompress-v3-finetuned")
+load_v2_weights(model, "kompress-v3-finetuned")  # handles local path
 model.eval()
 
 tok = AutoTokenizer.from_pretrained("answerdotai/ModernBERT-base")

@@ -186,9 +186,13 @@ class HeadroomCompressorModel(nn.Module):
 
 
 def load_v2_weights(model: HeadroomCompressorModel, model_id: str) -> None:
-    """Load merged.pt from the kompress-v2-base HF repo."""
-    from huggingface_hub import hf_hub_download
-    path = hf_hub_download(repo_id=model_id, filename="merged.pt")
+    """Load merged.pt from a local directory or HF repo."""
+    local = Path(model_id) / "merged.pt"
+    if local.exists():
+        path = str(local)
+    else:
+        from huggingface_hub import hf_hub_download
+        path = hf_hub_download(repo_id=model_id, filename="merged.pt")
     ckpt = torch.load(path, map_location="cpu", weights_only=True)
     missing_enc, _ = model.encoder.load_state_dict(ckpt["encoder_state_dict"], strict=False)
     model.token_head.load_state_dict(ckpt["token_head_state_dict"])
