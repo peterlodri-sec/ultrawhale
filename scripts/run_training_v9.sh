@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 # Kompress v9: C3-pure — Qwen labels only, no generic data dilution
 #
-# v8 finding: C3 self-distillation works (heretic +0.012, mk_in_ref 1.000)
-# but the 200 generic pairs (dolly/openorca/alpaca) may be dragging precision
-# down from v2-base's 0.975 ceiling.
+# v8: heretic 0.955 with C3+generic. Hypothesis: generic data (dolly/openorca)
+# drags precision down from v2-base's 0.975. v9 trains on C3 Qwen-labeled
+# data ONLY to test this.
 #
-# v9: train on C3 Qwen-labeled data ONLY. If the generic data was noise,
-# we should recover more of v2-base's precision.
-#
-# Data: 97 C3 Qwen-labeled pairs (no generic merge)
+# Data: 97 C3 Qwen-labeled pairs in text+reference format
 # Base:  chopratejas/kompress-v2-base
 # Target: heretic >= 0.965, override_delta = 0
 set -euo pipefail
@@ -16,20 +13,12 @@ cd /workspace/ultrawhale
 HF_TOKEN=${HF_TOKEN:-}
 HF_REPO=${HF_REPO:-"PeetPedro/kompress-v9"}
 
-echo "=== 1/4 Convert Qwen labels to token keep/drop ==="
-python3 scripts/convert_qwen_to_tokens.py \
-    --input data/c3_qwen_labeled.jsonl \
-    --output data/c3_train.jsonl \
-    --min-keep-ratio 0.03 \
-    --max-keep-ratio 0.75
+echo "=== 1/4 C3-pure training data (97 Qwen-labeled pairs) ==="
+wc -l data/kompress_v9_train.jsonl
 
-count=$(wc -l < data/c3_train.jsonl)
-echo "C3 training pairs: $count"
-[ "$count" -gt 20 ] || { echo "ERROR: too few pairs ($count)"; exit 1; }
-
-echo "=== 2/4 Fine-tune from v2-base (C3-only, no generic dilution) ==="
+echo "=== 2/4 Fine-tune from v2-base (C3-only) ==="
 python3 scripts/train_kompress.py \
-    --data data/c3_train.jsonl \
+    --data data/kompress_v9_train.jsonl \
     --base-model chopratejas/kompress-v2-base \
     --output kompress-v9-finetuned \
     --epochs 5 \
@@ -90,7 +79,7 @@ api.create_repo(repo, exist_ok=True, private=False)
 api.upload_folder(
     folder_path="kompress-v9-finetuned",
     repo_id=repo,
-    commit_message="kompress-v9: C3-pure — Qwen2.5-7B labels only, no generic dilution"
+    commit_message="kompress-v9: C3-pure — Qwen2.5-7B labels only, 97 pairs, no generic dilution"
 )
 print(f"Uploaded to {repo}")
 PY
