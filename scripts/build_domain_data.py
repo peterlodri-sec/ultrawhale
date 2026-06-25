@@ -515,6 +515,7 @@ def _make_bash_output(rng: random.Random) -> tuple[str, str]:
         ref_lines = [
             f"{hashv} fix({mod.split('.')[0]}): {camel}",
             f"{rng.choice(_GIT_HASHES)} bump {num2 % 10}.{num1 % 100}.{num2 % 50}",
+            f"last {num1 % 20 + 1} commits",
         ]
     else:  # cargo
         text = (
@@ -662,7 +663,7 @@ def gen_error_trace(rng: random.Random, n: int = 150) -> list[dict]:
     pairs = []
     for _ in range(n * 4):
         text, reference = _make_error_trace(rng)
-        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.2:
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.3:
             pairs.append({
                 "text": text, "reference": reference,
                 "role": "tool", "source": "error_trace", "topic": "compression",
@@ -765,8 +766,7 @@ def _make_json_tool_result(rng: random.Random) -> tuple[str, str]:
         },
         "error": None if http < 400 else f"{camel}: {flag} rejected at {path}",
     }
-    import json as _json
-    payload_str = _json.dumps(payload, indent=2)
+    payload_str = json.dumps(payload, indent=2)
 
     item_count = min(3, num2 % 4 + 1)
     item_ids = [str(num1 + i) for i in range(item_count)]
@@ -777,6 +777,7 @@ def _make_json_tool_result(rng: random.Random) -> tuple[str, str]:
         f'"operation": "{func}"',
         f'"resource": "{path}"',
         f'"count": {num2}',
+        f'"type": "{camel}"',
         f'"items": [{", ".join(item_ids)}]',
         f'"flag": "{flag}"',
         f'"module": "{mod}"',
