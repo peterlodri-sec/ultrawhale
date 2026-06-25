@@ -44,10 +44,10 @@ def _compress_text(text: str, model, tokenizer, threshold: float = 0.5) -> tuple
 
 
 def _exact_preserved(original: str, compressed: str) -> float:
-    must_keep = set(_MUST_KEEP_RE.findall(original))
+    must_keep = [m.group(0) for m in _MUST_KEEP_RE.finditer(original)]
     if not must_keep:
         return 1.0
-    preserved = sum(1 for t in must_keep if t[0] in compressed)
+    preserved = sum(1 for t in must_keep if t in compressed)
     return preserved / len(must_keep)
 
 
