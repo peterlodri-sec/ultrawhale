@@ -94,3 +94,4 @@ homebrew-ultrawhale/
 secrets/
 hugo-site/public/
 hugo-site/.hugo_build.lock
+.superpowers/
