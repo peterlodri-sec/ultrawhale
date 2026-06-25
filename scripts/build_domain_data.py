@@ -717,7 +717,7 @@ def gen_search_result(rng: random.Random, n: int = 150) -> list[dict]:
     pairs = []
     for _ in range(n * 4):
         text, reference = _make_search_result(rng)
-        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.25:
+        if len(text) >= 100 and len(text) / max(len(reference), 1) >= 1.3:
             pairs.append({
                 "text": text, "reference": reference,
                 "role": "tool", "source": "search_result", "topic": "compression",
