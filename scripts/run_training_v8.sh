@@ -24,31 +24,17 @@ count=$(wc -l < data/c3_train.jsonl)
 echo "Training pairs: $count"
 [ "$count" -gt 20 ] || { echo "ERROR: too few pairs ($count), need >20"; exit 1; }
 
-echo "=== 2/5 Merge C3 data + existing generic for diversity ==="
+echo "=== 2/5 Training data ready (pre-merged C3 + generic) ==="
 python3 - << 'PY'
-import json, random
-
-# Load C3 Qwen-labeled pairs
-c3 = [json.loads(l) for l in open("data/c3_train.jsonl")]
-print(f"  c3 qwen-labeled: {len(c3)}")
-
-# Also load existing generic training data for diversity
-try:
-    generic = [json.loads(l) for l in open("data/kompress_multi_train.jsonl")]
-    # Sample to keep ratio balanced
-    random.seed(42)
-    generic = random.sample(generic, min(len(c3) * 2, len(generic)))
-    print(f"  generic (multi): {len(generic)}")
-except FileNotFoundError:
-    generic = []
-    print(f"  generic: not found, c3-only")
-
-merged = c3 + generic
-random.shuffle(merged)
-with open("data/kompress_v8_train.jsonl", "w") as f:
-    for r in merged:
-        f.write(json.dumps(r, ensure_ascii=False) + "\n")
-print(f"  Total: {len(merged)} rows")
+import json
+# Pre-built merged file from repo (C3 Qwen-labeled + generic multi-train)
+with open("data/kompress_v8_train.jsonl") as f:
+    rows = [json.loads(l) for l in f]
+from collections import Counter
+sources = Counter(r.get("source", "?") for r in rows)
+print(f"  Total: {len(rows)} rows from {len(sources)} sources")
+for s, c in sources.most_common():
+    print(f"    {s}: {c}")
 PY
 
 echo "=== 3/5 Fine-tune from v2-base (recover precision, don't inherit v4 noise) ==="
