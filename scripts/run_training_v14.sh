@@ -36,34 +36,30 @@ for round in $(seq 1 $MAX_ROUNDS); do
     echo "  Heretic: $HERETIC, override_delta: +$OVERRIDE"
     
     echo "=== Council decision (GLM-5.1) ==="
+    export COUNCIL_HERETIC="$HERETIC"
+    export COUNCIL_OVERRIDE="$OVERRIDE"
+    export COUNCIL_ROUND="$round"
     DECISION=$(python3 - << 'PY'
-import sys, os
+import os
 from huggingface_hub import InferenceClient
-heretic = float(sys.argv[1]) if len(sys.argv) > 1 else 0
-override = float(sys.argv[2]) if len(sys.argv) > 2 else 0
-round_num = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+h = float(os.environ.get("COUNCIL_HERETIC","0"))
+o = float(os.environ.get("COUNCIL_OVERRIDE","0"))
+r = int(os.environ.get("COUNCIL_ROUND","1"))
 
-prompt = f"""You are reviewing a kompress model after training round {round_num}.
-Metrics: heretic_exact={heretic:.3f}, override_delta=+{override:.3f}
+prompt = f"""Kompress model review after training round {r}/3.
+heretic_exact={h:.3f} override_delta={o:.3f}
+Target: heretic>=0.960 override=0. Best so far: v8=0.955 v2=0.975.
 
-Target: heretic >= 0.960, override_delta = 0.000
-History: v2-base=0.975 (ceiling), v4=0.943, v8=0.955 (best so far)
-
-Decision:
-- SHIP: heretic >= 0.960 or (plateaued AND round >= 3)
-- RETRAIN: heretic < 0.960 AND round < 3 AND improvement possible
-
-Reply with ONLY one word: SHIP or RETRAIN"""
+RULES: Round 1-2 ALWAYS retrain unless heretic>=0.965. Round 3 ship if heretic>=0.950.
+Reply ONE word: SHIP or RETRAIN"""
 try:
     client = InferenceClient(token=os.environ.get("HF_TOKEN",""))
-    r = client.chat_completion(
-        messages=[{"role":"user","content":prompt}],
+    r = client.chat_completion(messages=[{"role":"user","content":prompt}],
         model="zai-org/GLM-5.1-FP8", max_tokens=5, temperature=0.1)
-    decision = r.choices[0].message.content.strip().upper()
-    if "SHIP" in decision: print("SHIP")
-    else: print("RETRAIN")
-except:
-    print("SHIP")  # default to ship on error
+    d = r.choices[0].message.content.strip().upper()
+    print("SHIP" if "SHIP" in d else "RETRAIN")
+except Exception as e:
+    print(f"RETRAIN")  # default to retrain on error
 PY
     ) 2>&1
     
