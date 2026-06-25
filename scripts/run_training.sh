@@ -7,12 +7,20 @@ cd /workspace/ultrawhale
 HF_TOKEN=${HF_TOKEN:-}
 HF_REPO=${HF_REPO:-"peterlodri-sec/kompress-v3"}
 
-echo "=== 1/4 Export training data ==="
-python3 scripts/export_for_kompress.py \
-    --output data/kompress_train.jsonl
-
-echo "Splitting train/test..."
-python3 - << 'PY'
+echo "=== 1/4 Training data ==="
+# Use pre-exported data committed to the repo (avoids HF download issues on some instances)
+if [ -f "data/kompress_train_split.jsonl" ] && [ -f "data/kompress_test.jsonl" ]; then
+    echo "Using committed data files"
+    python3 -c "
+import json
+train = sum(1 for _ in open('data/kompress_train_split.jsonl'))
+test  = sum(1 for _ in open('data/kompress_test.jsonl'))
+print(f'Train: {train}, Test: {test}')
+"
+else
+    echo "Falling back to HF download..."
+    python3 scripts/export_for_kompress.py --output data/kompress_train.jsonl
+    python3 - << 'PY'
 import json, random, pathlib
 records = [json.loads(l) for l in open("data/kompress_train.jsonl")]
 random.shuffle(records)
@@ -24,6 +32,7 @@ with open("data/kompress_test.jsonl","w") as f:
     for r in records[split:]: f.write(json.dumps(r)+"\n")
 print(f"Train: {split}, Test: {len(records)-split}")
 PY
+fi
 
 echo "=== 2/4 Fine-tune ==="
 python3 scripts/train_kompress.py \
