@@ -241,11 +241,18 @@ echo "=== 4/3 ONNX + upload ==="
 pip install -q onnx onnxruntime 2>/dev/null || true
 python3 - << 'PY'
 import sys, os, torch
-sys.path.insert(0, "/workspace/ultrawhale")
-from scripts.train_kompress import HeadroomCompressorModel, load_v2_weights
-from transformers import AutoTokenizer
-model = HeadroomCompressorModel("answerdotai/ModernBERT-base")
-load_v2_weights(model, "kompress-v14-finetuned")
+from transformers import AutoModel, AutoTokenizer
+
+ENCODER = "answerdotai/ModernBERT-base"
+class HCM(torch.nn.Module):
+    def __init__(self, eid):
+        super().__init__(); self.enc=AutoModel.from_pretrained(eid)
+        h=self.enc.config.hidden_size; self.h1=torch.nn.Linear(h,2)
+        self.h2=torch.nn.Sequential(torch.nn.Conv1d(h,64,3,padding=1),torch.nn.ReLU(),torch.nn.Conv1d(64,1,3,padding=1))
+    def forward(self,i,a): o=self.enc(input_ids=i,attention_mask=a); h=o.last_hidden_state; return self.h1(h),torch.sigmoid(self.h2(h.transpose(1,2)).squeeze(1))
+
+model = HCM(ENCODER)
+model.load_state_dict(torch.load("kompress-v14-finetuned/merged.pt", map_location="cpu"))
 model.eval()
 tok = AutoTokenizer.from_pretrained("answerdotai/ModernBERT-base")
 dummy = tok("hello world", return_tensors="pt")
