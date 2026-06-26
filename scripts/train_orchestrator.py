@@ -78,7 +78,7 @@ def main():
         r=16, lora_alpha=32,
         target_modules=["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"],
         lora_dropout=0.05, bias="none", task_type=TaskType.CAUSAL_LM,
-        use_dora=True,  # ← Weight-Decomposed LoRA
+        use_dora=False,  # DoRA OOM on 24GB — fallback to LoRA
     ))
     model.print_trainable_parameters()
     # gradient checkpointing disabled for DoRA compat
