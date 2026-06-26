@@ -40,20 +40,24 @@ def main():
     log.info("Loaded %d pairs", len(dataset))
 
     log.info("Loading model...")
-    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
+    from transformers import BitsAndBytesConfig
+    bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True, bnb_4bit_quant_type="nf4")
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=bnb_config, device_map="auto", trust_remote_code=True)
     model = get_peft_model(model, LoraConfig(
         r=16, lora_alpha=32,
         target_modules=["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"],
         lora_dropout=0.05, bias="none", task_type=TaskType.CAUSAL_LM,
     ))
     model.print_trainable_parameters()
+    model.config.use_cache = False
+    model.gradient_checkpointing_enable()
     model.enable_input_require_grads()  # for gradient checkpointing
 
     trainer = Trainer(
         model=model,
         args=TrainingArguments(
             output_dir=args.output, num_train_epochs=args.epochs,
-            per_device_train_batch_size=args.batch_size, gradient_accumulation_steps=8,
+            per_device_train_batch_size=1, gradient_accumulation_steps=16,
             learning_rate=args.lr, warmup_ratio=0.05, logging_steps=5,
             save_strategy="epoch", bf16=True, report_to="none",
             remove_unused_columns=False,

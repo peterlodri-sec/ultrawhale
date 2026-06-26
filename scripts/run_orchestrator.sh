@@ -10,7 +10,7 @@ echo "Data: $(wc -l < data/orchestrator_train.jsonl) pairs"
 echo "Base: Qwen/Qwen2.5-7B-Instruct"
 echo "Target: $HF_REPO"
 
-pip install -q transformers peft datasets torch accelerate bitsandbytes 2>/dev/null || true
+pip install -q transformers peft datasets torch accelerate bitsandbytes scipy 2>/dev/null || true
 
 python3 scripts/train_orchestrator.py \
     --data data/orchestrator_train.jsonl \
