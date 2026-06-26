@@ -3,7 +3,8 @@
 import argparse, json, logging, torch
 from pathlib import Path
 from datasets import Dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
+from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
+from transformers import DataCollatorForSeq2Seq  # handles padding properly
 from peft import LoraConfig, get_peft_model, TaskType
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -15,37 +16,49 @@ def main():
     ap.add_argument("--data", default="data/orchestrator_train.jsonl")
     ap.add_argument("--output", default="kompress-superpower-orchestrator")
     ap.add_argument("--epochs", type=int, default=3)
-    ap.add_argument("--batch-size", type=int, default=2)
+    ap.add_argument("--batch-size", type=int, default=1)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--max-length", type=int, default=1024)
     args = ap.parse_args()
 
-    log.info("Loading %s...", BASE_MODEL)
+    log.info("Tokenizing %s...", BASE_MODEL)
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
-    model = get_peft_model(model, LoraConfig(r=16, lora_alpha=32, target_modules=["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"], lora_dropout=0.05, bias="none", task_type=TaskType.CAUSAL_LM))
-    model.print_trainable_parameters()
+    tokenizer.pad_token = tokenizer.eos_token
 
     with open(args.data) as f:
         rows = [json.loads(l) for l in f]
-    texts = [tokenizer.apply_chat_template(r["messages"], tokenize=False, add_generation_prompt=False) for r in rows]
     
-    def tokenize(ex):
-        tok = tokenizer(ex["text"], truncation=True, max_length=args.max_length, padding=False)
-        tok["labels"] = tok["input_ids"].copy()
-        return tok
+    texts = []
+    for r in rows:
+        t = tokenizer.apply_chat_template(r["messages"], tokenize=False, add_generation_prompt=False)
+        texts.append(t)
     
-    dataset = Dataset.from_dict({"text": texts}).map(tokenize, remove_columns=["text"])
+    # Tokenize with padding to max_length
+    encodings = tokenizer(texts, truncation=True, max_length=args.max_length, padding="max_length")
+    encodings["labels"] = [ids[:] for ids in encodings["input_ids"]]  # copy for labels
+    dataset = Dataset.from_dict(encodings)
     log.info("Loaded %d pairs", len(dataset))
+
+    log.info("Loading model...")
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
+    model = get_peft_model(model, LoraConfig(
+        r=16, lora_alpha=32,
+        target_modules=["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"],
+        lora_dropout=0.05, bias="none", task_type=TaskType.CAUSAL_LM,
+    ))
+    model.print_trainable_parameters()
+    model.enable_input_require_grads()  # for gradient checkpointing
 
     trainer = Trainer(
         model=model,
-        args=TrainingArguments(output_dir=args.output, num_train_epochs=args.epochs, per_device_train_batch_size=args.batch_size, gradient_accumulation_steps=4, learning_rate=args.lr, warmup_ratio=0.05, logging_steps=5, save_strategy="epoch", bf16=True, report_to="none"),
+        args=TrainingArguments(
+            output_dir=args.output, num_train_epochs=args.epochs,
+            per_device_train_batch_size=args.batch_size, gradient_accumulation_steps=8,
+            learning_rate=args.lr, warmup_ratio=0.05, logging_steps=5,
+            save_strategy="epoch", bf16=True, report_to="none",
+            remove_unused_columns=False,
+        ),
         train_dataset=dataset,
-        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
     )
 
     log.info("Training %d epochs...", args.epochs)
