@@ -81,8 +81,7 @@ def main():
         use_dora=True,  # ← Weight-Decomposed LoRA
     ))
     model.print_trainable_parameters()
-    model.config.use_cache = False
-    model.gradient_checkpointing_enable()
+    # gradient checkpointing disabled for DoRA compat
 
     neftune = NEFTuneCallback(noise_alpha=args.neftune_alpha)
 
