@@ -19,11 +19,14 @@ log = logging.getLogger(__name__)
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
-class NEFTuneCallback:
+from transformers import TrainerCallback
+
+class NEFTuneCallback(TrainerCallback):
     """Adds noise to input embeddings during training for better chat quality.
     Reference: https://arxiv.org/abs/2310.05914
     """
     def __init__(self, noise_alpha: float = 5.0):
+        super().__init__()
         self.noise_alpha = noise_alpha
         self._original_embed = None
     
@@ -31,11 +34,9 @@ class NEFTuneCallback:
         model = kwargs.get("model")
         if model is None:
             return
-        # Find embedding layer
         embed = model.get_input_embeddings()
         if self._original_embed is None:
             self._original_embed = embed.weight.data.clone()
-        # Add noise scaled by alpha/√L
         noise = torch.randn_like(embed.weight.data) * (self.noise_alpha / (768 ** 0.5))
         embed.weight.data.add_(noise)
     
