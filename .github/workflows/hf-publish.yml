@@ -43,7 +43,7 @@ jobs:
           fi
 
           # 3. Merge JSONL → Parquet + regenerate growth chart
-          pip install pyarrow pandas matplotlib numpy --quiet
+          pip install pyarrow pandas matplotlib numpy huggingface_hub --quiet
           python3 $GITHUB_WORKSPACE/scripts/plot_growth.py
           cp $GITHUB_WORKSPACE/site/dogfood/growth.png /tmp/hf-push/growth.png
           python3 $GITHUB_WORKSPACE/scripts/hf_optimize.py \
