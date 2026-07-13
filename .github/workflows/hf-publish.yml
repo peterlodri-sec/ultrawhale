@@ -15,6 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
       - name: Push dogfeed + consolidate telemetry
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}

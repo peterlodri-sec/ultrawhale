@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
     paths: ['site/**', 'docs-book/book/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:
